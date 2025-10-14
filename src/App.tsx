@@ -105,7 +105,7 @@ function App() {
 
   const canProceedStep2 = () => {
     if (!tipoInmueble) return false;
-    if (['2', '4', '5', '7'].includes(tipoInmueble) && !pisos) return false;
+    if (['2', '4', '5', '8'].includes(tipoInmueble) && !pisos) return false;
     if (!ancho || !largo) return false;
 
     // Validate carga details
@@ -609,13 +609,14 @@ function App() {
                         <option value="2">Departamento/local en edificio / condominio vertical</option>
                         <option value="3">Sólo áreas comunes de condominio / fraccionamiento</option>
                         <option value="4">Local en plaza comercial o edificio</option>
-                        <option value="5">Conjunto habitacional / condominio horizontal o vertical</option>
-                        <option value="6">Nave industrial / bodega</option>
-                        <option value="7">Edificios enteros (hoteles, oficinas, públicos)</option>
+                        <option value="5">Conjunto habitacional vertical / condominio vertical</option>
+                        <option value="6">Conjunto habitacional horizontal / condominio horizontal</option>
+                        <option value="7">Nave industrial / bodega</option>
+                        <option value="8">Edificios enteros (hoteles, oficinas, públicos)</option>
                       </select>
                     </div>
 
-                    {['2', '4', '5', '7'].includes(tipoInmueble) && (
+                    {['2', '4', '5', '8'].includes(tipoInmueble) && (
                       <div className="mt-4">
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           No. de pisos del edificio
