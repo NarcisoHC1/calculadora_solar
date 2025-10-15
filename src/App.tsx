@@ -50,6 +50,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
 
+  // === API base configurable por env ===
+  const RAW_API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
+  const API_BASE = RAW_API_BASE.replace(/\/$/, '');
+
   // Track if user came from "no CFE but planning" flow
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
   const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
@@ -184,7 +188,7 @@ function App() {
         showLoading('Procesando tu recibo…');
         const fd = new FormData();
         fd.append('file', fileObj);
-        const ocrRes = await fetch('/api/ocr_cfe_v2', { method: 'POST', body: fd });
+        const ocrRes = await fetch(`${API_BASE}/api/ocr_cfe_v2`, { method: 'POST', body: fd });
         const ocrJson = await ocrRes.json().catch(() => null);
         if (ocrRes.ok && (ocrJson?.ok || ocrJson?.data || ocrJson?.tarifa)) {
           ocr = ocrJson.data || ocrJson;
@@ -224,7 +228,7 @@ function App() {
     };
 
     try {
-      const res = await fetch('/api/cotizacion_v2', {
+      const res = await fetch(`${API_BASE}/api/cotizacion_v2`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ req_id, flow, flow_reason, utms, ocr, form: formPayload })
