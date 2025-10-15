@@ -1,0 +1,23 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback por si un día agregas routing
+[[redirects]]
+  from = "/cotizador-v2"
+  to   = "/cotizador-v2/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/cotizador-v2/*"
+  to   = "/cotizador-v2/index.html"
+  status = 200
+  force = true
+
+# Proxy de APIs del widget → sitio de funciones (AJUSTA si tu dominio de funciones cambia)
+[[redirects]]
+  from = "/api/*"
+  to   = "https://solarya1.netlify.app/api/:splat"
+  status = 200
+  force = true
