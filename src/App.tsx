@@ -45,13 +45,30 @@ function App() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
+  // NUEVO: manejo de archivo para OCR, y overlay de carga
+  const [fileObj, setFileObj] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
+
   // Track if user came from "no CFE but planning" flow
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
   const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
 
+  // Helpers overlay + aviso al padre (iframe)
+  function showLoading(msg = 'Calculando tu propuesta…') {
+    setLoadingMsg(msg);
+    setLoading(true);
+    try { window.parent.postMessage({ type: 'status', status: 'processing' }, '*'); } catch {}
+  }
+  function hideLoading() {
+    setLoading(false);
+    try { window.parent.postMessage({ type: 'status', status: 'done' }, '*'); } catch {}
+  }
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setFileObj(file);                // ← guardamos el File real para OCR
       setFileName(file.name);
       setFileUploaded(true);
       setShowManual(false);
@@ -61,6 +78,8 @@ function App() {
   const handleManualEntry = () => {
     setShowManual(true);
     setFileUploaded(false);
+    setFileObj(null);
+    setFileName('');
   };
 
   const handleCargaToggle = (carga: string, checked: boolean) => {
@@ -137,7 +156,8 @@ function App() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ⬇️ NUEVO handleSubmit con OCR + cotización + navegación vía bridge
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Skip tenencia validation for no CFE planning flow
@@ -146,14 +166,105 @@ function App() {
       return;
     }
 
-    const highValue = parseFloat(pago) >= 50000;
+    const highValue = parseFloat(pago || '0') >= 50000;
     const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa);
     const noCFEPlan = isNoCFENoPlanning;
 
-    if (industrialTariff || highValue || noCFEPlan) {
-      setShowContactModal(true);
-    } else {
+    // Flow que también guardamos en backend para status
+    let flow: 'AUTO' | 'MANUAL' | 'BLOCKED' = 'AUTO';
+    let flow_reason = 'ok';
+    if (industrialTariff) { flow = 'MANUAL'; flow_reason = 'tariff_business'; }
+    else if (highValue)   { flow = 'MANUAL'; flow_reason = 'high_monthly'; }
+    else if (noCFEPlan)   { flow = 'MANUAL'; flow_reason = 'no_cfe'; }
+
+    // 1) OCR si hay archivo
+    let ocr: any = null;
+    try {
+      if (fileObj) {
+        showLoading('Procesando tu recibo…');
+        const fd = new FormData();
+        fd.append('file', fileObj);
+        const ocrRes = await fetch('/api/ocr_cfe_v2', { method: 'POST', body: fd });
+        const ocrJson = await ocrRes.json().catch(() => null);
+        if (ocrRes.ok && (ocrJson?.ok || ocrJson?.data || ocrJson?.tarifa)) {
+          ocr = ocrJson.data || ocrJson;
+        }
+      }
+    } catch (err) {
+      console.warn('OCR failed, continuing without it', err);
+    }
+
+    // 2) Preparar payload para cotización
+    showLoading('Calculando tu propuesta…');
+
+    const roof_area_m2 = (ancho && largo) ? (parseFloat(ancho) * parseFloat(largo)) : 0;
+    const loads = cargaDetalles || {};
+
+    const bridge = (window as any).SYBridge;
+    const utms = (bridge?.getParentUtms?.() || {}) as any;
+    const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
+
+    const formPayload = {
+      nombre,
+      email: correo,
+      telefono,
+      uso,
+      tenencia,
+      periodicidad: periodo || 'bimestral',
+      pago_promedio_mxn: parseFloat(pago || '0') || 0,
+      cp,
+      tarifa: tarifa || (ocr?.tarifa || ''),
+      tipo_inmueble: tipoInmueble || '',
+      pisos: parseInt(pisos || '0', 10) || 0,
+      roof_area_m2,
+      notes: notas || '',
+      loads,
+      has_cfe: hasCFE !== 'no',
+      plans_cfe: planCFE !== 'no' && planCFE !== 'aislado'
+    };
+
+    try {
+      const res = await fetch('/api/cotizacion_v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ req_id, flow, flow_reason, utms, ocr, form: formPayload })
+      });
+      const json = await res.json();
+
+      if (!res.ok || json.ok === false) {
+        throw new Error(json?.error || 'cotizacion_error');
+      }
+
+      // 3) Ruteo según respuesta del backend
+      if (json.mode === 'AUTO' && json.pid) {
+        bridge?.gtm?.('cotizador_v2_auto', { pid: json.pid });
+        // Navegar en el sitio padre (Webflow) a /propuesta-v2 con payload
+        bridge?.navigate?.(`/propuesta-v2?pid=${encodeURIComponent(json.pid)}`, { proposal: json.proposal || null });
+        return; // no escondemos overlay porque navegamos
+      }
+
+      if (json.mode === 'MANUAL') {
+        hideLoading();
+        bridge?.gtm?.('cotizador_v2_manual', { reason: json.reason || flow_reason });
+        setShowContactModal(true);
+        return;
+      }
+
+      if (json.mode === 'BLOCKED') {
+        hideLoading();
+        bridge?.gtm?.('cotizador_v2_blocked', { reason: json.reason || flow_reason });
+        setShowError(true);
+        return;
+      }
+
+      // Fallback: si no viene mode, usa modal existente
+      hideLoading();
       setShowResultModal(true);
+
+    } catch (err) {
+      console.error(err);
+      hideLoading();
+      alert('Ocurrió un error al procesar tu propuesta. Intenta de nuevo.');
     }
   };
 
@@ -929,6 +1040,16 @@ function App() {
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay de carga global */}
+      {loading && (
+        <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-11 h-11 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto mb-3"></div>
+            <div className="font-extrabold text-slate-900">{loadingMsg}</div>
           </div>
         </div>
       )}
