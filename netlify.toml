@@ -2,16 +2,15 @@
   command = "npm run build"
   publish = "dist"
 
-# SPA fallback por si un día agregas routing
-[[redirects]]
-  from = "/*"
-  to   = "/index.html"
-  status = 200
-  force = true
-
-# Proxy de APIs del widget → sitio de funciones (AJUSTA si tu dominio de funciones cambia)
+# Proxy de APIs del widget → sitio de funciones
 [[redirects]]
   from = "/api/*"
   to   = "https://solarya1.netlify.app/api/:splat"
   status = 200
   force = true
+
+# Fallback SPA global (deja esto al final)
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
