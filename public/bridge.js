@@ -1,43 +1,38 @@
-// public/bridge.js
 (function () {
-  const PARENT_ORIGIN = '*';
+  const g = window;
 
-  // Auto-resize hacia el padre
-  try {
-    const ro = new ResizeObserver(() => {
-      const h = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
-      parent.postMessage({ type: 'resize', height: h }, PARENT_ORIGIN);
-    });
-    ro.observe(document.documentElement);
-  } catch {}
-
-  // UTMs recibidas del padre → guarda espejo (por si el form las ocupa)
-  let utmsParent = {};
-  window.addEventListener('message', (e) => {
-    const msg = e.data || {};
-    if (msg.type === 'utms' && msg.utms && typeof msg.utms === 'object') {
-      utmsParent = msg.utms || {};
-      try { localStorage.setItem('utms_parent', JSON.stringify(utmsParent)); } catch {}
+  function pickUTMsFromReferrer() {
+    try {
+      const url = new URL(document.referrer || '');
+      const allow = new Set(['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid']);
+      const out = {};
+      for (const [k, v] of url.searchParams.entries()) {
+        if (allow.has(k)) out[k] = v;
+      }
+      return out;
+    } catch {
+      return {};
     }
-  });
+  }
 
-  // Helpers expuestos
-  window.SYBridge = {
-    gtm(event, data = {}) {
-      try { parent.postMessage({ type: 'gtm', event, data }, PARENT_ORIGIN); } catch {}
-    },
-    navigate(path, payload = null) {
-      try { parent.postMessage({ type: 'navigate', path, payload }, PARENT_ORIGIN); } catch {}
-    },
+  const SYBridge = {
     getParentUtms() {
+      return pickUTMsFromReferrer();
+    },
+    navigate(path, data) {
+      try { parent.postMessage({ type: 'navigate', path, data }, '*'); } catch {}
       try {
-        return utmsParent && Object.keys(utmsParent).length
-          ? utmsParent
-          : JSON.parse(localStorage.getItem('utms_parent') || '{}');
-      } catch { return {}; }
+        if (typeof path === 'string') window.location.href = path;
+      } catch {}
+    },
+    gtm(event, payload) {
+      try { parent.postMessage({ type: 'gtm', event, payload }, '*'); } catch {}
+      try {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ event, ...payload });
+      } catch {}
     }
   };
 
-  // Señal de “ready” (opcional)
-  try { parent.postMessage({ type: 'child_ready' }, PARENT_ORIGIN); } catch {}
+  g.SYBridge = SYBridge;
 })();
