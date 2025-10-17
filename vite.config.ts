@@ -3,11 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    exclude: ['lucide-react'],
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
+  build: { outDir: 'dist', sourcemap: true },
+  optimizeDeps: { exclude: ['lucide-react'] },
 });
+
