@@ -3,6 +3,9 @@ import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock } from '
 
 type Step = 1 | 2 | 3;
 
+// ⬇️ Base de tu API (defínela en Netlify como VITE_API_BASE)
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
+
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [fileUploaded, setFileUploaded] = useState(false);
@@ -50,10 +53,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
 
-  // === API base configurable por env ===
-  const RAW_API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
-  const API_BASE = RAW_API_BASE.replace(/\/$/, '');
-
   // Track if user came from "no CFE but planning" flow
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
   const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
@@ -91,7 +90,7 @@ function App() {
       setCargas([...cargas, carga]);
     } else {
       setCargas(cargas.filter(c => c !== carga));
-      // Clear details for this carga
+      // Clear details for esta carga
       const newDetalles = { ...cargaDetalles };
       if (carga === 'ev') delete newDetalles.ev;
       if (carga === 'minisplit') delete newDetalles.minisplit;
@@ -160,7 +159,7 @@ function App() {
     }
   };
 
-  // ⬇️ NUEVO handleSubmit con OCR + cotización + navegación vía bridge
+  // ⬇️ Submit con OCR + cotización + navegación vía bridge + API_BASE
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
