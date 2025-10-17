@@ -4,14 +4,8 @@
 
 # SPA fallback por si un día agregas routing
 [[redirects]]
-  from = "/cotizador-v2"
-  to   = "/cotizador-v2/index.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/cotizador-v2/*"
-  to   = "/cotizador-v2/index.html"
+  from = "/*"
+  to   = "/index.html"
   status = 200
   force = true
 
