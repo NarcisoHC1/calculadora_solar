@@ -2,15 +2,35 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SolarYa</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Catcher de errores para no ver pantalla en blanco -->
+    <style>#boot-error{white-space:pre-wrap;color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;padding:12px;border-radius:8px;margin:16px;display:none}</style>
+    <script>
+      window.addEventListener('error', (e) => {
+        const el = document.getElementById('boot-error');
+        if (!el) return;
+        el.style.display = 'block';
+        el.textContent = 'JS runtime error:\\n' + (e.error?.stack || e.message || e.toString());
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        const el = document.getElementById('boot-error');
+        if (!el) return;
+        el.style.display = 'block';
+        el.textContent = 'Unhandled promise rejection:\\n' + (e.reason?.stack || e.reason || '');
+      });
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="boot-error"></div>
+    <div id="root">Cargando app…</div>
+
     <!-- Bridge para comunicar el widget con el sitio padre -->
     <script src="./bridge.js"></script>
-    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Vite bundle -->
+    <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>
