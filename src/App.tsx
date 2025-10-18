@@ -1018,3 +1018,139 @@ function App() {
                         value={telefono}
                         onChange={(e) => setTelefono(normalizePhone(e.target.value))}
                         onBlur={() => setTelefonoError(isValidPhone(telefono) ? '' : 'Ingresa un WhatsApp de 10 dígitos.')}
+                        placeholder="5512345678"
+                        required
+                        maxLength={10}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
+                      />
+                      {telefonoError && <p className="text-xs text-red-600 mt-1">{telefonoError}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Casa o negocio
+                      </label>
+                      <select
+                        value={uso}
+                        onChange={(e) => setUso(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
+                      >
+                        <option value="">Selecciona</option>
+                        <option>Casa</option>
+                        <option>Negocio</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={privacidad}
+                        onChange={(e) => setPrivacidad(e.target.checked)}
+                        required
+                        className="w-5 h-5 border-slate-300 rounded focus:ring-2 mt-0.5"
+                        style={{ accentColor: '#3cd070' }}
+                      />
+                      <span className="text-sm text-slate-700 group-hover:text-slate-900">
+                        He leído y acepto el <a href="#" className="underline" style={{ color: '#3cd070' }}>aviso de privacidad</a>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-slate-600 flex-shrink-0" />
+                    <p className="text-sm text-slate-700">
+                      Nunca compartimos tus datos con terceros. Tu información está segura con nosotros.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-6 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span>Atrás</span>
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all"
+                  style={{ background: '#ff5c36' }}
+                >
+                  <span>Calcular mi ahorro</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showResultModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowResultModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#3cd07022' }}>
+                <CheckCircle2 className="w-10 h-10" style={{ color: '#3cd070' }} />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Propuesta lista!</h3>
+              <p className="text-slate-600 mb-6">
+                Aquí mostraríamos tu simulación de ahorro, equipo sugerido y ROI estimado.
+              </p>
+              <button
+                onClick={() => setShowResultModal(false)}
+                className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
+                style={{ background: '#3cd070' }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showContactModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowContactModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#1e3a2b22' }}>
+                <CheckCircle2 className="w-10 h-10" style={{ color: '#1e3a2b' }} />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Gracias por tu interés!</h3>
+              <p className="text-slate-600 mb-6">
+                Te contactaremos en menos de 24h para preparar la mejor propuesta personalizada para tu caso.
+              </p>
+              <button
+                onClick={() => setShowContactModal(false)}
+                className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
+                style={{ background: '#1e3a2b' }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay */}
+      {loading && (
+        <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-11 h-11 border-4 border-slate-200 rounded-full animate-spin mx-auto mb-3"
+                 style={{ borderTopColor: '#1e3a2b' }}></div>
+            <div className="font-extrabold text-slate-900">{loadingMsg}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
