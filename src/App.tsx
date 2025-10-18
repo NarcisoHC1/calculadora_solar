@@ -3,19 +3,26 @@ import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock } from '
 
 type Step = 1 | 2 | 3;
 
-// ⬇️ Base de tu API (defínela en Netlify como VITE_API_BASE)
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
+const MAX_FILES = 2;
+const MAX_FILE_MB = 10;
 
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [fileUploaded, setFileUploaded] = useState(false);
-  const [fileName, setFileName] = useState('');
+
+  // Subida: máx 2 archivos (pdf/jpg/png)
+  const [files, setFiles] = useState<File[]>([]);
+  const fileUploaded = files.length > 0;
+  const [fileNames, setFileNames] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState('');
+  const [ocrWarning, setOcrWarning] = useState('');
+
   const [showManual, setShowManual] = useState(false);
 
   // Step 1 fields
   const [hasCFE, setHasCFE] = useState('');
   const [planCFE, setPlanCFE] = useState('');
-  const [usoCasaNegocio, setUsoCasaNegocio] = useState(''); // For no CFE but planning
+  const [usoCasaNegocio, setUsoCasaNegocio] = useState(''); // cuando no hay CFE pero planea contratar
   const [numPersonasCasa, setNumPersonasCasa] = useState('');
   const [rangoPersonasNegocio, setRangoPersonasNegocio] = useState('');
   const [pago, setPago] = useState('');
@@ -25,7 +32,7 @@ function App() {
   const [expand, setExpand] = useState('');
   const [showError, setShowError] = useState(false);
 
-  // Step 2 fields
+  // Step 2 fields (sin área de techo)
   const [cargas, setCargas] = useState<string[]>([]);
   const [cargaDetalles, setCargaDetalles] = useState<{
     ev?: { modelo: string; km: string };
@@ -33,27 +40,23 @@ function App() {
   }>({});
   const [tipoInmueble, setTipoInmueble] = useState('');
   const [pisos, setPisos] = useState('');
-  const [ancho, setAncho] = useState('');
-  const [largo, setLargo] = useState('');
   const [notas, setNotas] = useState('');
 
-  // Step 3 fields
+  // Step 3 fields (sin tenencia)
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [telefono, setTelefono] = useState('');
   const [uso, setUso] = useState('');
-  const [tenencia, setTenencia] = useState('');
   const [privacidad, setPrivacidad] = useState(false);
 
   const [showResultModal, setShowResultModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
-  // NUEVO: manejo de archivo para OCR, y overlay de carga
-  const [fileObj, setFileObj] = useState<File | null>(null);
+  // Overlay
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
 
-  // Track if user came from "no CFE but planning" flow
+  // Flujos
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
   const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
 
@@ -68,21 +71,44 @@ function App() {
     try { window.parent.postMessage({ type: 'status', status: 'done' }, '*'); } catch {}
   }
 
+  // --- Upload múltiple (máx 2) con validación ---
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileObj(file);                // ← guardamos el File real para OCR
-      setFileName(file.name);
-      setFileUploaded(true);
-      setShowManual(false);
+    const selected = Array.from(e.target.files || []);
+    let valid: File[] = [];
+    let error = '';
+
+    for (const f of selected) {
+      const okType = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'].includes(f.type);
+      if (!okType) { error = 'Formato no soportado. Sube PDF o imagen (JPG/PNG).'; continue; }
+      if (f.size > MAX_FILE_MB * 1024 * 1024) { error = `Cada archivo debe pesar ≤ ${MAX_FILE_MB}MB.`; continue; }
+      valid.push(f);
     }
+
+    const next = [...files, ...valid].slice(0, MAX_FILES);
+    if (error) setUploadError(error); else setUploadError('');
+
+    setFiles(next);
+    setFileNames(next.map(f => f.name));
+
+    // Si el usuario sube recibo, forzamos flujo CFE y desactivamos manual
+    setShowManual(false);
+    setHasCFE('si');
+    setPlanCFE('');
+    setOcrWarning('');
   };
 
-  const handleManualEntry = () => {
+  const removeFileAt = (idx: number) => {
+    const next = files.filter((_, i) => i !== idx);
+    setFiles(next);
+    setFileNames(next.map(f => f.name));
+  };
+
+  const startManual = () => {
     setShowManual(true);
-    setFileUploaded(false);
-    setFileObj(null);
-    setFileName('');
+    setFiles([]);
+    setFileNames([]);
+    setUploadError('');
+    setOcrWarning('');
   };
 
   const handleCargaToggle = (carga: string, checked: boolean) => {
@@ -90,7 +116,6 @@ function App() {
       setCargas([...cargas, carga]);
     } else {
       setCargas(cargas.filter(c => c !== carga));
-      // Clear details for esta carga
       const newDetalles = { ...cargaDetalles };
       if (carga === 'ev') delete newDetalles.ev;
       if (carga === 'minisplit') delete newDetalles.minisplit;
@@ -106,7 +131,6 @@ function App() {
     if (hasCFE === 'no') {
       if (!planCFE) return false;
       if (planCFE === 'no' || planCFE === 'aislado') return true;
-      // If planning to get CFE
       if (planCFE === 'si') {
         if (!usoCasaNegocio) return false;
         if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
@@ -128,7 +152,6 @@ function App() {
   const canProceedStep2 = () => {
     if (!tipoInmueble) return false;
     if (['2', '4', '5', '8'].includes(tipoInmueble) && !pisos) return false;
-    if (!ancho || !largo) return false;
 
     // Validate carga details
     if (cargas.includes('ev')) {
@@ -137,93 +160,160 @@ function App() {
     if (cargas.includes('minisplit')) {
       if (!cargaDetalles.minisplit?.cantidad || !cargaDetalles.minisplit?.horas) return false;
     }
-
     return true;
   };
 
+  // Navegación con lógica corregida
   const nextStep = () => {
-    if (currentStep === 1 && isNoCFENoPlanning) {
-      setCurrentStep(3);
-    } else if (currentStep === 1 && isNoCFEPlanningFlow) {
-      setCurrentStep(3);
-    } else if (currentStep < 3) {
-      setCurrentStep((currentStep + 1) as Step);
+    if (currentStep === 1) {
+      if (fileUploaded) { setCurrentStep(2); return; } // si sube recibo, siempre pasa a 2
+      if (isNoCFENoPlanning || isNoCFEPlanningFlow) { setCurrentStep(3); return; }
     }
+    if (currentStep < 3) setCurrentStep((currentStep + 1) as Step);
   };
 
   const prevStep = () => {
-    if (currentStep === 3 && (isNoCFENoPlanning || isNoCFEPlanningFlow)) {
-      setCurrentStep(1);
-    } else if (currentStep > 1) {
-      setCurrentStep((currentStep - 1) as Step);
-    }
+    if (currentStep > 1) setCurrentStep((currentStep - 1) as Step);
   };
 
-  // ⬇️ Submit con OCR + cotización + navegación vía bridge + API_BASE
+  // Helpers: PDF→IMG y Blob→dataURL
+  function blobToDataURL(file: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ''));
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function fileToDataURLs(file: File): Promise<string[]> {
+    if (file.type.startsWith('image/')) {
+      const b64 = await blobToDataURL(file);
+      return [b64];
+    }
+    if (file.type === 'application/pdf') {
+      const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs');
+      (pdfjsLib as any).GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs';
+
+      const buf = await file.arrayBuffer();
+      const loadingTask = (pdfjsLib as any).getDocument({ data: buf });
+      const pdf = await loadingTask.promise;
+
+      const maxPages = Math.min(pdf.numPages, 2);
+      const out: string[] = [];
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        out.push(canvas.toDataURL('image/jpeg', 0.85));
+      }
+      return out;
+    }
+    return [];
+  }
+
+  // SUBMIT
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Skip tenencia validation for no CFE planning flow
-    const skipTenencia = isNoCFEPlanningFlow || isNoCFENoPlanning;
-    if (!nombre || !correo || !telefono || !uso || (!skipTenencia && !tenencia) || !privacidad) {
-      return;
-    }
+    if (!nombre || !correo || !telefono || !uso || !privacidad) return;
 
     const highValue = parseFloat(pago || '0') >= 50000;
     const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa);
     const noCFEPlan = isNoCFENoPlanning;
 
-    // Flow que también guardamos en backend para status
     let flow: 'AUTO' | 'MANUAL' | 'BLOCKED' = 'AUTO';
     let flow_reason = 'ok';
     if (industrialTariff) { flow = 'MANUAL'; flow_reason = 'tariff_business'; }
     else if (highValue)   { flow = 'MANUAL'; flow_reason = 'high_monthly'; }
     else if (noCFEPlan)   { flow = 'MANUAL'; flow_reason = 'no_cfe'; }
 
-    // 1) OCR si hay archivo
+    // 1) OCR (si hay archivos) con fallback automático a manual
     let ocr: any = null;
+    let ocrQuality = 0;
     try {
-      if (fileObj) {
+      if (files.length) {
         showLoading('Procesando tu recibo…');
-        const fd = new FormData();
-        fd.append('file', fileObj);
-        const ocrRes = await fetch(`${API_BASE}/api/ocr_cfe_v2`, { method: 'POST', body: fd });
-        const ocrJson = await ocrRes.json().catch(() => null);
-        if (ocrRes.ok && (ocrJson?.ok || ocrJson?.data || ocrJson?.tarifa)) {
-          ocr = ocrJson.data || ocrJson;
+
+        let imgs: string[] = [];
+        for (const f of files) {
+          const arr = await fileToDataURLs(f);
+          imgs = imgs.concat(arr);
+        }
+        imgs = imgs.slice(0, 3); // máx 3
+
+        if (imgs.length) {
+          const ocrRes = await fetch(`${API_BASE}/api/ocr_cfe_v2`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: imgs, filename: fileNames.join(', ') })
+          });
+          const ocrJson = await ocrRes.json().catch(() => null);
+          if (ocrRes.ok && ocrJson) {
+            ocr = ocrJson.data || null;
+            ocrQuality = (ocrJson.quality ?? 0);
+
+            // Autocompletar si útil
+            const overrides = ocrJson?.form_overrides || {};
+            if (!tarifa && overrides.tarifa) setTarifa(overrides.tarifa);
+            if (!cp && overrides.cp) setCP(overrides.cp);
+            if (!pago && (ocr?.energia_mxn || (ocr as any)?.total_pagar_mxn)) {
+              const guess = Math.round((ocr as any).energia_mxn || (ocr as any).total_pagar_mxn);
+              if (guess > 0) setPago(String(guess));
+            }
+          }
         }
       }
     } catch (err) {
       console.warn('OCR failed, continuing without it', err);
     }
 
-    // 2) Preparar payload para cotización
+    // Fallback a manual si OCR pobre o sin datos mínimos
+    const needsManual =
+      files.length > 0 && (
+        !ocr ||
+        ocrQuality < 0.6 ||
+        ((!tarifa && !(ocr as any)?.tarifa) && (!cp && !(ocr as any)?.codigo_postal) && !pago)
+      );
+
+    if (needsManual) {
+      hideLoading();
+      setCurrentStep(1);
+      setShowManual(true);
+      setHasCFE('si');
+      setOcrWarning('No pudimos leer bien tu recibo. Sube una foto más nítida (ambas páginas) o captura los datos manualmente.');
+      return;
+    }
+
+    // 2) Preparar payload para cotización (sin roof_area_m2, sin tenencia)
     showLoading('Calculando tu propuesta…');
 
-    const roof_area_m2 = (ancho && largo) ? (parseFloat(ancho) * parseFloat(largo)) : 0;
     const loads = cargaDetalles || {};
-
     const bridge = (window as any).SYBridge;
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
 
-    const formPayload = {
+    const formPayload: any = {
       nombre,
       email: correo,
       telefono,
       uso,
-      tenencia,
       periodicidad: periodo || 'bimestral',
       pago_promedio_mxn: parseFloat(pago || '0') || 0,
       cp,
-      tarifa: tarifa || (ocr?.tarifa || ''),
+      tarifa: tarifa || ((ocr as any)?.tarifa || ''),
       tipo_inmueble: tipoInmueble || '',
       pisos: parseInt(pisos || '0', 10) || 0,
-      roof_area_m2,
       notes: notas || '',
       loads,
       has_cfe: hasCFE !== 'no',
       plans_cfe: planCFE !== 'no' && planCFE !== 'aislado'
+      // roof_area_m2: omitido
+      // tenencia: omitido
     };
 
     try {
@@ -238,12 +328,10 @@ function App() {
         throw new Error(json?.error || 'cotizacion_error');
       }
 
-      // 3) Ruteo según respuesta del backend
       if (json.mode === 'AUTO' && json.pid) {
         bridge?.gtm?.('cotizador_v2_auto', { pid: json.pid });
-        // Navegar en el sitio padre (Webflow) a /propuesta-v2 con payload
         bridge?.navigate?.(`/propuesta-v2?pid=${encodeURIComponent(json.pid)}`, { proposal: json.proposal || null });
-        return; // no escondemos overlay porque navegamos
+        return;
       }
 
       if (json.mode === 'MANUAL') {
@@ -260,7 +348,6 @@ function App() {
         return;
       }
 
-      // Fallback: si no viene mode, usa modal existente
       hideLoading();
       setShowResultModal(true);
 
@@ -270,8 +357,6 @@ function App() {
       alert('Ocurrió un error al procesar tu propuesta. Intenta de nuevo.');
     }
   };
-
-  const area = ancho && largo ? (parseFloat(ancho) * parseFloat(largo)).toFixed(1) : '0';
 
   useEffect(() => {
     if (!showManual) return;
@@ -284,11 +369,11 @@ function App() {
   const progressPercentage = currentStep === 1 ? 33 : currentStep === 2 ? 66 : 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 py-8 px-4">
+    <div className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-extrabold" style={{ color: '#1e3a2b' }}>
             Calcula tu ahorro con SolarYa
           </h1>
           <p className="text-slate-600">Completa 3 sencillos pasos para obtener tu propuesta de sistema de paneles solares</p>
@@ -302,8 +387,11 @@ function App() {
           </div>
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500 ease-out"
-              style={{ width: `${progressPercentage}%` }}
+              className="h-full transition-all duration-500 ease-out"
+              style={{
+                width: `${progressPercentage}%`,
+                backgroundImage: 'linear-gradient(90deg, #3cd070, #1e3a2b)'
+              }}
             />
           </div>
         </div>
@@ -315,42 +403,61 @@ function App() {
             <div className="space-y-6">
               {!showManual ? (
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-2">Sube tu recibo de CFE</h2>
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: '#1e3a2b' }}>Sube tu recibo de CFE</h2>
                   <p className="text-slate-600 mb-6">Te ayudamos a prellenar tus datos automáticamente</p>
 
-                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-emerald-400 transition-colors">
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:shadow-sm transition-colors">
                     <input
                       type="file"
                       id="file-upload"
                       className="hidden"
                       accept=".pdf,.jpg,.jpeg,.png"
+                      multiple
                       onChange={handleFileUpload}
                     />
                     <label htmlFor="file-upload" className="cursor-pointer">
                       <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                          <Upload className="w-8 h-8 text-emerald-600" />
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: '#3cd07022' }}>
+                          <Upload className="w-8 h-8" style={{ color: '#3cd070' }} />
                         </div>
                         <div>
                           <p className="text-lg font-semibold text-slate-900 mb-1">
-                            Arrastra tu archivo o haz clic para subir
+                            Arrastra tu archivo o haz clic para subir (máx. 2)
                           </p>
-                          <p className="text-sm text-slate-500">PDF, JPG o PNG (máx. 10MB)</p>
+                          <p className="text-sm text-slate-500">PDF, JPG o PNG • Máx. 10MB c/u</p>
                         </div>
                       </div>
                     </label>
 
                     {fileUploaded && (
-                      <div className="mt-4 flex items-center justify-center gap-2 text-emerald-600">
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span className="text-sm font-medium">{fileName}</span>
+                      <div className="mt-4 flex flex-col items-center gap-2" style={{ color: '#3cd070' }}>
+                        {fileNames.map((n, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5" />
+                            <span className="text-sm font-medium">{n}</span>
+                            <button
+                              onClick={() => removeFileAt(i)}
+                              className="text-xs underline text-slate-500 hover:text-slate-700"
+                            >
+                              quitar
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
-                    <p className="text-sm text-blue-900">
-                      <strong>Tip:</strong> Recomendamos subir ambas páginas de tu recibo (frente y reverso) para una propuesta más precisa.
+                  {uploadError && <div className="mt-3 text-sm text-red-600">{uploadError}</div>}
+                  {ocrWarning && (
+                    <div className="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                      {ocrWarning}{' '}
+                      <button type="button" className="underline" onClick={startManual}>Capturar manualmente</button>
+                    </div>
+                  )}
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
+                    <p className="text-sm text-slate-700">
+                      <strong>Tip:</strong> Sube ambas páginas (frente y reverso) para mayor precisión.
                     </p>
                   </div>
 
@@ -364,7 +471,7 @@ function App() {
                   </div>
 
                   <button
-                    onClick={handleManualEntry}
+                    onClick={startManual}
                     className="w-full py-3 px-4 bg-white border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-all"
                   >
                     Capturar datos manualmente
@@ -373,7 +480,7 @@ function App() {
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-slate-900">Captura manual</h2>
+                    <h2 className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>Captura manual</h2>
                     <button
                       onClick={() => setShowManual(false)}
                       className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
@@ -397,7 +504,8 @@ function App() {
                           setNumPersonasCasa('');
                           setRangoPersonasNegocio('');
                         }}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
                       >
                         <option value="">Selecciona una opción</option>
                         <option value="si">Sí</option>
@@ -418,11 +526,13 @@ function App() {
                             setNumPersonasCasa('');
                             setRangoPersonasNegocio('');
                           }}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                          style={{ outlineColor: '#3cd070' }}
                         >
                           <option value="">Selecciona una opción</option>
                           <option value="si">Sí</option>
-                          <option value="no">No, quiero instalar un sistema aislado</option>
+                          <option value="aislado">No, quiero instalar un sistema aislado</option>
+                          <option value="no">No</option>
                         </select>
                       </div>
                     )}
@@ -440,7 +550,8 @@ function App() {
                               setNumPersonasCasa('');
                               setRangoPersonasNegocio('');
                             }}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                            style={{ outlineColor: '#3cd070' }}
                           >
                             <option value="">Selecciona una opción</option>
                             <option value="casa">Casa</option>
@@ -459,7 +570,8 @@ function App() {
                               onChange={(e) => setNumPersonasCasa(e.target.value)}
                               placeholder="Ej. 4"
                               min="1"
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
                             />
                           </div>
                         )}
@@ -472,7 +584,8 @@ function App() {
                             <select
                               value={rangoPersonasNegocio}
                               onChange={(e) => setRangoPersonasNegocio(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
                             >
                               <option value="">Selecciona un rango</option>
                               <option value="1-10">1-10</option>
@@ -497,7 +610,8 @@ function App() {
                               value={pago}
                               onChange={(e) => setPago(e.target.value)}
                               placeholder="Ej. 3,200"
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
                             />
                             <p className="text-xs text-slate-500 mt-1">
                               Si usas <em>diablitos</em>, este pago no refleja tu consumo real
@@ -510,7 +624,8 @@ function App() {
                             <select
                               value={periodo}
                               onChange={(e) => setPeriodo(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
                             >
                               <option value="bimestral">Bimestral</option>
                               <option value="mensual">Mensual</option>
@@ -526,7 +641,8 @@ function App() {
                             <select
                               value={tarifa}
                               onChange={(e) => setTarifa(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
                             >
                               <option value="">Selecciona tu tarifa</option>
                               <option>1</option>
@@ -554,7 +670,8 @@ function App() {
                               onChange={(e) => setCP(e.target.value)}
                               placeholder="Ej. 06100"
                               maxLength={5}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
                             />
                           </div>
                         </div>
@@ -566,7 +683,8 @@ function App() {
                           <select
                             value={expand}
                             onChange={(e) => setExpand(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                            style={{ outlineColor: '#3cd070' }}
                           >
                             <option value="">Selecciona una opción</option>
                             <option>Sí</option>
@@ -592,7 +710,8 @@ function App() {
                 <button
                   onClick={nextStep}
                   disabled={!canProceedStep1()}
-                  className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  style={{ background: '#3cd070' }}
                 >
                   <span>Siguiente</span>
                   <ArrowRight className="w-5 h-5" />
@@ -601,11 +720,11 @@ function App() {
             </div>
           )}
 
-          {/* Step 2: Cargas e Inmueble */}
+          {/* Step 2: Cargas e Inmueble (sin área de techo) */}
           {currentStep === 2 && (
             <div className="space-y-8">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Detalles del inmueble</h2>
+                <h2 className="text-2xl font-bold mb-2" style={{ color: '#1e3a2b' }}>Detalles del inmueble</h2>
                 <p className="text-slate-600 mb-6">Ayúdanos a entender mejor tus necesidades</p>
 
                 <div className="space-y-6">
@@ -628,7 +747,8 @@ function App() {
                               type="checkbox"
                               checked={cargas.includes(item.value)}
                               onChange={(e) => handleCargaToggle(item.value, e.target.checked)}
-                              className="w-5 h-5 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                              className="w-5 h-5 border-slate-300 rounded focus:ring-2"
+                              style={{ accentColor: '#3cd070' }}
                             />
                             <span className="text-sm text-slate-700 group-hover:text-slate-900 font-medium">{item.label}</span>
                           </label>
@@ -643,7 +763,8 @@ function App() {
                                     ...cargaDetalles,
                                     ev: { ...cargaDetalles.ev, modelo: e.target.value, km: cargaDetalles.ev?.km || '' }
                                   })}
-                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
                                 >
                                   <option value="">Selecciona el modelo</option>
                                   <option value="tesla-model3">Tesla Model 3</option>
@@ -665,7 +786,8 @@ function App() {
                                     ev: { ...cargaDetalles.ev, modelo: cargaDetalles.ev?.modelo || '', km: e.target.value }
                                   })}
                                   placeholder="Ej. 40"
-                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
                                 />
                               </div>
                             </div>
@@ -684,7 +806,8 @@ function App() {
                                   })}
                                   placeholder="Ej. 2"
                                   min="1"
-                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
                                 />
                               </div>
                               <div>
@@ -698,7 +821,8 @@ function App() {
                                   })}
                                   placeholder="Ej. 6"
                                   step="0.5"
-                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
                                 />
                               </div>
                             </div>
@@ -716,7 +840,8 @@ function App() {
                       <select
                         value={tipoInmueble}
                         onChange={(e) => setTipoInmueble(e.target.value)}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
                       >
                         <option value="">Selecciona una opción</option>
                         <option value="1">Casa o negocio independiente de 1-2 pisos</option>
@@ -741,95 +866,11 @@ function App() {
                           onChange={(e) => setPisos(e.target.value)}
                           placeholder="Ej. 8"
                           min="1"
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                          style={{ outlineColor: '#3cd070' }}
                         />
                       </div>
                     )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-3">
-                      Área de tu techo
-                    </label>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-xs text-slate-600 mb-1">Ancho (m)</label>
-                        <input
-                          type="number"
-                          value={ancho}
-                          onChange={(e) => setAncho(e.target.value)}
-                          placeholder="Ej. 6.5"
-                          step="0.1"
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-600 mb-1">Largo (m)</label>
-                        <input
-                          type="number"
-                          value={largo}
-                          onChange={(e) => setLargo(e.target.value)}
-                          placeholder="Ej. 10"
-                          step="0.1"
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Visual representation of roof area */}
-                    <div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-6">
-                      <div className="flex items-center justify-center" style={{ minHeight: '200px' }}>
-                        {parseFloat(ancho) > 0 && parseFloat(largo) > 0 ? (
-                          <div className="relative">
-                            <svg width="300" height="200" viewBox="0 0 300 200">
-                              {/* Rectangle representing the roof */}
-                              <rect
-                                x="50"
-                                y="50"
-                                width={Math.min(200, parseFloat(ancho) * 15)}
-                                height={Math.min(100, parseFloat(largo) * 8)}
-                                fill="#d1fae5"
-                                stroke="#10b981"
-                                strokeWidth="2"
-                                rx="4"
-                              />
-                              {/* Width label */}
-                              <text
-                                x={50 + Math.min(200, parseFloat(ancho) * 15) / 2}
-                                y="40"
-                                textAnchor="middle"
-                                fill="#059669"
-                                fontSize="14"
-                                fontWeight="600"
-                              >
-                                {ancho} m
-                              </text>
-                              {/* Height label */}
-                              <text
-                                x="35"
-                                y={50 + Math.min(100, parseFloat(largo) * 8) / 2}
-                                textAnchor="middle"
-                                fill="#059669"
-                                fontSize="14"
-                                fontWeight="600"
-                                transform={`rotate(-90, 35, ${50 + Math.min(100, parseFloat(largo) * 8) / 2})`}
-                              >
-                                {largo} m
-                              </text>
-                            </svg>
-                            <div className="text-center mt-2">
-                              <p className="text-sm text-slate-600">
-                                Área total: <strong className="text-emerald-600 text-lg">{area} m²</strong>
-                              </p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-center text-slate-400">
-                            <p className="text-sm">Ingresa las medidas para ver la visualización</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
                   </div>
 
                   <div>
@@ -842,7 +883,8 @@ function App() {
                       onChange={(e) => setNotas(e.target.value)}
                       placeholder="Ej. Hay sombras por las tardes; antenas en el techo, etc."
                       rows={4}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all resize-none"
+                      style={{ outlineColor: '#3cd070' }}
                     />
                   </div>
                 </div>
@@ -859,7 +901,8 @@ function App() {
                 <button
                   onClick={nextStep}
                   disabled={!canProceedStep2()}
-                  className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  style={{ background: '#3cd070' }}
                 >
                   <span>Siguiente</span>
                   <ArrowRight className="w-5 h-5" />
@@ -868,11 +911,11 @@ function App() {
             </div>
           )}
 
-          {/* Step 3: Contacto */}
+          {/* Step 3: Contacto (sin propia/rentada) */}
           {currentStep === 3 && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Información de contacto</h2>
+                <h2 className="text-2xl font-bold mb-2" style={{ color: '#1e3a2b' }}>Información de contacto</h2>
                 <p className="text-slate-600 mb-6">Último paso para recibir tu propuesta personalizada</p>
 
                 <div className="space-y-5">
@@ -887,7 +930,8 @@ function App() {
                         onChange={(e) => setNombre(e.target.value)}
                         placeholder="Ej. María López"
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
                       />
                     </div>
                     <div>
@@ -900,7 +944,8 @@ function App() {
                         onChange={(e) => setCorreo(e.target.value)}
                         placeholder="tunombre@email.com"
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
                       />
                     </div>
                   </div>
@@ -916,7 +961,8 @@ function App() {
                         onChange={(e) => setTelefono(e.target.value)}
                         placeholder="55 1234 5678"
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
                       />
                     </div>
                     <div>
@@ -927,7 +973,8 @@ function App() {
                         value={uso}
                         onChange={(e) => setUso(e.target.value)}
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
                       >
                         <option value="">Selecciona</option>
                         <option>Casa</option>
@@ -936,25 +983,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Only show tenencia question if NOT in the no CFE planning flow */}
-                  {!isNoCFEPlanningFlow && !isNoCFENoPlanning && (
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        Tu casa es propia o rentada?
-                      </label>
-                      <select
-                        value={tenencia}
-                        onChange={(e) => setTenencia(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                      >
-                        <option value="">Selecciona</option>
-                        <option>Propia</option>
-                        <option>Rentada</option>
-                      </select>
-                    </div>
-                  )}
-
                   <div className="pt-4">
                     <label className="flex items-start gap-3 cursor-pointer group">
                       <input
@@ -962,10 +990,11 @@ function App() {
                         checked={privacidad}
                         onChange={(e) => setPrivacidad(e.target.checked)}
                         required
-                        className="w-5 h-5 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 mt-0.5"
+                        className="w-5 h-5 border-slate-300 rounded focus:ring-2 mt-0.5"
+                        style={{ accentColor: '#3cd070' }}
                       />
                       <span className="text-sm text-slate-700 group-hover:text-slate-900">
-                        He leído y acepto el <a href="#" className="text-emerald-600 hover:underline">aviso de privacidad</a>
+                        He leído y acepto el <a href="#" className="underline" style={{ color: '#3cd070' }}>aviso de privacidad</a>
                       </span>
                     </label>
                   </div>
@@ -990,7 +1019,8 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold rounded-xl hover:from-emerald-700 hover:to-emerald-600 shadow-lg hover:shadow-xl transition-all"
+                  className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all"
+                  style={{ background: '#ff5c36' }}
                 >
                   <span>Calcular mi ahorro</span>
                   <ArrowRight className="w-5 h-5" />
@@ -999,7 +1029,6 @@ function App() {
             </form>
           )}
         </div>
-
       </div>
 
       {/* Modals */}
@@ -1007,8 +1036,8 @@ function App() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowResultModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
             <div className="text-center">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#3cd07022' }}>
+                <CheckCircle2 className="w-10 h-10" style={{ color: '#3cd070' }} />
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Propuesta lista!</h3>
               <p className="text-slate-600 mb-6">
@@ -1016,7 +1045,8 @@ function App() {
               </p>
               <button
                 onClick={() => setShowResultModal(false)}
-                className="w-full py-3 px-6 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-all"
+                className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
+                style={{ background: '#3cd070' }}
               >
                 Cerrar
               </button>
@@ -1029,8 +1059,8 @@ function App() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowContactModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-10 h-10 text-blue-600" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#1e3a2b22' }}>
+                <CheckCircle2 className="w-10 h-10" style={{ color: '#1e3a2b' }} />
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Gracias por tu interés!</h3>
               <p className="text-slate-600 mb-6">
@@ -1038,7 +1068,8 @@ function App() {
               </p>
               <button
                 onClick={() => setShowContactModal(false)}
-                className="w-full py-3 px-6 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all"
+                className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
+                style={{ background: '#1e3a2b' }}
               >
                 Cerrar
               </button>
@@ -1047,11 +1078,12 @@ function App() {
         </div>
       )}
 
-      {/* Overlay de carga global */}
+      {/* Overlay */}
       {loading && (
         <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center">
-            <div className="w-11 h-11 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto mb-3"></div>
+            <div className="w-11 h-11 border-4 border-slate-200 rounded-full animate-spin mx-auto mb-3"
+                 style={{ borderTopColor: '#1e3a2b' }}></div>
             <div className="font-extrabold text-slate-900">{loadingMsg}</div>
           </div>
         </div>
