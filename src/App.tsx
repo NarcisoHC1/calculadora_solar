@@ -45,7 +45,9 @@ function App() {
   // Step 3 fields (sin tenencia)
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
+  const [correoError, setCorreoError] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [telefonoError, setTelefonoError] = useState('');
   const [uso, setUso] = useState('');
   const [privacidad, setPrivacidad] = useState(false);
 
@@ -58,7 +60,7 @@ function App() {
 
   // Flujos
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
-  const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
+  const isNoCFENoPlanning = hasCFE === 'no' && planCFE === 'aislado'; // solo esta opción existe ya
 
   // Helpers overlay + aviso al padre (iframe)
   function showLoading(msg = 'Calculando tu propuesta…') {
@@ -70,6 +72,15 @@ function App() {
     setLoading(false);
     try { window.parent.postMessage({ type: 'status', status: 'done' }, '*'); } catch {}
   }
+
+  // --- Reset de Step 2 (para arreglar el bug de flujo y no “arrastrar” datos) ---
+  const resetStep2 = () => {
+    setCargas([]);
+    setCargaDetalles({});
+    setTipoInmueble('');
+    setPisos('');
+    setNotas('');
+  };
 
   // --- Upload múltiple (máx 2) con validación ---
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +141,7 @@ function App() {
 
     if (hasCFE === 'no') {
       if (!planCFE) return false;
-      if (planCFE === 'no' || planCFE === 'aislado') return true;
+      if (planCFE === 'aislado') return true; // flujo directo a paso 3
       if (planCFE === 'si') {
         if (!usoCasaNegocio) return false;
         if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
@@ -166,14 +177,35 @@ function App() {
   // Navegación con lógica corregida
   const nextStep = () => {
     if (currentStep === 1) {
-      if (fileUploaded) { setCurrentStep(2); return; } // si sube recibo, siempre pasa a 2
-      if (isNoCFENoPlanning || isNoCFEPlanningFlow) { setCurrentStep(3); return; }
+      // si sube recibo, siempre pasa a 2
+      if (fileUploaded) { setCurrentStep(2); return; }
+      // no CFE: si planea SI (contratar), o quiere sistema independiente -> paso 3
+      if (isNoCFENoPlanning || isNoCFEPlanningFlow) { 
+        // al ir a paso 3 desde un flujo sin CFE, aseguramos que el paso 2 quede limpio
+        resetStep2();
+        setCurrentStep(3); 
+        return; 
+      }
     }
     if (currentStep < 3) setCurrentStep((currentStep + 1) as Step);
   };
 
   const prevStep = () => {
-    if (currentStep > 1) setCurrentStep((currentStep - 1) as Step);
+    if (currentStep === 3) {
+      // Si estamos en flujo de NO CFE (cualquiera de los dos), regresar debe llevar a Paso 1 y limpiar Step 2
+      if (hasCFE === 'no') {
+        resetStep2();
+        setCurrentStep(1);
+        return;
+      }
+      // Si veníamos de flujo con CFE (recibo o manual con CFE), retrocede a Paso 2
+      setCurrentStep(2);
+      return;
+    }
+    if (currentStep === 2) {
+      setCurrentStep(1);
+      return;
+    }
   };
 
   // Helpers: PDF→IMG y Blob→dataURL
@@ -216,11 +248,34 @@ function App() {
     return [];
   }
 
+  // Validaciones de contacto
+  const normalizePhone = (v: string) => v.replace(/\D/g, '').slice(0, 10);
+  const isValidPhone = (v: string) => /^\d{10}$/.test(v);
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.toLowerCase());
+
+  useEffect(() => {
+    if (telefono.length === 0) { setTelefonoError(''); return; }
+    setTelefonoError(isValidPhone(telefono) ? '' : 'Ingresa un WhatsApp de 10 dígitos.');
+  }, [telefono]);
+
+  useEffect(() => {
+    if (correo.length === 0) { setCorreoError(''); return; }
+    setCorreoError(isValidEmail(correo) ? '' : 'Ingresa un correo válido.');
+  }, [correo]);
+
   // SUBMIT
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nombre || !correo || !telefono || !uso || !privacidad) return;
+    // Validaciones duras de contacto
+    const phoneOk = isValidPhone(telefono);
+    const emailOk = isValidEmail(correo);
+
+    if (!nombre || !emailOk || !phoneOk || !uso || !privacidad) {
+      if (!phoneOk) setTelefonoError('Ingresa un WhatsApp de 10 dígitos.');
+      if (!emailOk) setCorreoError('Ingresa un correo válido.');
+      return;
+    }
 
     const highValue = parseFloat(pago || '0') >= 50000;
     const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa);
@@ -311,9 +366,7 @@ function App() {
       notes: notas || '',
       loads,
       has_cfe: hasCFE !== 'no',
-      plans_cfe: planCFE !== 'no' && planCFE !== 'aislado'
-      // roof_area_m2: omitido
-      // tenencia: omitido
+      plans_cfe: planCFE !== 'aislado' // true si sí planea contratar; false si independiente
     };
 
     try {
@@ -358,6 +411,7 @@ function App() {
     }
   };
 
+  // Mostrar aviso de consumo bajo en captura manual con CFE
   useEffect(() => {
     if (!showManual) return;
     const pagoNum = parseFloat(pago);
@@ -390,7 +444,7 @@ function App() {
               className="h-full transition-all duration-500 ease-out"
               style={{
                 width: `${progressPercentage}%`,
-                backgroundImage: 'linear-gradient(90deg, #3cd070, #1e3a2b)'
+                background: '#3cd070' // color plano como el botón
               }}
             />
           </div>
@@ -498,11 +552,13 @@ function App() {
                       <select
                         value={hasCFE}
                         onChange={(e) => {
-                          setHasCFE(e.target.value);
+                          const v = e.target.value;
+                          setHasCFE(v);
                           setPlanCFE('');
                           setUsoCasaNegocio('');
                           setNumPersonasCasa('');
                           setRangoPersonasNegocio('');
+                          if (v === 'no') resetStep2(); // limpiar posibles restos del paso 2
                         }}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                         style={{ outlineColor: '#3cd070' }}
@@ -531,8 +587,7 @@ function App() {
                         >
                           <option value="">Selecciona una opción</option>
                           <option value="si">Sí</option>
-                          <option value="aislado">No, quiero instalar un sistema aislado</option>
-                          <option value="no">No</option>
+                          <option value="aislado">No, quiero instalar un sistema independiente (con baterías)</option>
                         </select>
                       </div>
                     )}
@@ -678,7 +733,7 @@ function App() {
 
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            ¿Ya tienes sistema FV y quieres expandirlo?
+                            ¿Ya tienes sistema de paneles solares y quieres expandirlo?
                           </label>
                           <select
                             value={expand}
@@ -942,154 +997,24 @@ function App() {
                         type="email"
                         value={correo}
                         onChange={(e) => setCorreo(e.target.value)}
+                        onBlur={() => setCorreoError(isValidEmail(correo) ? '' : 'Ingresa un correo válido.')}
                         placeholder="tunombre@email.com"
                         required
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                         style={{ outlineColor: '#3cd070' }}
                       />
+                      {correoError && <p className="text-xs text-red-600 mt-1">{correoError}</p>}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        WhatsApp
+                        WhatsApp (a 10 dígitos)
                       </label>
                       <input
                         type="tel"
+                        inputMode="numeric"
                         value={telefono}
-                        onChange={(e) => setTelefono(e.target.value)}
-                        placeholder="55 1234 5678"
-                        required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        Casa o negocio
-                      </label>
-                      <select
-                        value={uso}
-                        onChange={(e) => setUso(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
-                      >
-                        <option value="">Selecciona</option>
-                        <option>Casa</option>
-                        <option>Negocio</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <label className="flex items-start gap-3 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={privacidad}
-                        onChange={(e) => setPrivacidad(e.target.checked)}
-                        required
-                        className="w-5 h-5 border-slate-300 rounded focus:ring-2 mt-0.5"
-                        style={{ accentColor: '#3cd070' }}
-                      />
-                      <span className="text-sm text-slate-700 group-hover:text-slate-900">
-                        He leído y acepto el <a href="#" className="underline" style={{ color: '#3cd070' }}>aviso de privacidad</a>
-                      </span>
-                    </label>
-                  </div>
-
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-3">
-                    <Lock className="w-5 h-5 text-slate-600 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">
-                      Nunca compartimos tus datos con terceros. Tu información está segura con nosotros.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-6 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                  <span>Atrás</span>
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all"
-                  style={{ background: '#ff5c36' }}
-                >
-                  <span>Calcular mi ahorro</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-
-      {/* Modals */}
-      {showResultModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowResultModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#3cd07022' }}>
-                <CheckCircle2 className="w-10 h-10" style={{ color: '#3cd070' }} />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Propuesta lista!</h3>
-              <p className="text-slate-600 mb-6">
-                Aquí mostraríamos tu simulación de ahorro, equipo sugerido y ROI estimado.
-              </p>
-              <button
-                onClick={() => setShowResultModal(false)}
-                className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
-                style={{ background: '#3cd070' }}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showContactModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowContactModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#1e3a2b22' }}>
-                <CheckCircle2 className="w-10 h-10" style={{ color: '#1e3a2b' }} />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Gracias por tu interés!</h3>
-              <p className="text-slate-600 mb-6">
-                Te contactaremos en menos de 24h para preparar la mejor propuesta personalizada para tu caso.
-              </p>
-              <button
-                onClick={() => setShowContactModal(false)}
-                className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
-                style={{ background: '#1e3a2b' }}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Overlay */}
-      {loading && (
-        <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-11 h-11 border-4 border-slate-200 rounded-full animate-spin mx-auto mb-3"
-                 style={{ borderTopColor: '#1e3a2b' }}></div>
-            <div className="font-extrabold text-slate-900">{loadingMsg}</div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default App;
+                        onChange={(e) => setTelefono(normalizePhone(e.target.value))}
+                        onBlur={() => setTelefonoError(isValidPhone(telefono) ? '' : 'Ingresa un WhatsApp de 10 dígitos.')}
