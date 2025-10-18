@@ -353,21 +353,22 @@ function App() {
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
 
     const formPayload: any = {
-      nombre,
-      email: correo,
-      telefono,
-      uso,
-      periodicidad: periodo || 'bimestral',
-      pago_promedio_mxn: parseFloat(pago || '0') || 0,
-      cp,
-      tarifa: tarifa || ((ocr as any)?.tarifa || ''),
-      tipo_inmueble: tipoInmueble || '',
-      pisos: parseInt(pisos || '0', 10) || 0,
-      notes: notas || '',
-      loads,
-      has_cfe: hasCFE !== 'no',
-      plans_cfe: planCFE !== 'aislado' // true si sí planea contratar; false si independiente
-    };
+    nombre,
+    email: correo,
+    telefono,
+    uso,
+    periodicidad: periodo || 'bimestral',
+    pago_promedio_mxn: parseFloat(pago || '0') || 0,
+    cp,
+    tarifa: tarifa || (ocr?.tarifa || ''),
+    tipo_inmueble: tipoInmueble || '',
+    pisos: parseInt(pisos || '0', 10) || 0,
+    notes: notas || '',
+    loads,                 // <- ya lo tenías
+    cargas,                // <- 👈 NUEVO: envía las casillas marcadas ['secadora','otro',...]
+    has_cfe: hasCFE !== 'no',
+    plans_cfe: planCFE !== 'no' && planCFE !== 'aislado'
+  };
 
     try {
       const res = await fetch(`${API_BASE}/api/cotizacion_v2`, {
