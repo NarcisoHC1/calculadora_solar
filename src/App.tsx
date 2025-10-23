@@ -1,37 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  Upload,
-  ArrowRight,
-  ArrowLeft,
-  CheckCircle2,
-  AlertCircle,
-  Lock,
-} from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
 
 type Step = 1 | 2 | 3;
 
-// ENDPOINTS
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || "";       // Netlify (backend general)
-const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || "";       // Railway (OCR)
+const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || '';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
 
-// —— Helpers: PDF → imágenes (en navegador) ————————————————————————————
-// Carga pdf.js dinámicamente desde CDN ESM (sin instalar paquete)
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/* ===================== Helpers de archivos/imagenes ===================== */
+
+// Convierte un File a uno o más dataURLs (si es PDF, rasteriza 1–2 páginas)
 async function fileToDataURLs(file: File): Promise<string[]> {
-  // Imágenes: regresamos dataURL directo
-  if (file.type.startsWith("image/")) {
+  if (file.type.startsWith('image/')) {
     const b64 = await blobToDataURL(file);
     return [b64];
   }
-
-  // PDF: renderizamos 1–2 páginas a JPEG
-  if (file.type === "application/pdf") {
-    // @ts-ignore - import dinámico ESM desde CDN en runtime
-    const pdfjsLib = await import(
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs"
+  if (file.type === 'application/pdf') {
+    // PDF → imágenes con pdf.js (CDN ESM)
+    const pdfjsLib: any = await import(
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs'
     );
-    // @ts-ignore
     pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs";
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs';
 
     const buf = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: buf });
@@ -42,58 +33,106 @@ async function fileToDataURLs(file: File): Promise<string[]> {
     for (let i = 1; i <= maxPages; i++) {
       const page = await pdf.getPage(i);
       const viewport = page.getViewport({ scale: 2 }); // ~144 DPI
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d")!;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
       await page.render({ canvasContext: ctx, viewport }).promise;
-      out.push(canvas.toDataURL("image/jpeg", 0.85));
+      out.push(canvas.toDataURL('image/jpeg', 0.85));
     }
     return out;
   }
-
-  // Otros tipos: ignora
   return [];
 }
 
 function blobToDataURL(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
-    r.onload = () => resolve(String(r.result || ""));
+    r.onload = () => resolve(String(r.result || ''));
     r.onerror = reject;
     r.readAsDataURL(file);
   });
 }
 
-// —— UI Component ————————————————————————————————————————————————
+// Comprime un dataURL para acelerar OCR (lado largo ~1280px)
+async function downscaleDataUrl(dataUrl: string, maxSide = 1280): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      const scale = Math.min(1, maxSide / Math.max(width, height));
+      if (scale < 1) {
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = () => resolve(dataUrl); // si falla, usa original
+    img.src = dataUrl;
+  });
+}
+
+/* ===================== OCR en Railway: job + polling ===================== */
+
+async function startOcrJob(images: string[], filename: string) {
+  // Compresión rápida cliente para reducir latencia y costo
+  const compact: string[] = [];
+  for (const s of images.slice(0, 3)) compact.push(await downscaleDataUrl(s, 1280));
+
+  const res = await fetch(`${OCR_BASE}/v1/ocr/cfe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ images: compact, filename }),
+  });
+
+  // 202 => { job_id }
+  if (res.status === 202) return res.json();
+  // 200 => resultado inline (por si tu server lo hace a veces)
+  if (res.ok) return res.json();
+  throw new Error(`OCR start error ${res.status}`);
+}
+
+async function pollOcr(jobId: string, timeoutMs = 55000, intervalMs = 1500) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const r = await fetch(`${OCR_BASE}/v1/ocr/cfe/${encodeURIComponent(jobId)}`, { method: 'GET' });
+    if (!r.ok) throw new Error(`OCR poll error ${r.status}`);
+    const json = await r.json();
+    if (json.status === 'done') return json; // { ok, quality, data, ... }
+    if (json.status === 'error') throw new Error(json.error || 'ocr_failed');
+    await sleep(intervalMs);
+  }
+  throw new Error('ocr_timeout_client');
+}
+
+/* ===================== Componente principal ===================== */
+
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
 
-  // Upload (máx 2)
+  // Upload hasta 2 archivos
   const [files, setFiles] = useState<File[]>([]);
-  const [fileNames, setFileNames] = useState<string[]>([]);
   const fileUploaded = files.length > 0;
+  const [fileNames, setFileNames] = useState<string[]>([]);
 
-  // OCR states
-  const [ocrQuality, setOcrQuality] = useState<number | null>(null);
-  const [ocrOk, setOcrOk] = useState<boolean | null>(null);
-  const [ocrWarnings, setOcrWarnings] = useState<string[]>([]);
-  const [ocrData, setOcrData] = useState<any | null>(null);
-
-  // Captura manual
   const [showManual, setShowManual] = useState(false);
 
   // Step 1
-  const [hasCFE, setHasCFE] = useState("");
-  const [planCFE, setPlanCFE] = useState("");
-  const [usoCasaNegocio, setUsoCasaNegocio] = useState("");
-  const [numPersonasCasa, setNumPersonasCasa] = useState("");
-  const [rangoPersonasNegocio, setRangoPersonasNegocio] = useState("");
-  const [pago, setPago] = useState("");
-  const [periodo, setPeriodo] = useState<"bimestral" | "mensual">("bimestral");
-  const [tarifa, setTarifa] = useState("");
-  const [cp, setCP] = useState("");
-  const [expand, setExpand] = useState("");
+  const [hasCFE, setHasCFE] = useState('');
+  const [planCFE, setPlanCFE] = useState('');
+  const [usoCasaNegocio, setUsoCasaNegocio] = useState('');
+  const [numPersonasCasa, setNumPersonasCasa] = useState('');
+  const [rangoPersonasNegocio, setRangoPersonasNegocio] = useState('');
+  const [pago, setPago] = useState('');
+  const [periodo, setPeriodo] = useState('bimestral');
+  const [tarifa, setTarifa] = useState('');
+  const [cp, setCP] = useState('');
+  const [expand, setExpand] = useState('');
   const [showError, setShowError] = useState(false);
 
   // Step 2 (sin área de techo)
@@ -102,49 +141,43 @@ function App() {
     ev?: { modelo: string; km: string };
     minisplit?: { cantidad: string; horas: string };
   }>({});
-  const [tipoInmueble, setTipoInmueble] = useState("");
-  const [pisos, setPisos] = useState("");
-
-  const [notas, setNotas] = useState("");
+  const [tipoInmueble, setTipoInmueble] = useState('');
+  const [pisos, setPisos] = useState('');
+  const [notas, setNotas] = useState('');
 
   // Step 3 (contacto)
-  const [nombre, setNombre] = useState("");
-  const [correo, setCorreo] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [uso, setUso] = useState("");
+  const [nombre, setNombre] = useState('');
+  const [correo, setCorreo] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [uso, setUso] = useState('');
   const [privacidad, setPrivacidad] = useState(false);
 
-  // Overlay
-  const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState("Calculando tu propuesta…");
-
-  // Modals
   const [showResultModal, setShowResultModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
-  // Flags de flujo (front)
-  const isNoCFEPlanningFlow = hasCFE === "no" && planCFE === "si";
-  const isNoCFENoPlanning =
-    hasCFE === "no" && (planCFE === "no" || planCFE === "aislado");
+  // Overlay
+  const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
 
-  // Bridge para iframe (opcional)
-  const bridge = useMemo(() => (window as any).SYBridge || null, []);
+  // Banderas del flujo
+  const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
+  const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
 
-  function showLoading(msg = "Procesando…") {
+  function showLoading(msg = 'Calculando tu propuesta…') {
     setLoadingMsg(msg);
     setLoading(true);
     try {
-      window.parent.postMessage({ type: "status", status: "processing" }, "*");
+      (window as any).parent?.postMessage?.({ type: 'status', status: 'processing' }, '*');
     } catch {}
   }
   function hideLoading() {
     setLoading(false);
     try {
-      window.parent.postMessage({ type: "status", status: "done" }, "*");
+      (window as any).parent?.postMessage?.({ type: 'status', status: 'done' }, '*');
     } catch {}
   }
 
-  // ——— Upload ———
+  // Upload múltiple (máx 2)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
     if (!selected.length) return;
@@ -153,37 +186,21 @@ function App() {
     setFileNames(next.map((f) => f.name));
 
     // Si sube recibo, forzamos flujo con CFE
-    setHasCFE("si");
-    setPlanCFE("");
+    setHasCFE('si');
+    setPlanCFE('');
     setShowManual(false);
-
-    // Reset OCR previous
-    setOcrOk(null);
-    setOcrQuality(null);
-    setOcrWarnings([]);
-    setOcrData(null);
   };
 
   const removeFileAt = (idx: number) => {
     const next = files.filter((_, i) => i !== idx);
     setFiles(next);
     setFileNames(next.map((f) => f.name));
-    if (next.length === 0) {
-      setOcrOk(null);
-      setOcrQuality(null);
-      setOcrWarnings([]);
-      setOcrData(null);
-    }
   };
 
   const startManual = () => {
     setShowManual(true);
     setFiles([]);
     setFileNames([]);
-    setOcrOk(null);
-    setOcrQuality(null);
-    setOcrWarnings([]);
-    setOcrData(null);
   };
 
   const handleCargaToggle = (carga: string, checked: boolean) => {
@@ -191,35 +208,34 @@ function App() {
       setCargas([...cargas, carga]);
     } else {
       setCargas(cargas.filter((c) => c !== carga));
-      const nd = { ...cargaDetalles };
-      if (carga === "ev") delete nd.ev;
-      if (carga === "minisplit") delete nd.minisplit;
-      setCargaDetalles(nd);
+      const newDetalles = { ...cargaDetalles };
+      if (carga === 'ev') delete newDetalles.ev;
+      if (carga === 'minisplit') delete newDetalles.minisplit;
+      setCargaDetalles(newDetalles);
     }
   };
 
-  // Validación pasos
   const canProceedStep1 = () => {
     if (fileUploaded) return true;
     if (!showManual) return false;
     if (!hasCFE) return false;
 
-    if (hasCFE === "no") {
+    if (hasCFE === 'no') {
       if (!planCFE) return false;
-      if (planCFE === "no" || planCFE === "aislado") return true;
-      if (planCFE === "si") {
+      if (planCFE === 'no' || planCFE === 'aislado') return true;
+      if (planCFE === 'si') {
         if (!usoCasaNegocio) return false;
-        if (usoCasaNegocio === "casa" && !numPersonasCasa) return false;
-        if (usoCasaNegocio === "negocio" && !rangoPersonasNegocio) return false;
+        if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
+        if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
         return true;
       }
     }
 
-    if (hasCFE === "si") {
+    if (hasCFE === 'si') {
       if (!pago || !tarifa || !cp || !expand) return false;
       const pagoNum = parseFloat(pago);
       const threshold = 2500;
-      const bimestral = periodo === "bimestral" ? pagoNum : pagoNum * 2;
+      const bimestral = periodo === 'bimestral' ? pagoNum : pagoNum * 2;
       if (bimestral < threshold) return false;
     }
     return true;
@@ -227,13 +243,13 @@ function App() {
 
   const canProceedStep2 = () => {
     if (!tipoInmueble) return false;
-    if (["2", "4", "5", "8"].includes(tipoInmueble) && !pisos) return false;
-    if (cargas.includes("ev")) {
+    if (['2', '4', '5', '8'].includes(tipoInmueble) && !pisos) return false;
+
+    if (cargas.includes('ev')) {
       if (!cargaDetalles.ev?.modelo || !cargaDetalles.ev?.km) return false;
     }
-    if (cargas.includes("minisplit")) {
-      if (!cargaDetalles.minisplit?.cantidad || !cargaDetalles.minisplit?.horas)
-        return false;
+    if (cargas.includes('minisplit')) {
+      if (!cargaDetalles.minisplit?.cantidad || !cargaDetalles.minisplit?.horas) return false;
     }
     return true;
   };
@@ -252,48 +268,39 @@ function App() {
     }
     if (currentStep < 3) setCurrentStep((currentStep + 1) as Step);
   };
+
   const prevStep = () => {
     if (currentStep > 1) setCurrentStep((currentStep - 1) as Step);
   };
 
-  // Reglas de advertencia por ticket bajo
-  useEffect(() => {
-    if (!showManual) return;
-    const pagoNum = parseFloat(pago || "0");
-    const threshold = 2500;
-    const bimestral = periodo === "bimestral" ? pagoNum : pagoNum * 2;
-    setShowError(bimestral > 0 && bimestral < threshold);
-  }, [pago, periodo, showManual]);
-
   // SUBMIT
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!nombre || !correo || !telefono || !uso || !privacidad) return;
 
-    const highValue = parseFloat(pago || "0") >= 50000;
-    const industrialTariff = ["GDBT", "GDMTH", "GDMTO"].includes(tarifa);
+    const highValue = parseFloat(pago || '0') >= 50000;
+    const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa);
     const noCFEPlan = isNoCFENoPlanning;
 
-    let flow: "AUTO" | "MANUAL" | "BLOCKED" = "AUTO";
-    let flow_reason = "ok";
+    let flow: 'AUTO' | 'MANUAL' | 'BLOCKED' = 'AUTO';
+    let flow_reason = 'ok';
     if (industrialTariff) {
-      flow = "MANUAL";
-      flow_reason = "tariff_business";
+      flow = 'MANUAL';
+      flow_reason = 'tariff_business';
     } else if (highValue) {
-      flow = "MANUAL";
-      flow_reason = "high_monthly";
+      flow = 'MANUAL';
+      flow_reason = 'high_monthly';
     } else if (noCFEPlan) {
-      flow = "MANUAL";
-      flow_reason = "no_cfe";
+      flow = 'MANUAL';
+      flow_reason = 'no_cfe';
     }
 
-    // 1) OCR (si hay archivos)
-    let ocrPayload: any = null;
+    // 1) OCR → Railway (job+polling). Si falla, seguimos sin OCR.
+    let ocr: any = null;
     try {
       if (files.length && OCR_BASE) {
-        showLoading("Procesando tu recibo…");
-
-        // Convierte TODOS los archivos a imágenes (máx. 3 imágenes totales)
+        showLoading('Procesando tu recibo…');
         let imgs: string[] = [];
         for (const f of files) {
           const arr = await fileToDataURLs(f);
@@ -302,180 +309,147 @@ function App() {
         imgs = imgs.slice(0, 3);
 
         if (imgs.length) {
-          const ocrRes = await fetch(`${OCR_BASE}/v1/ocr/cfe`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              images: imgs,
-              filename: fileNames.join(", "),
-            }),
-          });
-          const ocrJson = await ocrRes.json().catch(() => null);
-
-          const ok =
-            ocrRes.ok && ocrJson && (ocrJson.ok === true || ocrJson.data);
-          setOcrOk(!!ok);
-          setOcrQuality(ocrJson?.quality ?? null);
-          setOcrWarnings(ocrJson?.warnings || []);
-          setOcrData(ocrJson?.data || null);
-          if (ok) {
-            ocrPayload = ocrJson.data;
-            // Prellenar si vacío:
-            if (!tarifa && ocrJson.form_overrides?.tarifa) {
-              setTarifa(ocrJson.form_overrides.tarifa);
+          const start = await startOcrJob(imgs, files.map((f) => f.name).join(', '));
+          if (start?.job_id) {
+            const done = await pollOcr(start.job_id);
+            if (done?.status === 'done' && (done?.ok || done?.data)) {
+              ocr = done.data || null;
             }
-            if (!cp && ocrJson.form_overrides?.cp) {
-              setCP(ocrJson.form_overrides.cp);
-            }
+          } else if (start?.ok || start?.data) {
+            ocr = start.data || start || null;
           }
         }
       }
     } catch (err) {
-      console.warn("OCR error:", err);
-      setOcrOk(false);
-      setOcrQuality(null);
-      setOcrWarnings(["ocr_call_failed"]);
-      setOcrData(null);
-      // seguimos sin OCR
+      console.warn('OCR fallback (continuamos sin OCR):', err);
     }
 
-    // 2) Payload para cotización (Netlify)
-    showLoading("Calculando tu propuesta…");
+    // 2) Payload para cotización
+    showLoading('Calculando tu propuesta…');
 
     const loads = cargaDetalles || {};
+    const bridge = (window as any).SYBridge;
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id =
-      (crypto as any)?.randomUUID?.() || String(Date.now() + Math.random());
+      (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
 
     const formPayload: any = {
       nombre,
       email: correo,
       telefono,
       uso,
-      periodicidad: periodo || "bimestral",
-      pago_promedio_mxn: parseFloat(pago || "0") || 0,
+      periodicidad: periodo || 'bimestral',
+      pago_promedio_mxn: parseFloat(pago || '0') || 0,
       cp,
-      tarifa,
-      tipo_inmueble: tipoInmueble || "",
-      pisos: parseInt(pisos || "0", 10) || 0,
-      notes: notas || "",
+      tarifa: tarifa || (ocr?.tarifa || ''),
+      tipo_inmueble: tipoInmueble || '',
+      pisos: parseInt(pisos || '0', 10) || 0,
+      notes: notas || '',
       loads,
-      cargas, // <—— importante para marcar (secadora/bomba/otro) en Airtable
-      has_cfe: hasCFE !== "no",
-      plans_cfe: planCFE !== "no" && planCFE !== "aislado",
-      // roof_area_m2 / tenencia: omitidos
+      has_cfe: hasCFE !== 'no',
+      plans_cfe: planCFE !== 'no' && planCFE !== 'aislado',
     };
 
     try {
       const res = await fetch(`${API_BASE}/api/cotizacion_v2`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          req_id,
-          flow,
-          flow_reason,
-          utms,
-          ocr: ocrPayload
-            ? { ok: true, quality: ocrQuality, data: ocrPayload }
-            : null,
-          form: formPayload,
-        }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ req_id, flow, flow_reason, utms, ocr, form: formPayload }),
       });
       const json = await res.json();
 
       if (!res.ok || json.ok === false) {
-        throw new Error(json?.error || "cotizacion_error");
+        throw new Error(json?.error || 'cotizacion_error');
       }
 
-      hideLoading();
-
-      if (json.mode === "AUTO" && json.pid) {
-        bridge?.gtm?.("cotizador_v2_auto", { pid: json.pid });
+      if (json.mode === 'AUTO' && json.pid) {
+        hideLoading();
+        bridge?.gtm?.('cotizador_v2_auto', { pid: json.pid });
+        // si tienes SPA/host parent:
         bridge?.navigate?.(`/propuesta-v2?pid=${encodeURIComponent(json.pid)}`, {
           proposal: json.proposal || null,
         });
         return;
       }
 
-      if (json.mode === "MANUAL") {
-        bridge?.gtm?.("cotizador_v2_manual", {
-          reason: json.reason || flow_reason,
-        });
+      if (json.mode === 'MANUAL') {
+        hideLoading();
+        bridge?.gtm?.('cotizador_v2_manual', { reason: json.reason || flow_reason });
         setShowContactModal(true);
         return;
       }
 
-      if (json.mode === "BLOCKED") {
-        bridge?.gtm?.("cotizador_v2_blocked", {
-          reason: json.reason || flow_reason,
-        });
+      if (json.mode === 'BLOCKED') {
+        hideLoading();
+        bridge?.gtm?.('cotizador_v2_blocked', { reason: json.reason || flow_reason });
         setShowError(true);
         return;
       }
 
+      hideLoading();
       setShowResultModal(true);
     } catch (err) {
       console.error(err);
       hideLoading();
-      alert("Ocurrió un error al procesar tu propuesta. Intenta de nuevo.");
+      alert('Ocurrió un error al procesar tu propuesta. Intenta de nuevo.');
     }
   };
 
-  const progressPercentage =
-    currentStep === 1 ? 33 : currentStep === 2 ? 66 : 100;
+  // Validación “umbral de consumo”
+  useEffect(() => {
+    if (!showManual) return;
+    const pagoNum = parseFloat(pago);
+    const threshold = 2500;
+    const bimestral = periodo === 'bimestral' ? pagoNum : pagoNum * 2;
+    setShowError(bimestral > 0 && bimestral < threshold);
+  }, [pago, periodo, showManual]);
+
+  const progressPercentage = currentStep === 1 ? 33 : currentStep === 2 ? 66 : 100;
 
   return (
     <div className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1
-            className="text-3xl md:text-4xl font-extrabold"
-            style={{ color: "#1e3a2b" }}
-          >
+          <h1 className="text-3xl md:text-4xl font-extrabold" style={{ color: '#1e3a2b' }}>
             Calcula tu ahorro con SolarYa
           </h1>
           <p className="text-slate-600">
-            Completa 3 sencillos pasos para obtener tu propuesta
+            Completa 3 sencillos pasos para obtener tu propuesta de sistema de paneles solares
           </p>
         </div>
 
-        {/* Progress */}
+        {/* Progress Bar */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-700">
               Paso {currentStep} de 3
             </span>
-            <span className="text-xs text-slate-500">
-              {progressPercentage}% completado
-            </span>
+            <span className="text-xs text-slate-500">{progressPercentage}% completado</span>
           </div>
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full transition-all duration-500 ease-out"
               style={{
                 width: `${progressPercentage}%`,
-                backgroundImage: "linear-gradient(90deg, #3cd070, #1e3a2b)",
+                backgroundImage: 'linear-gradient(90deg, #3cd070, #1e3a2b)',
               }}
             />
           </div>
         </div>
 
-        {/* Card */}
+        {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8">
-          {/* STEP 1 */}
+          {/* Step 1 */}
           {currentStep === 1 && (
             <div className="space-y-6">
               {!showManual ? (
                 <div>
-                  <h2
-                    className="text-2xl font-bold mb-2"
-                    style={{ color: "#1e3a2b" }}
-                  >
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: '#1e3a2b' }}>
                     Sube tu recibo de CFE
                   </h2>
                   <p className="text-slate-600 mb-6">
-                    Prellenaremos tu info automáticamente
+                    Te ayudamos a prellenar tus datos automáticamente
                   </p>
 
                   <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:shadow-sm transition-colors">
@@ -491,26 +465,21 @@ function App() {
                       <div className="flex flex-col items-center gap-4">
                         <div
                           className="w-16 h-16 rounded-full flex items-center justify-center"
-                          style={{ background: "#3cd07022" }}
+                          style={{ background: '#3cd07022' }}
                         >
-                          <Upload className="w-8 h-8" style={{ color: "#3cd070" }} />
+                          <Upload className="w-8 h-8" style={{ color: '#3cd070' }} />
                         </div>
                         <div>
                           <p className="text-lg font-semibold text-slate-900 mb-1">
-                            Arrastra o haz clic (máx. 2 archivos)
+                            Arrastra tu archivo o haz clic para subir (máx. 2)
                           </p>
-                          <p className="text-sm text-slate-500">
-                            PDF, JPG o PNG • Máx. 10MB c/u
-                          </p>
+                          <p className="text-sm text-slate-500">PDF, JPG o PNG • Máx. 10MB c/u</p>
                         </div>
                       </div>
                     </label>
 
                     {fileUploaded && (
-                      <div
-                        className="mt-4 flex flex-col items-center gap-2"
-                        style={{ color: "#3cd070" }}
-                      >
+                      <div className="mt-4 flex flex-col items-center gap-2" style={{ color: '#3cd070' }}>
                         {fileNames.map((n, i) => (
                           <div key={i} className="flex items-center gap-2">
                             <CheckCircle2 className="w-5 h-5" />
@@ -527,27 +496,9 @@ function App() {
                     )}
                   </div>
 
-                  {ocrOk === false && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4 flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-amber-800">
-                        No pudimos leer tu recibo con suficiente calidad.
-                        Sube fotos más nítidas o{" "}
-                        <button
-                          className="underline font-semibold"
-                          onClick={startManual}
-                        >
-                          captura tus datos manualmente
-                        </button>
-                        .
-                      </div>
-                    </div>
-                  )}
-
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
                     <p className="text-sm text-slate-700">
-                      <strong>Tip:</strong> Sube ambas páginas (frente/reverso)
-                      para mayor precisión.
+                      <strong>Tip:</strong> Sube ambas páginas (frente y reverso) para mayor precisión.
                     </p>
                   </div>
 
@@ -556,9 +507,7 @@ function App() {
                       <div className="w-full border-t border-slate-300"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-white text-slate-500">
-                        ¿No tienes el archivo?
-                      </span>
+                      <span className="px-4 bg-white text-slate-500">¿No tienes el archivo?</span>
                     </div>
                   </div>
 
@@ -572,10 +521,7 @@ function App() {
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-6">
-                    <h2
-                      className="text-2xl font-bold"
-                      style={{ color: "#1e3a2b" }}
-                    >
+                    <h2 className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>
                       Captura manual
                     </h2>
                     <button
@@ -596,13 +542,13 @@ function App() {
                         value={hasCFE}
                         onChange={(e) => {
                           setHasCFE(e.target.value);
-                          setPlanCFE("");
-                          setUsoCasaNegocio("");
-                          setNumPersonasCasa("");
-                          setRangoPersonasNegocio("");
+                          setPlanCFE('');
+                          setUsoCasaNegocio('');
+                          setNumPersonasCasa('');
+                          setRangoPersonasNegocio('');
                         }}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: "#3cd070" }}
+                        style={{ outlineColor: '#3cd070' }}
                       >
                         <option value="">Selecciona una opción</option>
                         <option value="si">Sí</option>
@@ -610,7 +556,7 @@ function App() {
                       </select>
                     </div>
 
-                    {hasCFE === "no" && (
+                    {hasCFE === 'no' && (
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           Si no tienes, ¿planeas contratarlo?
@@ -619,24 +565,22 @@ function App() {
                           value={planCFE}
                           onChange={(e) => {
                             setPlanCFE(e.target.value);
-                            setUsoCasaNegocio("");
-                            setNumPersonasCasa("");
-                            setRangoPersonasNegocio("");
+                            setUsoCasaNegocio('');
+                            setNumPersonasCasa('');
+                            setRangoPersonasNegocio('');
                           }}
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                          style={{ outlineColor: "#3cd070" }}
+                          style={{ outlineColor: '#3cd070' }}
                         >
                           <option value="">Selecciona una opción</option>
                           <option value="si">Sí</option>
-                          <option value="aislado">
-                            No, quiero un sistema aislado
-                          </option>
+                          <option value="aislado">No, quiero instalar un sistema aislado</option>
                           <option value="no">No</option>
                         </select>
                       </div>
                     )}
 
-                    {hasCFE === "no" && planCFE === "si" && (
+                    {hasCFE === 'no' && planCFE === 'si' && (
                       <>
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -646,11 +590,11 @@ function App() {
                             value={usoCasaNegocio}
                             onChange={(e) => {
                               setUsoCasaNegocio(e.target.value);
-                              setNumPersonasCasa("");
-                              setRangoPersonasNegocio("");
+                              setNumPersonasCasa('');
+                              setRangoPersonasNegocio('');
                             }}
                             className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                            style={{ outlineColor: "#3cd070" }}
+                            style={{ outlineColor: '#3cd070' }}
                           >
                             <option value="">Selecciona una opción</option>
                             <option value="casa">Casa</option>
@@ -658,7 +602,7 @@ function App() {
                           </select>
                         </div>
 
-                        {usoCasaNegocio === "casa" && (
+                        {usoCasaNegocio === 'casa' && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                               ¿Cuántas personas habrá en la casa?
@@ -670,23 +614,21 @@ function App() {
                               placeholder="Ej. 4"
                               min={1}
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: "#3cd070" }}
+                              style={{ outlineColor: '#3cd070' }}
                             />
                           </div>
                         )}
 
-                        {usoCasaNegocio === "negocio" && (
+                        {usoCasaNegocio === 'negocio' && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                               ¿Cuántas personas habrá en el negocio?
                             </label>
                             <select
                               value={rangoPersonasNegocio}
-                              onChange={(e) =>
-                                setRangoPersonasNegocio(e.target.value)
-                              }
+                              onChange={(e) => setRangoPersonasNegocio(e.target.value)}
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: "#3cd070" }}
+                              style={{ outlineColor: '#3cd070' }}
                             >
                               <option value="">Selecciona un rango</option>
                               <option value="1-10">1-10</option>
@@ -699,7 +641,7 @@ function App() {
                       </>
                     )}
 
-                    {hasCFE === "si" && (
+                    {hasCFE === 'si' && (
                       <div className="space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
@@ -712,11 +654,10 @@ function App() {
                               onChange={(e) => setPago(e.target.value)}
                               placeholder="Ej. 3,200"
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: "#3cd070" }}
+                              style={{ outlineColor: '#3cd070' }}
                             />
                             <p className="text-xs text-slate-500 mt-1">
-                              Si usas <em>diablitos</em>, este pago no refleja
-                              tu consumo real
+                              Si usas <em>diablitos</em>, este pago no refleja tu consumo real
                             </p>
                           </div>
                           <div>
@@ -725,11 +666,9 @@ function App() {
                             </label>
                             <select
                               value={periodo}
-                              onChange={(e) =>
-                                setPeriodo(e.target.value as "bimestral" | "mensual")
-                              }
+                              onChange={(e) => setPeriodo(e.target.value)}
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: "#3cd070" }}
+                              style={{ outlineColor: '#3cd070' }}
                             >
                               <option value="bimestral">Bimestral</option>
                               <option value="mensual">Mensual</option>
@@ -746,7 +685,7 @@ function App() {
                               value={tarifa}
                               onChange={(e) => setTarifa(e.target.value)}
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: "#3cd070" }}
+                              style={{ outlineColor: '#3cd070' }}
                             >
                               <option value="">Selecciona tu tarifa</option>
                               <option>1</option>
@@ -775,7 +714,7 @@ function App() {
                               placeholder="Ej. 06100"
                               maxLength={5}
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: "#3cd070" }}
+                              style={{ outlineColor: '#3cd070' }}
                             />
                           </div>
                         </div>
@@ -788,7 +727,7 @@ function App() {
                             value={expand}
                             onChange={(e) => setExpand(e.target.value)}
                             className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                            style={{ outlineColor: "#3cd070" }}
+                            style={{ outlineColor: '#3cd070' }}
                           >
                             <option value="">Selecciona una opción</option>
                             <option>Sí</option>
@@ -800,8 +739,8 @@ function App() {
                           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                             <p className="text-sm text-red-800">
-                              Por el momento, para tu nivel de consumo, no
-                              atendemos tu área. Mantente en contacto.
+                              Por el momento, para tu nivel de consumo, no atendemos tu área. Mantente en
+                              contacto.
                             </p>
                           </div>
                         )}
@@ -816,7 +755,7 @@ function App() {
                   onClick={nextStep}
                   disabled={!canProceedStep1()}
                   className="flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  style={{ background: "#3cd070" }}
+                  style={{ background: '#3cd070' }}
                 >
                   <span>Siguiente</span>
                   <ArrowRight className="w-5 h-5" />
@@ -825,72 +764,63 @@ function App() {
             </div>
           )}
 
-          {/* STEP 2 */}
+          {/* Step 2 */}
           {currentStep === 2 && (
             <div className="space-y-8">
               <div>
-                <h2
-                  className="text-2xl font-bold mb-2"
-                  style={{ color: "#1e3a2b" }}
-                >
+                <h2 className="text-2xl font-bold mb-2" style={{ color: '#1e3a2b' }}>
                   Detalles del inmueble
                 </h2>
-                <p className="text-slate-600 mb-6">
-                  Ayúdanos a entender mejor tus necesidades
-                </p>
+                <p className="text-slate-600 mb-6">Ayúdanos a entender mejor tus necesidades</p>
 
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      ¿Planeas instalar alguno de estos en 3–6 meses?
+                      ¿Planeas instalar alguno de estos en los próximos 3-6 meses?
                     </label>
-                    <p className="text-xs text-slate-500 mb-3">
-                      (Opcional — puedes elegir varias)
-                    </p>
+                    <p className="text-xs text-slate-500 mb-3">(Opcional - puedes elegir varias)</p>
                     <div className="space-y-3">
                       {[
-                        { value: "ev", label: "Cargador para coche eléctrico" },
-                        { value: "minisplit", label: "Minisplit / A/C" },
-                        { value: "secadora", label: "Secadora eléctrica" },
-                        { value: "bomba", label: "Bomba de agua / alberca" },
-                        { value: "otro", label: "Otro" },
+                        { value: 'ev', label: 'Cargador para coche eléctrico' },
+                        { value: 'minisplit', label: 'Minisplit / A/C' },
+                        { value: 'secadora', label: 'Secadora eléctrica' },
+                        { value: 'bomba', label: 'Bomba de agua / alberca' },
+                        { value: 'otro', label: 'Otro' },
                       ].map((item) => (
                         <div key={item.value}>
                           <label className="flex items-center gap-3 cursor-pointer group">
                             <input
                               type="checkbox"
                               checked={cargas.includes(item.value)}
-                              onChange={(e) =>
-                                handleCargaToggle(item.value, e.target.checked)
-                              }
+                              onChange={(e) => handleCargaToggle(item.value, e.target.checked)}
                               className="w-5 h-5 border-slate-300 rounded focus:ring-2"
-                              style={{ accentColor: "#3cd070" }}
+                              style={{ accentColor: '#3cd070' }}
                             />
                             <span className="text-sm text-slate-700 group-hover:text-slate-900 font-medium">
                               {item.label}
                             </span>
                           </label>
 
-                          {cargas.includes(item.value) && item.value === "ev" && (
+                          {cargas.includes(item.value) && item.value === 'ev' && (
                             <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                               <div>
                                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                                   Modelo
                                 </label>
                                 <select
-                                  value={cargaDetalles.ev?.modelo || ""}
+                                  value={cargaDetalles.ev?.modelo || ''}
                                   onChange={(e) =>
                                     setCargaDetalles({
                                       ...cargaDetalles,
                                       ev: {
                                         ...cargaDetalles.ev,
                                         modelo: e.target.value,
-                                        km: cargaDetalles.ev?.km || "",
+                                        km: cargaDetalles.ev?.km || '',
                                       },
                                     })
                                   }
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
-                                  style={{ outlineColor: "#3cd070" }}
+                                  style={{ outlineColor: '#3cd070' }}
                                 >
                                   <option value="">Selecciona el modelo</option>
                                   <option value="tesla-model3">Tesla Model 3</option>
@@ -898,9 +828,7 @@ function App() {
                                   <option value="byd-seal">BYD Seal</option>
                                   <option value="byd-dolphin">BYD Dolphin</option>
                                   <option value="nissan-leaf">Nissan Leaf</option>
-                                  <option value="chevrolet-bolt">
-                                    Chevrolet Bolt
-                                  </option>
+                                  <option value="chevrolet-bolt">Chevrolet Bolt</option>
                                   <option value="otro">Otro</option>
                                 </select>
                               </div>
@@ -910,79 +838,75 @@ function App() {
                                 </label>
                                 <input
                                   type="number"
-                                  value={cargaDetalles.ev?.km || ""}
+                                  value={cargaDetalles.ev?.km || ''}
                                   onChange={(e) =>
                                     setCargaDetalles({
                                       ...cargaDetalles,
                                       ev: {
                                         ...cargaDetalles.ev,
-                                        modelo: cargaDetalles.ev?.modelo || "",
+                                        modelo: cargaDetalles.ev?.modelo || '',
                                         km: e.target.value,
                                       },
                                     })
                                   }
                                   placeholder="Ej. 40"
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
-                                  style={{ outlineColor: "#3cd070" }}
+                                  style={{ outlineColor: '#3cd070' }}
                                 />
                               </div>
                             </div>
                           )}
 
-                          {cargas.includes(item.value) &&
-                            item.value === "minisplit" && (
-                              <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                                <div>
-                                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                    Cantidad
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={cargaDetalles.minisplit?.cantidad || ""}
-                                    onChange={(e) =>
-                                      setCargaDetalles({
-                                        ...cargaDetalles,
-                                        minisplit: {
-                                          ...cargaDetalles.minisplit,
-                                          cantidad: e.target.value,
-                                          horas:
-                                            cargaDetalles.minisplit?.horas || "",
-                                        },
-                                      })
-                                    }
-                                    placeholder="Ej. 2"
-                                    min={1}
-                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
-                                    style={{ outlineColor: "#3cd070" }}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                    Horas diarias encendido
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={cargaDetalles.minisplit?.horas || ""}
-                                    onChange={(e) =>
-                                      setCargaDetalles({
-                                        ...cargaDetalles,
-                                        minisplit: {
-                                          ...cargaDetalles.minisplit,
-                                          cantidad:
-                                            cargaDetalles.minisplit?.cantidad ||
-                                            "",
-                                          horas: e.target.value,
-                                        },
-                                      })
-                                    }
-                                    placeholder="Ej. 6"
-                                    step={0.5}
-                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
-                                    style={{ outlineColor: "#3cd070" }}
-                                  />
-                                </div>
+                          {cargas.includes(item.value) && item.value === 'minisplit' && (
+                            <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                  Cantidad
+                                </label>
+                                <input
+                                  type="number"
+                                  value={cargaDetalles.minisplit?.cantidad || ''}
+                                  onChange={(e) =>
+                                    setCargaDetalles({
+                                      ...cargaDetalles,
+                                      minisplit: {
+                                        ...cargaDetalles.minisplit,
+                                        cantidad: e.target.value,
+                                        horas: cargaDetalles.minisplit?.horas || '',
+                                      },
+                                    })
+                                  }
+                                  placeholder="Ej. 2"
+                                  min={1}
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
+                                />
                               </div>
-                            )}
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                  Horas diarias que estará encendido
+                                </label>
+                                <input
+                                  type="number"
+                                  value={cargaDetalles.minisplit?.horas || ''}
+                                  onChange={(e) =>
+                                    setCargaDetalles({
+                                      ...cargaDetalles,
+                                      minisplit: {
+                                        ...cargaDetalles.minisplit,
+                                        cantidad: cargaDetalles.minisplit?.cantidad || '',
+                                        horas: e.target.value,
+                                      },
+                                    })
+                                  }
+                                  placeholder="Ej. 6"
+                                  step={0.5}
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -997,31 +921,21 @@ function App() {
                         value={tipoInmueble}
                         onChange={(e) => setTipoInmueble(e.target.value)}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: "#3cd070" }}
+                        style={{ outlineColor: '#3cd070' }}
                       >
                         <option value="">Selecciona una opción</option>
-                        <option value="1">
-                          Casa o negocio independiente de 1-2 pisos
-                        </option>
-                        <option value="2">
-                          Depto/local en edificio / condominio vertical
-                        </option>
-                        <option value="3">
-                          Sólo áreas comunes de condominio / fracc.
-                        </option>
+                        <option value="1">Casa o negocio independiente de 1-2 pisos</option>
+                        <option value="2">Departamento/local en edificio / condominio vertical</option>
+                        <option value="3">Sólo áreas comunes de condominio / fraccionamiento</option>
                         <option value="4">Local en plaza comercial o edificio</option>
-                        <option value="5">
-                          Conjunto habitacional vertical / condominio vertical
-                        </option>
-                        <option value="6">
-                          Conjunto habitacional horizontal / condominio horizontal
-                        </option>
+                        <option value="5">Conjunto habitacional vertical / condominio vertical</option>
+                        <option value="6">Conjunto habitacional horizontal / condominio horizontal</option>
                         <option value="7">Nave industrial / bodega</option>
-                        <option value="8">Edificios enteros (hoteles/oficinas)</option>
+                        <option value="8">Edificios enteros (hoteles, oficinas, públicos)</option>
                       </select>
                     </div>
 
-                    {["2", "4", "5", "8"].includes(tipoInmueble) && (
+                    {['2', '4', '5', '8'].includes(tipoInmueble) && (
                       <div className="mt-4">
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           No. de pisos del edificio
@@ -1033,7 +947,7 @@ function App() {
                           placeholder="Ej. 8"
                           min={1}
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                          style={{ outlineColor: "#3cd070" }}
+                          style={{ outlineColor: '#3cd070' }}
                         />
                       </div>
                     )}
@@ -1050,7 +964,7 @@ function App() {
                       placeholder="Ej. Hay sombras por las tardes; antenas en el techo, etc."
                       rows={4}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all resize-none"
-                      style={{ outlineColor: "#3cd070" }}
+                      style={{ outlineColor: '#3cd070' }}
                     />
                   </div>
                 </div>
@@ -1068,7 +982,7 @@ function App() {
                   onClick={nextStep}
                   disabled={!canProceedStep2()}
                   className="flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  style={{ background: "#3cd070" }}
+                  style={{ background: '#3cd070' }}
                 >
                   <span>Siguiente</span>
                   <ArrowRight className="w-5 h-5" />
@@ -1077,18 +991,15 @@ function App() {
             </div>
           )}
 
-          {/* STEP 3 */}
+          {/* Step 3 */}
           {currentStep === 3 && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <h2
-                  className="text-2xl font-bold mb-2"
-                  style={{ color: "#1e3a2b" }}
-                >
+                <h2 className="text-2xl font-bold mb-2" style={{ color: '#1e3a2b' }}>
                   Información de contacto
                 </h2>
                 <p className="text-slate-600 mb-6">
-                  Último paso para recibir tu propuesta
+                  Último paso para recibir tu propuesta personalizada
                 </p>
 
                 <div className="space-y-5">
@@ -1104,7 +1015,7 @@ function App() {
                         placeholder="Ej. María López"
                         required
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: "#3cd070" }}
+                        style={{ outlineColor: '#3cd070' }}
                       />
                     </div>
                     <div>
@@ -1118,7 +1029,7 @@ function App() {
                         placeholder="tunombre@email.com"
                         required
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: "#3cd070" }}
+                        style={{ outlineColor: '#3cd070' }}
                       />
                     </div>
                   </div>
@@ -1135,7 +1046,7 @@ function App() {
                         placeholder="55 1234 5678"
                         required
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: "#3cd070" }}
+                        style={{ outlineColor: '#3cd070' }}
                       />
                     </div>
                     <div>
@@ -1147,7 +1058,7 @@ function App() {
                         onChange={(e) => setUso(e.target.value)}
                         required
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: "#3cd070" }}
+                        style={{ outlineColor: '#3cd070' }}
                       >
                         <option value="">Selecciona</option>
                         <option>Casa</option>
@@ -1164,11 +1075,11 @@ function App() {
                         onChange={(e) => setPrivacidad(e.target.checked)}
                         required
                         className="w-5 h-5 border-slate-300 rounded focus:ring-2 mt-0.5"
-                        style={{ accentColor: "#3cd070" }}
+                        style={{ accentColor: '#3cd070' }}
                       />
                       <span className="text-sm text-slate-700 group-hover:text-slate-900">
-                        He leído y acepto el{" "}
-                        <a href="#" className="underline" style={{ color: "#3cd070" }}>
+                        He leído y acepto el{' '}
+                        <a href="#" className="underline" style={{ color: '#3cd070' }}>
                           aviso de privacidad
                         </a>
                       </span>
@@ -1178,8 +1089,8 @@ function App() {
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-3">
                     <Lock className="w-5 h-5 text-slate-600 flex-shrink-0" />
                     <p className="text-sm text-slate-700">
-                      Nunca compartimos tus datos con terceros. Tu información
-                      está segura con nosotros.
+                      Nunca compartimos tus datos con terceros. Tu información está segura con
+                      nosotros.
                     </p>
                   </div>
                 </div>
@@ -1197,7 +1108,7 @@ function App() {
                 <button
                   type="submit"
                   className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all"
-                  style={{ background: "#ff5c36" }}
+                  style={{ background: '#ff5c36' }}
                 >
                   <span>Calcular mi ahorro</span>
                   <ArrowRight className="w-5 h-5" />
@@ -1208,7 +1119,7 @@ function App() {
         </div>
       </div>
 
-      {/* Result modal (demo) */}
+      {/* Modals */}
       {showResultModal && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
@@ -1221,21 +1132,18 @@ function App() {
             <div className="text-center">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: "#3cd07022" }}
+                style={{ background: '#3cd07022' }}
               >
-                <CheckCircle2 className="w-10 h-10" style={{ color: "#3cd070" }} />
+                <CheckCircle2 className="w-10 h-10" style={{ color: '#3cd070' }} />
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                ¡Propuesta lista!
-              </h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Propuesta lista!</h3>
               <p className="text-slate-600 mb-6">
-                Aquí mostraríamos tu simulación de ahorro, equipo sugerido y ROI
-                estimado.
+                Aquí mostraríamos tu simulación de ahorro, equipo sugerido y ROI estimado.
               </p>
               <button
                 onClick={() => setShowResultModal(false)}
                 className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
-                style={{ background: "#3cd070" }}
+                style={{ background: '#3cd070' }}
               >
                 Cerrar
               </button>
@@ -1244,7 +1152,6 @@ function App() {
         </div>
       )}
 
-      {/* Manual contact / MANUAL mode */}
       {showContactModal && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
@@ -1257,21 +1164,19 @@ function App() {
             <div className="text-center">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: "#1e3a2b22" }}
+                style={{ background: '#1e3a2b22' }}
               >
-                <CheckCircle2 className="w-10 h-10" style={{ color: "#1e3a2b" }} />
+                <CheckCircle2 className="w-10 h-10" style={{ color: '#1e3a2b' }} />
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                ¡Gracias por tu interés!
-              </h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Gracias por tu interés!</h3>
               <p className="text-slate-600 mb-6">
-                Te contactaremos en menos de 24h para preparar la mejor propuesta
-                personalizada.
+                Te contactaremos en menos de 24h para preparar la mejor propuesta personalizada para tu
+                caso.
               </p>
               <button
                 onClick={() => setShowContactModal(false)}
                 className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
-                style={{ background: "#1e3a2b" }}
+                style={{ background: '#1e3a2b' }}
               >
                 Cerrar
               </button>
@@ -1280,14 +1185,14 @@ function App() {
         </div>
       )}
 
-      {/* Overlay */}
+      {/* Overlay de carga global */}
       {loading && (
         <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center">
             <div
               className="w-11 h-11 border-4 border-slate-200 rounded-full animate-spin mx-auto mb-3"
-              style={{ borderTopColor: "#1e3a2b" }}
-            />
+              style={{ borderTopColor: '#1e3a2b' }}
+            ></div>
             <div className="font-extrabold text-slate-900">{loadingMsg}</div>
           </div>
         </div>
