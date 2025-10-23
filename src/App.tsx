@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
+import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 
 type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
-const OCR_BASE  = (import.meta as any).env?.VITE_OCR_BASE  || ''; // si no está, el código intentará Netlify /api/ocr_cfe_v2
+const OCR_BASE  = (import.meta as any).env?.VITE_OCR_BASE  || '';
 
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -13,12 +13,13 @@ function App() {
   const [files, setFiles] = useState<File[]>([]);
   const fileUploaded = files.length > 0;
   const [fileNames, setFileNames] = useState<string[]>([]);
+
   const [showManual, setShowManual] = useState(false);
 
   // Step 1 fields
   const [hasCFE, setHasCFE] = useState('');
   const [planCFE, setPlanCFE] = useState('');
-  const [usoCasaNegocio, setUsoCasaNegocio] = useState(''); // For no CFE but planning
+  const [usoCasaNegocio, setUsoCasaNegocio] = useState('');
   const [numPersonasCasa, setNumPersonasCasa] = useState('');
   const [rangoPersonasNegocio, setRangoPersonasNegocio] = useState('');
   const [pago, setPago] = useState('');
@@ -38,14 +39,14 @@ function App() {
   const [pisos, setPisos] = useState('');
   const [notas, setNotas] = useState('');
 
-  // Step 3 fields (sin tenencia)
+  // Step 3 fields
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [telefono, setTelefono] = useState('');
   const [uso, setUso] = useState('');
   const [privacidad, setPrivacidad] = useState(false);
 
-  // Validación de WhatsApp (10 dígitos)
+  // Validación WhatsApp (10 dígitos)
   const PHONE_RE = /^[0-9]{10}$/;
   const [phoneTouched, setPhoneTouched] = useState(false);
   const phoneError = phoneTouched && !PHONE_RE.test(telefono);
@@ -54,16 +55,19 @@ function App() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
-  // Overlay
+  // Overlay global (para submit a Netlify)
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
 
-  // OCR state (no cambiamos la lógica existente)
+  // OCR states
   const [ocrData, setOcrData] = useState<any>(null);
+  const [ocrStatus, setOcrStatus] = useState<'idle'|'processing'|'success'|'error'>('idle');
+  const [ocrMessage, setOcrMessage] = useState<string>('');
+  const [ocrQuality, setOcrQuality] = useState<number | null>(null);
 
   // Flags de flujo
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
-  const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
+  const isNoCFENoPlanning   = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
 
   // Helpers overlay + aviso al padre (iframe)
   function showLoading(msg = 'Calculando tu propuesta…') {
@@ -76,30 +80,7 @@ function App() {
     try { window.parent.postMessage({ type: 'status', status: 'done' }, '*'); } catch {}
   }
 
-  // --- Upload múltiple (máx 2) ---
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files || []);
-    if (!selected.length) return;
-    const next = [...files, ...selected].slice(0, 2);
-    setFiles(next);
-    setFileNames(next.map(f => f.name));
-    setHasCFE('si');
-    setPlanCFE('');
-    setShowManual(false);
-  };
-
-  const removeFileAt = (idx: number) => {
-    const next = files.filter((_, i) => i !== idx);
-    setFiles(next);
-    setFileNames(next.map(f => f.name));
-  };
-
-  const startManual = () => {
-    setShowManual(true);
-    setFiles([]);
-    setFileNames([]);
-  };
-
+  // Utils ----------------------------------------------------
   const handleCargaToggle = (carga: string, checked: boolean) => {
     if (checked) {
       setCargas([...cargas, carga]);
@@ -112,49 +93,155 @@ function App() {
     }
   };
 
-  // === OCR call (manteniendo el comportamiento: intenta Railway y si no hay base, fallback a Netlify) ===
+  function startManual() {
+    setShowManual(true);
+    setFiles([]);
+    setFileNames([]);
+    // reset OCR UI si veníamos de un intento
+    setOcrStatus('idle');
+    setOcrMessage('');
+    setOcrQuality(null);
+    setOcrData(null);
+  }
+
+  function removeFileAt(idx: number) {
+    const next = files.filter((_, i) => i !== idx);
+    setFiles(next);
+    setFileNames(next.map(f => f.name));
+    if (next.length === 0) {
+      setOcrStatus('idle');
+      setOcrMessage('');
+      setOcrQuality(null);
+      setOcrData(null);
+    }
+  }
+
+  async function fileToDataURL(file: File): Promise<string> {
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // === OCR: Railway primero (multipart sin bajar resolución) y fallback a Netlify (JSON base64) ===
   async function runOCRIfFiles(): Promise<any | null> {
     if (!files.length) return null;
 
+    setOcrStatus('processing');
+    setOcrMessage('Extrayendo información de tu recibo de CFE…');
+    setOcrQuality(null);
+
     try {
-      showLoading('Procesando tu recibo…');
-      // Preferimos enviar los archivos tal cual (PDF/IMG) como multipart para no bajar resolución
       if (OCR_BASE) {
+        // Railway (multipart)
         const fd = new FormData();
         files.forEach((f) => fd.append('files', f, f.name));
-        const r = await fetch(`${OCR_BASE.replace(/\/+$/,'')}/v1/ocr/cfe`, { method: 'POST', body: fd });
-        const j = await r.json().catch(() => null);
-        if (r.ok && j?.ok) {
-          setOcrData(j.data || null);
-          // Overrides amables
-          if (j?.data?.tarifa && !tarifa) setTarifa(String(j.data.tarifa).toUpperCase());
-          if (j?.data?.codigo_postal && !cp) setCP(String(j.data.codigo_postal));
-          return j.data || null;
-        }
-      } else {
-        // Fallback a Netlify si no hay OCR_BASE
-        const fd = new FormData();
-        files.forEach((f) => fd.append('file', f, f.name));
-        const r = await fetch(`${API_BASE}/api/ocr_cfe_v2`, { method: 'POST', body: fd });
-        const j = await r.json().catch(() => null);
-        if (r.ok && (j?.ok || j?.data)) {
-          const data = j.data || j;
+        const res = await fetch(`${OCR_BASE.replace(/\/+$/,'')}/v1/ocr/cfe`, { method: 'POST', body: fd });
+        const json = await res.json().catch(() => null);
+
+        if (res.ok && json?.ok && json?.data) {
+          const data = json.data;
           setOcrData(data);
+          setOcrQuality(typeof json.quality === 'number' ? json.quality : null);
           if (data?.tarifa && !tarifa) setTarifa(String(data.tarifa).toUpperCase());
           if (data?.codigo_postal && !cp) setCP(String(data.codigo_postal));
+          setOcrStatus('success');
+          setOcrMessage('¡Listo! Extraímos tus datos correctamente.');
           return data;
+        } else {
+          // Intenta fallback a Netlify si existe API_BASE
+          if (API_BASE) {
+            const images: string[] = [];
+            for (const f of files.slice(0, 3)) {
+              images.push(await fileToDataURL(f));
+            }
+            const res2 = await fetch(`${API_BASE}/api/ocr_cfe_v2`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ images, filename: fileNames[0] || 'recibo' })
+            });
+            const j2 = await res2.json().catch(() => null);
+            const ok2 = res2.ok && (j2?.ok || j2?.data);
+            const data2 = j2?.data || (ok2 ? j2 : null);
+
+            if (ok2 && data2) {
+              setOcrData(data2);
+              if (typeof j2?.quality === 'number') setOcrQuality(j2.quality);
+              if (data2?.tarifa && !tarifa) setTarifa(String(data2.tarifa).toUpperCase());
+              if (data2?.codigo_postal && !cp) setCP(String(data2.codigo_postal));
+              setOcrStatus('success');
+              setOcrMessage('¡Listo! Extraímos tus datos correctamente.');
+              return data2;
+            }
+          }
+
+          setOcrStatus('error');
+          setOcrMessage('No pudimos leer tu recibo. Por favor súbelo más nítido o captura tus datos manualmente.');
+          return null;
         }
+      } else if (API_BASE) {
+        // Sólo Netlify (JSON con dataURL)
+        const images: string[] = [];
+        for (const f of files.slice(0, 3)) {
+          images.push(await fileToDataURL(f));
+        }
+        const res = await fetch(`${API_BASE}/api/ocr_cfe_v2`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images, filename: fileNames[0] || 'recibo' })
+        });
+        const j = await res.json().catch(() => null);
+        const ok = res.ok && (j?.ok || j?.data);
+        const data = j?.data || (ok ? j : null);
+
+        if (ok && data) {
+          setOcrData(data);
+          if (typeof j?.quality === 'number') setOcrQuality(j.quality);
+          if (data?.tarifa && !tarifa) setTarifa(String(data.tarifa).toUpperCase());
+          if (data?.codigo_postal && !cp) setCP(String(data.codigo_postal));
+          setOcrStatus('success');
+          setOcrMessage('¡Listo! Extraímos tus datos correctamente.');
+          return data;
+        } else {
+          setOcrStatus('error');
+          setOcrMessage('No pudimos leer tu recibo. Por favor súbelo más nítido o captura tus datos manualmente.');
+          return null;
+        }
+      } else {
+        setOcrStatus('error');
+        setOcrMessage('OCR no está configurado. Define VITE_OCR_BASE o VITE_API_BASE.');
+        return null;
       }
     } catch (err) {
       console.warn('OCR error', err);
-    } finally {
-      hideLoading();
+      setOcrStatus('error');
+      setOcrMessage('No pudimos leer tu recibo. Por favor súbelo más nítido o captura tus datos manualmente.');
+      return null;
     }
-    return null;
   }
 
+  // Upload handler: dispara OCR de inmediato
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+    const next = [...files, ...selected].slice(0, 2);
+    setFiles(next);
+    setFileNames(next.map(f => f.name));
+
+    // asegúrate que estamos en flujo con CFE
+    setHasCFE('si');
+    setPlanCFE('');
+    setShowManual(false);
+
+    // Ejecuta OCR inline (sin overlay global)
+    await runOCRIfFiles();
+  };
+
+  // Step 1 gating (igual que antes)
   const canProceedStep1 = () => {
-    if (fileUploaded) return true; // (mantengo el comportamiento original)
+    if (fileUploaded) return true;
     if (!showManual) return false;
     if (!hasCFE) return false;
 
@@ -182,7 +269,6 @@ function App() {
   const canProceedStep2 = () => {
     if (!tipoInmueble) return false;
     if (['2', '4', '5', '8'].includes(tipoInmueble) && !pisos) return false;
-
     if (cargas.includes('ev')) {
       if (!cargaDetalles.ev?.modelo || !cargaDetalles.ev?.km) return false;
     }
@@ -192,12 +278,11 @@ function App() {
     return true;
   };
 
-  // Navegación (mantenida)
+  // Navegación (sin cambios en la lógica de paso)
   const nextStep = async () => {
     if (currentStep === 1) {
-      // Si hay archivos, intentamos OCR aquí (manteniendo UX previa de ir al paso 2)
+      // si el usuario subió archivos, OCR ya corrió con el upload
       if (fileUploaded) {
-        await runOCRIfFiles(); // no bloqueamos el avance; mantenemos la lógica existente
         setCurrentStep(2);
         return;
       }
@@ -206,31 +291,22 @@ function App() {
         return;
       }
     }
-    if (currentStep < 3) {
-      setCurrentStep((currentStep + 1) as Step);
-    }
+    if (currentStep < 3) setCurrentStep((currentStep + 1) as Step);
   };
-
   const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep((currentStep - 1) as Step);
-    }
+    if (currentStep > 1) setCurrentStep((currentStep - 1) as Step);
   };
 
-  // SUBMIT
+  // SUBMIT (Netlify no espera a Railway porque OCR ya ocurrió en Step 1)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validación de WhatsApp a 10 dígitos
     setPhoneTouched(true);
-    if (!PHONE_RE.test(telefono)) {
-      return;
-    }
+    if (!PHONE_RE.test(telefono)) return;
 
-    if (!nombre || !correo || !telefono || !uso || !privacidad) {
-      return;
-    }
+    if (!nombre || !correo || !telefono || !uso || !privacidad) return;
 
+    // flujo
     const highValue = parseFloat(pago || '0') >= 50000;
     const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa);
     const noCFEPlan = isNoCFENoPlanning;
@@ -241,7 +317,7 @@ function App() {
     else if (highValue)   { flow = 'MANUAL'; flow_reason = 'high_monthly'; }
     else if (noCFEPlan)   { flow = 'MANUAL'; flow_reason = 'no_cfe'; }
 
-    // 1) OCR si hay archivos (por si aún no se hizo)
+    // Si no hay OCR y hay archivos, intenta una última vez rápido (no bloquea el submit si falla)
     let ocr: any = ocrData || null;
     try {
       if (files.length && !ocr) {
@@ -249,7 +325,7 @@ function App() {
       }
     } catch {}
 
-    // 2) Preparar payload
+    // payload
     showLoading('Calculando tu propuesta…');
 
     const loads = cargaDetalles || {};
@@ -302,13 +378,12 @@ function App() {
       if (json.mode === 'BLOCKED') {
         hideLoading();
         bridge?.gtm?.('cotizador_v2_blocked', { reason: json.reason || flow_reason });
-        setShowError(true);
+        alert('Por ahora no podemos calcular tu propuesta automáticamente.');
         return;
       }
 
       hideLoading();
       setShowResultModal(true);
-
     } catch (err) {
       console.error(err);
       hideLoading();
@@ -401,6 +476,40 @@ function App() {
                             </button>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Estado OCR inline */}
+                    {ocrStatus === 'processing' && (
+                      <div className="mt-6 flex items-center justify-center gap-3 text-slate-700">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="text-sm font-medium">Extrayendo información de tu recibo de CFE…</span>
+                      </div>
+                    )}
+
+                    {ocrStatus === 'success' && (
+                      <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-green-800">{ocrMessage}</p>
+                          <p className="text-xs text-green-700 mt-1">
+                            {ocrQuality != null ? `Calidad OCR: ${(ocrQuality * 100).toFixed(0)}%` : 'Campos clave detectados.'}
+                            {ocrData?.tarifa ? ` • Tarifa: ${String(ocrData.tarifa).toUpperCase()}` : ''}
+                            {ocrData?.codigo_postal ? ` • CP: ${ocrData.codigo_postal}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {ocrStatus === 'error' && (
+                      <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-red-800">{ocrMessage}</p>
+                          <p className="text-xs text-red-700 mt-1">
+                            Asegúrate de que la foto sea nítida y se vean todas las secciones. También puedes capturar los datos manualmente.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -519,7 +628,7 @@ function App() {
                               value={numPersonasCasa}
                               onChange={(e) => setNumPersonasCasa(e.target.value)}
                               placeholder="Ej. 4"
-                              min="1"
+                              min={1}
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                               style={{ outlineColor: '#3cd070' }}
                             />
@@ -546,6 +655,14 @@ function App() {
                           </div>
                         )}
                       </>
+                    )}
+
+                    {hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado') && (
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <p className="text-sm text-slate-700">
+                          Continuaremos sin CFE. Si decides contratar más adelante, podremos ajustar tu propuesta.
+                        </p>
+                      </div>
                     )}
 
                     {hasCFE === 'si' && (
@@ -685,11 +802,11 @@ function App() {
                     <p className="text-xs text-slate-500 mb-3">(Opcional - puedes elegir varias)</p>
                     <div className="space-y-3">
                       {[
-                        { value: 'ev', label: 'Cargador para coche eléctrico' },
+                        { value: 'ev',        label: 'Cargador para coche eléctrico' },
                         { value: 'minisplit', label: 'Minisplit / A/C' },
-                        { value: 'secadora', label: 'Secadora eléctrica' },
-                        { value: 'bomba', label: 'Bomba de agua / alberca' },
-                        { value: 'otro', label: 'Otro' },
+                        { value: 'secadora',  label: 'Secadora eléctrica' },
+                        { value: 'bomba',     label: 'Bomba de agua / alberca' },
+                        { value: 'otro',      label: 'Otro' },
                       ].map((item) => (
                         <div key={item.value}>
                           <label className="flex items-center gap-3 cursor-pointer group">
@@ -755,7 +872,7 @@ function App() {
                                     minisplit: { ...cargaDetalles.minisplit, cantidad: e.target.value, horas: cargaDetalles.minisplit?.horas || '' }
                                   })}
                                   placeholder="Ej. 2"
-                                  min="1"
+                                  min={1}
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
                                 />
@@ -770,7 +887,7 @@ function App() {
                                     minisplit: { ...cargaDetalles.minisplit, cantidad: cargaDetalles.minisplit?.cantidad || '', horas: e.target.value }
                                   })}
                                   placeholder="Ej. 6"
-                                  step="0.5"
+                                  step={0.5}
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
                                 />
@@ -815,7 +932,7 @@ function App() {
                           value={pisos}
                           onChange={(e) => setPisos(e.target.value)}
                           placeholder="Ej. 8"
-                          min="1"
+                          min={1}
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                           style={{ outlineColor: '#3cd070' }}
                         />
@@ -909,7 +1026,6 @@ function App() {
                         type="tel"
                         value={telefono}
                         onChange={(e) => {
-                          // Solo dígitos y máx 10
                           const v = e.target.value.replace(/\D/g, '').slice(0, 10);
                           setTelefono(v);
                         }}
@@ -1039,7 +1155,7 @@ function App() {
         </div>
       )}
 
-      {/* Overlay de carga global */}
+      {/* Overlay de carga global (para submit) */}
       {loading && (
         <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center">
