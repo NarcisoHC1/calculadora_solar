@@ -1,35 +1,42 @@
 import { useState, useEffect } from 'react';
-import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
+import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Info } from 'lucide-react';
 
 type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
-const OCR_BASE  = (import.meta as any).env?.VITE_OCR_BASE  || '';
+const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || ''; // 👉 tu servicio de Railway
 
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
 
-  // Subida de hasta 2 archivos
+  // Upload hasta 2 archivos
   const [files, setFiles] = useState<File[]>([]);
   const fileUploaded = files.length > 0;
   const [fileNames, setFileNames] = useState<string[]>([]);
 
+  // Estado OCR
+  const [ocrStatus, setOcrStatus] = useState<'idle' | 'processing' | 'ok' | 'fail'>('idle');
+  const [ocrMsg, setOcrMsg] = useState<string>('');
+  const [ocrResult, setOcrResult] = useState<any>(null); // guardamos { ok, quality, data, form_overrides? }
+
+  // Mostrar captura manual (cuando no usan recibo)
   const [showManual, setShowManual] = useState(false);
 
-  // Step 1 fields
+  // Step 1
   const [hasCFE, setHasCFE] = useState('');
   const [planCFE, setPlanCFE] = useState('');
-  const [usoCasaNegocio, setUsoCasaNegocio] = useState('');
+  const [usoCasaNegocio, setUsoCasaNegocio] = useState(''); // For no CFE but planning
   const [numPersonasCasa, setNumPersonasCasa] = useState('');
   const [rangoPersonasNegocio, setRangoPersonasNegocio] = useState('');
+
   const [pago, setPago] = useState('');
-  const [periodo, setPeriodo] = useState('bimestral');
+  const [periodo, setPeriodo] = useState<'bimestral' | 'mensual'>('bimestral');
   const [tarifa, setTarifa] = useState('');
   const [cp, setCP] = useState('');
   const [expand, setExpand] = useState('');
   const [showError, setShowError] = useState(false);
 
-  // Step 2 fields (sin área de techo)
+  // Step 2 (sin área de techo)
   const [cargas, setCargas] = useState<string[]>([]);
   const [cargaDetalles, setCargaDetalles] = useState<{
     ev?: { modelo: string; km: string };
@@ -39,37 +46,24 @@ function App() {
   const [pisos, setPisos] = useState('');
   const [notas, setNotas] = useState('');
 
-  // Step 3 fields
+  // Step 3 (sin propia/rentada)
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [telefono, setTelefono] = useState('');
   const [uso, setUso] = useState('');
   const [privacidad, setPrivacidad] = useState(false);
+  const [telError, setTelError] = useState<string>(''); // validación 10 dígitos
 
-  // Validación WhatsApp (10 dígitos)
-  const PHONE_RE = /^[0-9]{10}$/;
-  const [phoneTouched, setPhoneTouched] = useState(false);
-  const phoneError = phoneTouched && !PHONE_RE.test(telefono);
-
-  // Modals
+  // Modales / overlay
   const [showResultModal, setShowResultModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
-
-  // Overlay global (para submit a Netlify)
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
 
-  // OCR states
-  const [ocrData, setOcrData] = useState<any>(null);
-  const [ocrStatus, setOcrStatus] = useState<'idle'|'processing'|'success'|'error'>('idle');
-  const [ocrMessage, setOcrMessage] = useState<string>('');
-  const [ocrQuality, setOcrQuality] = useState<number | null>(null);
-
   // Flags de flujo
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
-  const isNoCFENoPlanning   = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
+  const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
 
-  // Helpers overlay + aviso al padre (iframe)
   function showLoading(msg = 'Calculando tu propuesta…') {
     setLoadingMsg(msg);
     setLoading(true);
@@ -80,7 +74,94 @@ function App() {
     try { window.parent.postMessage({ type: 'status', status: 'done' }, '*'); } catch {}
   }
 
-  // Utils ----------------------------------------------------
+  // ---------- OCR: corre en cuanto el usuario sube archivo(s) ----------
+  async function runOCRRailway(selectedFiles: File[]) {
+    if (!OCR_BASE) {
+      setOcrStatus('fail');
+      setOcrMsg('No se encontró el servicio de OCR. Revisa VITE_OCR_BASE.');
+      return;
+    }
+    try {
+      setOcrStatus('processing');
+      setOcrMsg('Extrayendo información de tu recibo de CFE…');
+
+      const fd = new FormData();
+      selectedFiles.slice(0, 2).forEach(f => fd.append('files', f)); // 👈 clave 'files'
+
+      const res = await fetch(`${OCR_BASE}/v1/ocr/cfe`, {
+        method: 'POST',
+        body: fd,
+      });
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json) {
+        setOcrStatus('fail');
+        setOcrMsg('No pudimos procesar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
+        setOcrResult(null);
+        return;
+      }
+
+      // Esperamos { ok, quality, data, form_overrides? }
+      if (json.ok) {
+        setOcrStatus('ok');
+        setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
+
+        setOcrResult(json);
+
+        // Prefill NO intrusivo: sólo si están vacíos
+        if (!tarifa && json.form_overrides?.tarifa) setTarifa(String(json.form_overrides.tarifa).toUpperCase());
+        if (!cp && json.form_overrides?.cp) setCP(String(json.form_overrides.cp));
+
+        // Forzar flujo de "sí tengo CFE" si subió recibo
+        setHasCFE('si');
+        setPlanCFE('');
+        setShowManual(false);
+      } else {
+        setOcrStatus('fail');
+        setOcrMsg('No pudimos leer bien el recibo. Sube una imagen más nítida o captura tus datos manualmente.');
+        setOcrResult(json); // lo guardamos igual por si trae algo útil
+      }
+    } catch (err) {
+      console.warn('OCR error', err);
+      setOcrStatus('fail');
+      setOcrMsg('Error al procesar tu recibo. Intenta con una foto más clara o captura manualmente.');
+      setOcrResult(null);
+    }
+  }
+
+  // Upload múltiple (máx 2) → dispara OCR
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+
+    const next = [...selected].slice(0, 2);
+    setFiles(next);
+    setFileNames(next.map(f => f.name));
+
+    // Corre OCR primero
+    await runOCRRailway(next);
+  };
+
+  const removeFileAt = (idx: number) => {
+    const next = files.filter((_, i) => i !== idx);
+    setFiles(next);
+    setFileNames(next.map(f => f.name));
+    if (next.length === 0) {
+      setOcrStatus('idle');
+      setOcrMsg('');
+      setOcrResult(null);
+    }
+  };
+
+  const startManual = () => {
+    setShowManual(true);
+    setFiles([]);
+    setFileNames([]);
+    setOcrStatus('idle');
+    setOcrMsg('');
+    setOcrResult(null);
+  };
+
   const handleCargaToggle = (carga: string, checked: boolean) => {
     if (checked) {
       setCargas([...cargas, carga]);
@@ -93,155 +174,12 @@ function App() {
     }
   };
 
-  function startManual() {
-    setShowManual(true);
-    setFiles([]);
-    setFileNames([]);
-    // reset OCR UI si veníamos de un intento
-    setOcrStatus('idle');
-    setOcrMessage('');
-    setOcrQuality(null);
-    setOcrData(null);
-  }
-
-  function removeFileAt(idx: number) {
-    const next = files.filter((_, i) => i !== idx);
-    setFiles(next);
-    setFileNames(next.map(f => f.name));
-    if (next.length === 0) {
-      setOcrStatus('idle');
-      setOcrMessage('');
-      setOcrQuality(null);
-      setOcrData(null);
-    }
-  }
-
-  async function fileToDataURL(file: File): Promise<string> {
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(reader.error);
-      reader.onload = () => resolve(String(reader.result));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // === OCR: Railway primero (multipart sin bajar resolución) y fallback a Netlify (JSON base64) ===
-  async function runOCRIfFiles(): Promise<any | null> {
-    if (!files.length) return null;
-
-    setOcrStatus('processing');
-    setOcrMessage('Extrayendo información de tu recibo de CFE…');
-    setOcrQuality(null);
-
-    try {
-      if (OCR_BASE) {
-        // Railway (multipart)
-        const fd = new FormData();
-        files.forEach((f) => fd.append('files', f, f.name));
-        const res = await fetch(`${OCR_BASE.replace(/\/+$/,'')}/v1/ocr/cfe`, { method: 'POST', body: fd });
-        const json = await res.json().catch(() => null);
-
-        if (res.ok && json?.ok && json?.data) {
-          const data = json.data;
-          setOcrData(data);
-          setOcrQuality(typeof json.quality === 'number' ? json.quality : null);
-          if (data?.tarifa && !tarifa) setTarifa(String(data.tarifa).toUpperCase());
-          if (data?.codigo_postal && !cp) setCP(String(data.codigo_postal));
-          setOcrStatus('success');
-          setOcrMessage('¡Listo! Extraímos tus datos correctamente.');
-          return data;
-        } else {
-          // Intenta fallback a Netlify si existe API_BASE
-          if (API_BASE) {
-            const images: string[] = [];
-            for (const f of files.slice(0, 3)) {
-              images.push(await fileToDataURL(f));
-            }
-            const res2 = await fetch(`${API_BASE}/api/ocr_cfe_v2`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ images, filename: fileNames[0] || 'recibo' })
-            });
-            const j2 = await res2.json().catch(() => null);
-            const ok2 = res2.ok && (j2?.ok || j2?.data);
-            const data2 = j2?.data || (ok2 ? j2 : null);
-
-            if (ok2 && data2) {
-              setOcrData(data2);
-              if (typeof j2?.quality === 'number') setOcrQuality(j2.quality);
-              if (data2?.tarifa && !tarifa) setTarifa(String(data2.tarifa).toUpperCase());
-              if (data2?.codigo_postal && !cp) setCP(String(data2.codigo_postal));
-              setOcrStatus('success');
-              setOcrMessage('¡Listo! Extraímos tus datos correctamente.');
-              return data2;
-            }
-          }
-
-          setOcrStatus('error');
-          setOcrMessage('No pudimos leer tu recibo. Por favor súbelo más nítido o captura tus datos manualmente.');
-          return null;
-        }
-      } else if (API_BASE) {
-        // Sólo Netlify (JSON con dataURL)
-        const images: string[] = [];
-        for (const f of files.slice(0, 3)) {
-          images.push(await fileToDataURL(f));
-        }
-        const res = await fetch(`${API_BASE}/api/ocr_cfe_v2`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images, filename: fileNames[0] || 'recibo' })
-        });
-        const j = await res.json().catch(() => null);
-        const ok = res.ok && (j?.ok || j?.data);
-        const data = j?.data || (ok ? j : null);
-
-        if (ok && data) {
-          setOcrData(data);
-          if (typeof j?.quality === 'number') setOcrQuality(j.quality);
-          if (data?.tarifa && !tarifa) setTarifa(String(data.tarifa).toUpperCase());
-          if (data?.codigo_postal && !cp) setCP(String(data.codigo_postal));
-          setOcrStatus('success');
-          setOcrMessage('¡Listo! Extraímos tus datos correctamente.');
-          return data;
-        } else {
-          setOcrStatus('error');
-          setOcrMessage('No pudimos leer tu recibo. Por favor súbelo más nítido o captura tus datos manualmente.');
-          return null;
-        }
-      } else {
-        setOcrStatus('error');
-        setOcrMessage('OCR no está configurado. Define VITE_OCR_BASE o VITE_API_BASE.');
-        return null;
-      }
-    } catch (err) {
-      console.warn('OCR error', err);
-      setOcrStatus('error');
-      setOcrMessage('No pudimos leer tu recibo. Por favor súbelo más nítido o captura tus datos manualmente.');
-      return null;
-    }
-  }
-
-  // Upload handler: dispara OCR de inmediato
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files || []);
-    if (!selected.length) return;
-    const next = [...files, ...selected].slice(0, 2);
-    setFiles(next);
-    setFileNames(next.map(f => f.name));
-
-    // asegúrate que estamos en flujo con CFE
-    setHasCFE('si');
-    setPlanCFE('');
-    setShowManual(false);
-
-    // Ejecuta OCR inline (sin overlay global)
-    await runOCRIfFiles();
-  };
-
-  // Step 1 gating (igual que antes)
+  // Validar avance de pasos
   const canProceedStep1 = () => {
-    if (fileUploaded) return true;
+    // Si subió recibo(s), requerimos OCR OK para avanzar
+    if (fileUploaded) return ocrStatus === 'ok';
+
+    // Manual
     if (!showManual) return false;
     if (!hasCFE) return false;
 
@@ -269,6 +207,7 @@ function App() {
   const canProceedStep2 = () => {
     if (!tipoInmueble) return false;
     if (['2', '4', '5', '8'].includes(tipoInmueble) && !pisos) return false;
+
     if (cargas.includes('ev')) {
       if (!cargaDetalles.ev?.modelo || !cargaDetalles.ev?.km) return false;
     }
@@ -278,13 +217,17 @@ function App() {
     return true;
   };
 
-  // Navegación (sin cambios en la lógica de paso)
-  const nextStep = async () => {
+  // Navegación
+  const nextStep = () => {
     if (currentStep === 1) {
-      // si el usuario subió archivos, OCR ya corrió con el upload
       if (fileUploaded) {
-        setCurrentStep(2);
-        return;
+        // con recibo: sólo sigue si OCR ok
+        if (ocrStatus === 'ok') {
+          setCurrentStep(2);
+          return;
+        } else {
+          return; // bloqueado hasta que sea ok o elija manual
+        }
       }
       if (isNoCFENoPlanning || isNoCFEPlanningFlow) {
         setCurrentStep(3);
@@ -293,20 +236,34 @@ function App() {
     }
     if (currentStep < 3) setCurrentStep((currentStep + 1) as Step);
   };
-  const prevStep = () => {
-    if (currentStep > 1) setCurrentStep((currentStep - 1) as Step);
-  };
+  const prevStep = () => { if (currentStep > 1) setCurrentStep((currentStep - 1) as Step); };
 
-  // SUBMIT (Netlify no espera a Railway porque OCR ya ocurrió en Step 1)
+  // Validación de teléfono 10 dígitos
+  useEffect(() => {
+    const d = (telefono || '').replace(/\D/g, '');
+    if (!telefono) {
+      setTelError('');
+    } else if (d.length !== 10) {
+      setTelError('El WhatsApp debe tener 10 dígitos (solo números).');
+    } else {
+      setTelError('');
+    }
+  }, [telefono]);
+
+  // Submit final → Netlify
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setPhoneTouched(true);
-    if (!PHONE_RE.test(telefono)) return;
-
     if (!nombre || !correo || !telefono || !uso || !privacidad) return;
 
-    // flujo
+    // Tel 10 dígitos
+    const telDigits = (telefono || '').replace(/\D/g, '');
+    if (telDigits.length !== 10) {
+      setTelError('El WhatsApp debe tener 10 dígitos (solo números).');
+      return;
+    }
+
+    // Reglas de flujo
     const highValue = parseFloat(pago || '0') >= 50000;
     const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa);
     const noCFEPlan = isNoCFENoPlanning;
@@ -317,15 +274,6 @@ function App() {
     else if (highValue)   { flow = 'MANUAL'; flow_reason = 'high_monthly'; }
     else if (noCFEPlan)   { flow = 'MANUAL'; flow_reason = 'no_cfe'; }
 
-    // Si no hay OCR y hay archivos, intenta una última vez rápido (no bloquea el submit si falla)
-    let ocr: any = ocrData || null;
-    try {
-      if (files.length && !ocr) {
-        ocr = await runOCRIfFiles();
-      }
-    } catch {}
-
-    // payload
     showLoading('Calculando tu propuesta…');
 
     const loads = cargaDetalles || {};
@@ -333,6 +281,7 @@ function App() {
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
 
+    // Enviamos al backend todo, incluyendo el resultado crudo del OCR (ok/quality/data)
     const formPayload: any = {
       nombre,
       email: correo,
@@ -341,7 +290,7 @@ function App() {
       periodicidad: periodo || 'bimestral',
       pago_promedio_mxn: parseFloat(pago || '0') || 0,
       cp,
-      tarifa: tarifa || (ocr?.tarifa || ''),
+      tarifa: tarifa || '',
       tipo_inmueble: tipoInmueble || '',
       pisos: parseInt(pisos || '0', 10) || 0,
       notes: notas || '',
@@ -354,7 +303,11 @@ function App() {
       const res = await fetch(`${API_BASE}/api/cotizacion_v2`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ req_id, flow, flow_reason, utms, ocr, form: formPayload })
+        body: JSON.stringify({
+          req_id, flow, flow_reason, utms,
+          ocr: ocrResult || null, // 👈 mandamos lo que devolvió Railway (o null)
+          form: formPayload
+        })
       });
       const json = await res.json();
 
@@ -378,12 +331,13 @@ function App() {
       if (json.mode === 'BLOCKED') {
         hideLoading();
         bridge?.gtm?.('cotizador_v2_blocked', { reason: json.reason || flow_reason });
-        alert('Por ahora no podemos calcular tu propuesta automáticamente.');
+        alert('Por ahora no podemos procesar tu solicitud en automático.');
         return;
       }
 
       hideLoading();
       setShowResultModal(true);
+
     } catch (err) {
       console.error(err);
       hideLoading();
@@ -391,6 +345,7 @@ function App() {
     }
   };
 
+  // Umbral de consumo pequeño (aviso rojo)
   useEffect(() => {
     if (!showManual) return;
     const pagoNum = parseFloat(pago);
@@ -431,7 +386,7 @@ function App() {
 
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8">
-          {/* Step 1 */}
+          {/* Step 1: Upload o Manual */}
           {currentStep === 1 && (
             <div className="space-y-6">
               {!showManual ? (
@@ -478,47 +433,37 @@ function App() {
                         ))}
                       </div>
                     )}
-
-                    {/* Estado OCR inline */}
-                    {ocrStatus === 'processing' && (
-                      <div className="mt-6 flex items-center justify-center gap-3 text-slate-700">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span className="text-sm font-medium">Extrayendo información de tu recibo de CFE…</span>
-                      </div>
-                    )}
-
-                    {ocrStatus === 'success' && (
-                      <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-semibold text-green-800">{ocrMessage}</p>
-                          <p className="text-xs text-green-700 mt-1">
-                            {ocrQuality != null ? `Calidad OCR: ${(ocrQuality * 100).toFixed(0)}%` : 'Campos clave detectados.'}
-                            {ocrData?.tarifa ? ` • Tarifa: ${String(ocrData.tarifa).toUpperCase()}` : ''}
-                            {ocrData?.codigo_postal ? ` • CP: ${ocrData.codigo_postal}` : ''}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {ocrStatus === 'error' && (
-                      <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-semibold text-red-800">{ocrMessage}</p>
-                          <p className="text-xs text-red-700 mt-1">
-                            Asegúrate de que la foto sea nítida y se vean todas las secciones. También puedes capturar los datos manualmente.
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
-                    <p className="text-sm text-slate-700">
-                      <strong>Tip:</strong> Sube ambas páginas (frente y reverso) para mayor precisión.
-                    </p>
-                  </div>
+                  {/* Estado del OCR */}
+                  {ocrStatus === 'processing' && (
+                    <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-slate-300 rounded-full animate-spin" style={{ borderTopColor: '#1e3a2b' }}></div>
+                      <p className="text-sm text-slate-700">{ocrMsg || 'Extrayendo información de tu recibo de CFE…'}</p>
+                    </div>
+                  )}
+                  {ocrStatus === 'ok' && (
+                    <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <p className="text-sm text-emerald-800">
+                        {ocrMsg || 'Datos extraídos correctamente.'} {!tarifa && ocrResult?.form_overrides?.tarifa ? <>(Tarifa sugerida: <strong>{String(ocrResult.form_overrides.tarifa)}</strong>)</> : null}
+                        {!cp && ocrResult?.form_overrides?.cp ? <>, CP sugerido: <strong>{String(ocrResult.form_overrides.cp)}</strong></> : null}
+                      </p>
+                    </div>
+                  )}
+                  {ocrStatus === 'fail' && (
+                    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-amber-800">
+                          {ocrMsg || 'No pudimos leer bien el recibo.'}
+                        </p>
+                        <p className="text-xs text-amber-700 mt-2">
+                          Sube una imagen más nítida, o <button className="underline" onClick={startManual}>captura tus datos manualmente</button>.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="relative my-8">
                     <div className="absolute inset-0 flex items-center">
@@ -628,7 +573,7 @@ function App() {
                               value={numPersonasCasa}
                               onChange={(e) => setNumPersonasCasa(e.target.value)}
                               placeholder="Ej. 4"
-                              min={1}
+                              min="1"
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                               style={{ outlineColor: '#3cd070' }}
                             />
@@ -657,14 +602,6 @@ function App() {
                       </>
                     )}
 
-                    {hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado') && (
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                        <p className="text-sm text-slate-700">
-                          Continuaremos sin CFE. Si decides contratar más adelante, podremos ajustar tu propuesta.
-                        </p>
-                      </div>
-                    )}
-
                     {hasCFE === 'si' && (
                       <div className="space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -690,7 +627,7 @@ function App() {
                             </label>
                             <select
                               value={periodo}
-                              onChange={(e) => setPeriodo(e.target.value)}
+                              onChange={(e) => setPeriodo(e.target.value as 'bimestral' | 'mensual')}
                               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                               style={{ outlineColor: '#3cd070' }}
                             >
@@ -787,7 +724,7 @@ function App() {
             </div>
           )}
 
-          {/* Step 2 */}
+          {/* Step 2: Cargas e Inmueble */}
           {currentStep === 2 && (
             <div className="space-y-8">
               <div>
@@ -802,11 +739,11 @@ function App() {
                     <p className="text-xs text-slate-500 mb-3">(Opcional - puedes elegir varias)</p>
                     <div className="space-y-3">
                       {[
-                        { value: 'ev',        label: 'Cargador para coche eléctrico' },
+                        { value: 'ev', label: 'Cargador para coche eléctrico' },
                         { value: 'minisplit', label: 'Minisplit / A/C' },
-                        { value: 'secadora',  label: 'Secadora eléctrica' },
-                        { value: 'bomba',     label: 'Bomba de agua / alberca' },
-                        { value: 'otro',      label: 'Otro' },
+                        { value: 'secadora', label: 'Secadora eléctrica' },
+                        { value: 'bomba', label: 'Bomba de agua / alberca' },
+                        { value: 'otro', label: 'Otro' },
                       ].map((item) => (
                         <div key={item.value}>
                           <label className="flex items-center gap-3 cursor-pointer group">
@@ -872,7 +809,7 @@ function App() {
                                     minisplit: { ...cargaDetalles.minisplit, cantidad: e.target.value, horas: cargaDetalles.minisplit?.horas || '' }
                                   })}
                                   placeholder="Ej. 2"
-                                  min={1}
+                                  min="1"
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
                                 />
@@ -887,7 +824,7 @@ function App() {
                                     minisplit: { ...cargaDetalles.minisplit, cantidad: cargaDetalles.minisplit?.cantidad || '', horas: e.target.value }
                                   })}
                                   placeholder="Ej. 6"
-                                  step={0.5}
+                                  step="0.5"
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
                                 />
@@ -932,7 +869,7 @@ function App() {
                           value={pisos}
                           onChange={(e) => setPisos(e.target.value)}
                           placeholder="Ej. 8"
-                          min={1}
+                          min="1"
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                           style={{ outlineColor: '#3cd070' }}
                         />
@@ -978,7 +915,7 @@ function App() {
             </div>
           )}
 
-          {/* Step 3 */}
+          {/* Step 3: Contacto */}
           {currentStep === 3 && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
@@ -1025,20 +962,16 @@ function App() {
                       <input
                         type="tel"
                         value={telefono}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          setTelefono(v);
-                        }}
-                        onBlur={() => setPhoneTouched(true)}
-                        placeholder="5512345678"
+                        onChange={(e) => setTelefono(e.target.value)}
+                        placeholder="55 1234 5678"
                         required
-                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${phoneError ? 'border-red-400' : 'border-slate-300'}`}
-                        style={{ outlineColor: phoneError ? '#dc2626' : '#3cd070' }}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                        style={{ outlineColor: '#3cd070' }}
                       />
-                      {phoneError && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Debe tener exactamente 10 dígitos (solo números).
-                        </p>
+                      {telError ? (
+                        <p className="text-xs mt-1 text-red-600">{telError}</p>
+                      ) : (
+                        <p className="text-xs mt-1 text-slate-500">10 dígitos (solo números).</p>
                       )}
                     </div>
                     <div>
@@ -1095,8 +1028,7 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!PHONE_RE.test(telefono)}
-                  className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all"
                   style={{ background: '#ff5c36' }}
                 >
                   <span>Calcular mi ahorro</span>
@@ -1155,7 +1087,7 @@ function App() {
         </div>
       )}
 
-      {/* Overlay de carga global (para submit) */}
+      {/* Overlay de carga global (para cotización) */}
       {loading && (
         <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center">
