@@ -24,7 +24,7 @@ function getFirstName(fullName: string): string {
   return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
 }
 
-function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
+function ProposalCard({ data, title, onClose }: { data: ProposalData; title: string; onClose: () => void }) {
   const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
 
   return (
@@ -147,13 +147,24 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
               </div>
             </div>
           </div>
+
+          <div className="mt-6 text-center">
+            <button
+              onClick={onClose}
+              className="w-full px-6 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+              style={{ background: '#ff5c36', color: 'white' }}
+            >
+              Agendar visita técnica gratuita
+            </button>
+            <p className="text-xs text-slate-500 mt-2">Sin compromiso · Evaluación profesional · 100% gratis</p>
+          </div>
         </div>
 
         <div className="border-t border-slate-200 pt-6 mb-6">
           <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
 
           <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff5c36' }}>
               <h5 className="text-base font-bold text-slate-900 mb-4">💰 Beneficios Económicos</h5>
               <div className="space-y-3 text-sm text-slate-700">
                 <div className="flex items-start gap-3">
@@ -181,7 +192,7 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-200 rounded-xl p-6">
+            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#1e3a2b' }}>
               <h5 className="text-base font-bold text-slate-900 mb-4">🛡️ Servicios y Garantías</h5>
               <div className="space-y-3 text-sm text-slate-700">
                 <div className="flex items-start gap-3">
@@ -207,7 +218,7 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-xl p-6">
+          <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff5c36' }}>
             <h5 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
               <TreePine className="w-5 h-5" style={{ color: '#3cd070' }} />
               Impacto Ambiental Anual
@@ -257,152 +268,172 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
           <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 rounded-xl p-5" style={{ borderColor: '#ff5c3644' }}>
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff5c36' }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold" style={{ background: '#ff5c36' }}>
-                  ☀️
-                </div>
+                <img src="/logo_longi_2.jpg" alt="JA Solar" className="w-12 h-12 object-contain" />
                 <div>
                   <h5 className="font-bold text-slate-900">JA Solar</h5>
                   <p className="text-xs text-slate-600">Paneles Solares</p>
                 </div>
               </div>
-              <div className="space-y-1.5 text-sm text-slate-700">
+              <div className="space-y-1 text-sm text-slate-700">
                 <p>• #3 mundial en fabricación</p>
                 <p>• +90GW instalados globalmente</p>
                 <p>• Tecnología bifacial N-Type</p>
-                <p>• Certificaciones IEC/UL 1703</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5">
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#1e3a2b' }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold" style={{ background: '#1e3a2b' }}>
-                  ⚡
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
+                  H
                 </div>
                 <div>
                   <h5 className="font-bold text-slate-900">Hoymiles</h5>
                   <p className="text-xs text-slate-600">Microinversores</p>
                 </div>
               </div>
-              <div className="space-y-1.5 text-sm text-slate-700">
+              <div className="space-y-1 text-sm text-slate-700">
                 <p>• Líder global en microinversores</p>
                 <p>• +5M unidades instaladas</p>
                 <p>• Eficiencia hasta 97.3%</p>
-                <p>• Monitoreo individual por panel</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-200 rounded-xl p-5">
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff5c36' }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold" style={{ background: '#1e3a2b' }}>
-                  🔌
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
+                  H
                 </div>
                 <div>
                   <h5 className="font-bold text-slate-900">Huawei</h5>
                   <p className="text-xs text-slate-600">Inversores String</p>
                 </div>
               </div>
-              <div className="space-y-1.5 text-sm text-slate-700">
+              <div className="space-y-1 text-sm text-slate-700">
                 <p>• Líder mundial en inversores</p>
                 <p>• Tecnología FusionSolar</p>
                 <p>• Eficiencia hasta 98.6%</p>
-                <p>• Protección IP65</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-50 to-zinc-50 border-2 border-slate-300 rounded-xl p-5">
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#1e3a2b' }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold" style={{ background: '#1e3a2b' }}>
-                  🔩
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
+                  A
                 </div>
                 <div>
                   <h5 className="font-bold text-slate-900">Aluminext</h5>
                   <p className="text-xs text-slate-600">Sistema de Montaje</p>
                 </div>
               </div>
-              <div className="space-y-1.5 text-sm text-slate-700">
+              <div className="space-y-1 text-sm text-slate-700">
                 <p>• Fabricante mexicano premium</p>
                 <p>• Aluminio grado industrial</p>
                 <p>• Diseño antisísmico certificado</p>
-                <p>• Resistencia a vientos extremos</p>
               </div>
             </div>
+          </div>
+
+          <div className="mt-6 text-center">
+            <button
+              onClick={onClose}
+              className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+              style={{ background: '#ff5c36', color: 'white' }}
+            >
+              Agendar visita técnica gratuita
+            </button>
           </div>
         </div>
 
         <div className="border-t border-slate-200 pt-6 mt-6">
           <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
-                1
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Visita Técnica</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    ~1 día
-                  </span>
-                </div>
-                <p className="text-sm text-slate-700">Evaluación gratuita y propuesta final</p>
-              </div>
-            </div>
 
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
-                2
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    ~1 día
-                  </span>
-                </div>
-                <p className="text-sm text-slate-700">Firma y pago del 50%</p>
-              </div>
-            </div>
+          <div className="relative">
+            <div className="absolute left-6 top-12 bottom-12 w-0.5" style={{ background: '#ff5c36' }}></div>
 
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
-                3
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Instalación</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    ~5 días
-                  </span>
+            <div className="space-y-8">
+              <div className="flex gap-4 relative">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                  1
                 </div>
-                <p className="text-sm text-slate-700">Sistema funcionando</p>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff5c36' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h5 className="font-bold text-slate-900">Visita Técnica</h5>
+                    <span className="text-sm text-slate-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      ~1 día
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-700">Evaluación gratuita y propuesta final</p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
-                4
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    2-4 semanas
-                  </span>
+              <div className="flex gap-4 relative">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                  2
                 </div>
-                <p className="text-sm text-slate-700">Trámites y medidor bidireccional</p>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#1e3a2b' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
+                    <span className="text-sm text-slate-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      ~1 día
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-700">Firma y pago del 50%</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 relative">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                  3
+                </div>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff5c36' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h5 className="font-bold text-slate-900">Instalación</h5>
+                    <span className="text-sm text-slate-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      ~5 días
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-700">Sistema funcionando</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 relative">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                  4
+                </div>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#1e3a2b' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
+                    <span className="text-sm text-slate-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      2-4 semanas
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-700">Trámites y medidor bidireccional</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-sm text-blue-900 font-semibold">
+          <div className="mt-6 bg-slate-50 border-2 rounded-xl p-4 text-center" style={{ borderColor: '#ff5c36' }}>
+            <p className="text-sm font-semibold" style={{ color: '#1e3a2b' }}>
               ⏱️ Tiempo total estimado: 4-6 semanas desde la visita hasta interconexión completa
             </p>
+          </div>
+
+          <div className="mt-6 text-center">
+            <button
+              onClick={onClose}
+              className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+              style={{ background: '#ff5c36', color: 'white' }}
+            >
+              Agendar visita técnica gratuita
+            </button>
+            <p className="text-xs text-slate-500 mt-2">Agenda tu cita ahora · Sin compromiso</p>
           </div>
         </div>
 
@@ -493,7 +524,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               />
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold" style={{ color: '#1e3a2b' }}>SolarYa</h1>
-                <p className="text-slate-600">Tu solución solar personalizada</p>
+                <p className="text-slate-600 font-semibold">Accesible. Confiable. Simple.</p>
               </div>
             </div>
             <div className="text-right">
@@ -514,41 +545,61 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
         {proposal.future ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" />
-            <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" />
+            <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} />
+            <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} />
           </div>
         ) : (
           <div className="mb-8">
-            <ProposalCard data={proposal.current} title="Tu Propuesta Personalizada de Sistema de Paneles Solares" />
+            <ProposalCard data={proposal.current} title="Tu Propuesta Personalizada de Sistema de Paneles Solares" onClose={onClose} />
           </div>
         )}
 
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
           <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
           <FAQAccordion />
-        </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 text-center" style={{ borderTop: '4px solid #ff5c36' }}>
-          <div className="text-5xl mb-4">🚀</div>
-          <h3 className="text-2xl font-bold mb-3" style={{ color: '#1e3a2b' }}>¿Listo para comenzar?</h3>
-          <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-            Nuestro equipo de expertos está listo para agendar tu visita técnica gratuita y comenzar tu transformación energética
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
+          <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+            <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
             <button
               onClick={onClose}
-              className="px-6 py-3 rounded-xl font-semibold transition-all hover:opacity-90"
+              className="px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
               style={{ background: '#ff5c36', color: 'white' }}
             >
               Agendar visita técnica gratuita
             </button>
-            <button
-              onClick={onClose}
-              className="px-6 py-3 border-2 rounded-xl font-semibold transition-all hover:bg-slate-50"
-              style={{ borderColor: '#1e3a2b', color: '#1e3a2b' }}
-            >
-              Tengo preguntas
-            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff5c36' }}>
+          <div className="text-6xl mb-4">🚀</div>
+          <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
+            Da el Primer Paso Hacia Tu Independencia Energética
+          </h3>
+          <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+            Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
+            style={{ background: '#ff5c36', color: 'white' }}
+          >
+            Agendar Visita Técnica Gratuita
+          </button>
+          <p className="text-sm text-slate-500">Respuesta en menos de 24 horas · Sin letra pequeña</p>
+
+          <div className="mt-8 flex items-center justify-center gap-8 flex-wrap text-sm text-slate-600">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+              <span>Sin compromiso</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+              <span>100% gratis</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+              <span>Respuesta rápida</span>
+            </div>
           </div>
         </div>
       </div>
