@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ProposalData, DualProposal } from './types';
-import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download } from 'lucide-react';
+import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock } from 'lucide-react';
 
 interface ProposalProps {
   proposal: DualProposal;
@@ -20,7 +20,7 @@ function formatCurrency(amount: number): string {
 function getFirstName(fullName: string): string {
   const trimmed = fullName.trim();
   const parts = trimmed.split(/\s+/);
-  return parts[0];
+  return parts[0].toUpperCase();
 }
 
 function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
@@ -60,12 +60,8 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
         {showDACWarning && dacBimonthlyPayment && dacFinancial && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
             <p className="text-sm font-bold text-amber-900 mb-2">⚠️ Advertencia DAC</p>
-            <p className="text-sm text-amber-800 mb-2">
-              Tu consumo de <strong>{Math.round(data.input.consumoKwh || 0)} kWh</strong> bimestrales te hace candidato para tarifa DAC.
-              Si caes en DAC, tu pago sería de <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre.
-            </p>
             <p className="text-sm text-amber-800">
-              Con paneles solares en DAC: pagarías <strong>{formatCurrency(dacFinancial.pagoFuturo)}</strong> y ahorrarías <strong>{formatCurrency(dacFinancial.ahorroBimestral)}</strong> al bimestre.
+              Tu consumo de <strong>{Math.round(data.input.consumoKwh || 0)} kWh</strong> bimestrales te hace candidato para tarifa DAC (tarifa residencial de alto consumo). Si caes en DAC, tu pago será de <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre. Con paneles solares en DAC: pagarás <strong>{formatCurrency(dacFinancial.pagoFuturo)}</strong> y ahorrarás <strong>{formatCurrency(dacFinancial.ahorroBimestral)}</strong> al bimestre.
             </p>
           </div>
         )}
@@ -78,11 +74,11 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
               </div>
               <h5 className="text-sm font-bold text-slate-700">Tu Sistema Solar</h5>
             </div>
-            <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{(system.potenciaTotal / 1000).toFixed(1)} kWp</p>
+            <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{(system.potenciaTotal / 1000).toFixed(1)} kilowatts</p>
             <div className="space-y-1 text-sm text-slate-600">
-              <p><strong className="text-slate-900">{system.numPaneles}</strong> paneles solares</p>
-              <p><strong className="text-slate-900">{Math.round(system.generacionMensualKwh)}</strong> kWh/mes</p>
-              <p><strong className="text-slate-900">{porcentajeCobertura.toFixed(0)}%</strong> cobertura</p>
+              <p><strong className="text-slate-900">{system.numPaneles}</strong> paneles solares de <strong className="text-slate-900">{system.potenciaPorPanel}</strong> watts</p>
+              <p>Energía generada: <strong className="text-slate-900">{Math.round(system.generacionMensualKwh)}</strong> kWh/mes</p>
+              <p>Generas <strong className="text-slate-900">{porcentajeCobertura.toFixed(0)}%</strong> de la energía que consumes</p>
             </div>
           </div>
 
@@ -142,25 +138,81 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
         </div>
 
         <div className="border-t border-slate-200 pt-6 mb-6">
-          <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <TreePine className="w-5 h-5" style={{ color: '#3cd070' }} />
-            Impacto Ambiental
-          </h4>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <div className="text-3xl mb-2">🌳</div>
-              <p className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
-              <p className="text-xs text-slate-600 font-semibold mt-1">árboles/año</p>
+          <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
+
+          <div className="mb-6">
+            <h5 className="text-base font-bold text-slate-900 mb-3">Beneficios Económicos</h5>
+            <div className="space-y-2 text-sm text-slate-700">
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span><strong>{formatCurrency(financial.ahorroBimestral * 6 * 25)}</strong> ahorrados en 25 años</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>Recuperación de tu inversión en <strong>{financial.anosRetorno.toFixed(1)} años</strong></span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>Aumenta el valor de tu propiedad</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>Protección contra subidas de precios de CFE</span>
+              </p>
             </div>
-            <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <div className="text-3xl mb-2">🛢️</div>
-              <p className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
-              <p className="text-xs text-slate-600 font-semibold mt-1">barriles/año</p>
+          </div>
+
+          <div className="mb-6">
+            <h5 className="text-base font-bold text-slate-900 mb-3">Servicios y Garantías Incluidas</h5>
+            <div className="space-y-2 text-sm text-slate-700">
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>Instalación profesional por técnicos certificados</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>Trámites CFE completamente gratis</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>App de monitoreo en tiempo real</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>2 años garantía instalación</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>12 años garantía en equipos</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <span>25 años garantía generación de energía</span>
+              </p>
             </div>
-            <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <div className="text-3xl mb-2">☁️</div>
-              <p className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
-              <p className="text-xs text-slate-600 font-semibold mt-1">ton CO₂/año</p>
+          </div>
+
+          <div>
+            <h5 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
+              <TreePine className="w-5 h-5" style={{ color: '#3cd070' }} />
+              Impacto Ambiental
+            </h5>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="text-3xl mb-2">🌳</div>
+                <p className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
+                <p className="text-xs text-slate-600 font-semibold mt-1">árboles/año</p>
+              </div>
+              <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="text-3xl mb-2">🛢️</div>
+                <p className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
+                <p className="text-xs text-slate-600 font-semibold mt-1">barriles/año</p>
+              </div>
+              <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="text-3xl mb-2">☁️</div>
+                <p className="text-2xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
+                <p className="text-xs text-slate-600 font-semibold mt-1">ton CO₂/año</p>
+              </div>
             </div>
           </div>
         </div>
@@ -182,6 +234,196 @@ function ProposalCard({ data, title }: { data: ProposalData; title: string }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-6 mt-6">
+          <h4 className="text-xl font-bold text-slate-900 mb-6">Usamos Sólo las Mejores Marcas</h4>
+          <p className="text-sm text-slate-700 mb-6">Nuestras marcas son líderes mundiales:</p>
+
+          <div className="space-y-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+              <h5 className="font-bold text-slate-900 mb-2">JA Solar (paneles solares)</h5>
+              <ul className="space-y-1 text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>#3 mundial en fabricación de paneles</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Más de 90GW instalados globalmente</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Tecnología Avanzada bifacial N-Type de Última generación</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>+5% más eficiente que tecnología tradicional</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Menor degradación anual</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Certificaciones IEC 61215/61730 y UL 1703 (Estados Unidos)</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+              <h5 className="font-bold text-slate-900 mb-2">Hoymiles (microinversores)</h5>
+              <ul className="space-y-1 text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Líder global en tecnología de microinversores</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Más de 5 millones de unidades instaladas mundialmente</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Eficiencia de conversión hasta 97.3%</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Monitoreo individual por panel en tiempo real</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Certificaciones IEEE 1547, UL 1741, FCC Part 15</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+              <h5 className="font-bold text-slate-900 mb-2">Growatt (inversores string)</h5>
+              <ul className="space-y-1 text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Top 10 mundial en fabricación de inversores</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Más de 3 millones de inversores instalados globalmente</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Eficiencia máxima hasta 98.75%</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Protección IP65 contra polvo y agua</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Certificaciones IEC, CE, G98, G99</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+              <h5 className="font-bold text-slate-900 mb-2">Schletter (sistema de montaje)</h5>
+              <ul className="space-y-1 text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Líder alemán en estructuras de montaje solar</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Más de 16 GW de sistemas instalados mundialmente</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Aluminio y acero inoxidable de grado marino</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Diseño optimizado para resistencia a vientos y cargas</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-400">•</span>
+                  <span>Garantía de 25 años en estructura</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-6 mt-6">
+          <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
+                1
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Visita Técnica</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~1 día
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Evaluación gratuita y propuesta final</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
+                2
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~1 día
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Firma y pago del 50%</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
+                3
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Instalación</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~5 días
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Sistema funcionando</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: '#ff5c36' }}>
+                4
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    2-4 semanas
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Trámites y medidor bidireccional</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm text-blue-900 font-semibold">
+              ⏱️ Tiempo total estimado: 4-6 semanas desde la visita hasta interconexión completa
+            </p>
           </div>
         </div>
 
@@ -282,29 +524,14 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#ff5c3622' }}>
-              <Download className="w-6 h-6" style={{ color: '#ff5c36' }} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Resumen de Tu Inversión</h2>
-              <p className="text-sm text-slate-600">
-                Hemos analizado tu consumo energético y diseñado un sistema solar a tu medida.
-                Esta propuesta incluye todo lo necesario para que empieces a generar tu propia energía limpia.
-              </p>
-            </div>
+        {proposal.future && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
+            <p className="text-sm text-blue-900">
+              <strong>💡 Planificación inteligente:</strong> Hemos preparado dos propuestas para ti.
+              La segunda considera las cargas adicionales que planeas instalar, asegurando que tu sistema crezca con tus necesidades.
+            </p>
           </div>
-
-          {proposal.future && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-              <p className="text-sm text-blue-900">
-                <strong>💡 Planificación inteligente:</strong> Hemos preparado dos propuestas para ti.
-                La segunda considera las cargas adicionales que planeas instalar, asegurando que tu sistema crezca con tus necesidades.
-              </p>
-            </div>
-          )}
-        </div>
+        )}
 
         {proposal.future ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -313,7 +540,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           </div>
         ) : (
           <div className="mb-8">
-            <ProposalCard data={proposal.current} title="Tu Propuesta Solar" />
+            <ProposalCard data={proposal.current} title="Tu Propuesta Personalizada de Sistema de Paneles Solares" />
           </div>
         )}
 
