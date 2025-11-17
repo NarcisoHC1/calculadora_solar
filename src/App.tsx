@@ -274,15 +274,26 @@ function App() {
       return;
     }
 
-    const highValue = parseFloat(pago || '0') >= 50000;
+    // Calculate bimonthly payment
+    const paymentValue = parseFloat(pago || '0');
+    const bimestralPayment = periodo === 'bimestral' ? paymentValue : paymentValue * 2;
+
+    // Check conditions for MANUAL flow
     const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa.toUpperCase());
-    const noCFEPlan = isNoCFENoPlanning;
+    const isAislado = planCFE === 'aislado';
+    const isOutsideCDMXMexico = estado && estado !== 'Ciudad de México' && estado !== 'México';
+
+    // Check if payment is above max threshold
+    const locationInfo = estado && municipio ? getLocationInfo(estado, municipio) : null;
+    const maxThreshold = locationInfo?.max_bimonthly_payment_threshold || 13000;
+    const aboveMaxThreshold = bimestralPayment > maxThreshold;
 
     let flow: 'AUTO' | 'MANUAL' | 'BLOCKED' = 'AUTO';
     let flow_reason = 'ok';
     if (industrialTariff) { flow = 'MANUAL'; flow_reason = 'tariff_business'; }
-    else if (highValue)   { flow = 'MANUAL'; flow_reason = 'high_monthly'; }
-    else if (noCFEPlan)   { flow = 'MANUAL'; flow_reason = 'no_cfe'; }
+    else if (isAislado) { flow = 'MANUAL'; flow_reason = 'sistema_aislado'; }
+    else if (isOutsideCDMXMexico) { flow = 'MANUAL'; flow_reason = 'outside_service_area'; }
+    else if (aboveMaxThreshold) { flow = 'MANUAL'; flow_reason = 'above_max_threshold'; }
 
     showLoading('Calculando tu propuesta…');
 
@@ -330,14 +341,24 @@ function App() {
         return;
       }
 
-      const proposalInput = {
+      const proposalInput: any = {
+        hasCFE: hasCFE === 'si',
+        plansCFE: planCFE === 'si',
+        isAislado: planCFE === 'aislado',
         tarifa: formPayload.tarifa || '1',
-        pago_bimestral: formPayload.periodicidad === 'bimestral'
-          ? formPayload.pago_promedio_mxn
-          : formPayload.pago_promedio_mxn * 2,
-        loads: loads,
+        periodo: formPayload.periodicidad,
+        pagoActual: formPayload.pago_promedio_mxn,
         estado: estado || 'Ciudad de México',
-        municipio: municipio || 'Benito Juárez'
+        municipio: municipio || 'Benito Juárez',
+        cargas: cargas.length > 0 ? {
+          ev: cargas.includes('ev') ? cargaDetalles.ev : undefined,
+          minisplit: cargas.includes('minisplit') ? cargaDetalles.minisplit : undefined,
+          secadora: cargas.includes('secadora'),
+          bomba: cargas.includes('bomba'),
+          otro: cargas.includes('otro')
+        } : undefined,
+        tipoInmueble: tipoInmueble,
+        pisos: parseInt(pisos || '0', 10)
       };
 
       const proposal = generateProposal(proposalInput);
@@ -1278,7 +1299,7 @@ function App() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Gracias por tu interés!</h3>
               <p className="text-slate-600 mb-6">
-                Te contactaremos en menos de 24h para preparar la mejor propuesta personalizada para tu caso.
+                Nuestro equipo revisará tu información y te contactaremos en breve.
               </p>
               <button
                 onClick={() => setShowContactModal(false)}
