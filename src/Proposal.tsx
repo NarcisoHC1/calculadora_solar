@@ -159,13 +159,15 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
           </div>
 
           <div className="mt-6 text-center">
-            <button
-              onClick={onClose}
-              className="w-full px-6 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+            <a
+              href="https://calendly.com/narciso-solarya/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full px-6 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
               style={{ background: '#ff5c36', color: 'white' }}
             >
               Agendar visita técnica gratuita
-            </button>
+            </a>
             <p className="text-xs text-slate-500 mt-2">Sin compromiso · Evaluación profesional · 100% gratis</p>
           </div>
         </div>
@@ -352,13 +354,15 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
           </div>
 
           <div className="mt-6 text-center">
-            <button
-              onClick={onClose}
-              className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+            <a
+              href="https://calendly.com/narciso-solarya/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
               style={{ background: '#ff5c36', color: 'white' }}
             >
               Agendar visita técnica gratuita
-            </button>
+            </a>
           </div>
         </div>
         )}
@@ -444,13 +448,15 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
           </div>
 
           <div className="mt-6 text-center">
-            <button
-              onClick={onClose}
-              className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+            <a
+              href="https://calendly.com/narciso-solarya/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
               style={{ background: '#ff5c36', color: 'white' }}
             >
               Agendar visita técnica gratuita
-            </button>
+            </a>
             <p className="text-xs text-slate-500 mt-2">Agenda tu cita ahora · Sin compromiso</p>
           </div>
         </div>
@@ -543,13 +549,15 @@ function SharedSections({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="mt-6 text-center">
-          <button
-            onClick={onClose}
-            className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+          <a
+            href="https://calendly.com/narciso-solarya/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
             style={{ background: '#ff5c36', color: 'white' }}
           >
             Agendar visita técnica gratuita
-          </button>
+          </a>
         </div>
       </div>
 
@@ -633,13 +641,15 @@ function SharedSections({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="mt-6 text-center">
-          <button
-            onClick={onClose}
-            className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+          <a
+            href="https://calendly.com/narciso-solarya/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
             style={{ background: '#ff5c36', color: 'white' }}
           >
             Agendar visita técnica gratuita
-          </button>
+          </a>
           <p className="text-xs text-slate-500 mt-2">Agenda tu cita ahora · Sin compromiso</p>
         </div>
       </div>
@@ -650,13 +660,15 @@ function SharedSections({ onClose }: { onClose: () => void }) {
 
         <div className="mt-8 pt-6 border-t border-slate-200 text-center">
           <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
-          <button
-            onClick={onClose}
-            className="px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
+          <a
+            href="https://calendly.com/narciso-solarya/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
             style={{ background: '#ff5c36', color: 'white' }}
           >
             Agendar visita técnica gratuita
-          </button>
+          </a>
         </div>
       </div>
 
@@ -668,13 +680,15 @@ function SharedSections({ onClose }: { onClose: () => void }) {
         <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
           Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
         </p>
-        <button
-          onClick={onClose}
-          className="px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
+        <a
+          href="https://calendly.com/narciso-solarya/30min"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
           style={{ background: '#ff5c36', color: 'white' }}
         >
           Agendar Visita Técnica Gratuita
-        </button>
+        </a>
         <p className="text-sm text-slate-500">Respuesta en menos de 24 horas · Sin letra pequeña</p>
 
         <div className="mt-8 flex items-center justify-center gap-8 flex-wrap text-sm text-slate-600">
@@ -790,7 +804,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
         {proposal.future ? (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} showSharedSections={false} />
               <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} />
             </div>
@@ -810,13 +824,15 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
               <div className="mt-8 pt-6 border-t border-slate-200 text-center">
                 <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
-                <button
-                  onClick={onClose}
-                  className="px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
+                <a
+                  href="https://calendly.com/narciso-solarya/30min"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
                   style={{ background: '#ff5c36', color: 'white' }}
                 >
                   Agendar visita técnica gratuita
-                </button>
+                </a>
               </div>
             </div>
 
@@ -828,13 +844,15 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
             Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
           </p>
-          <button
-            onClick={onClose}
-            className="px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
+          <a
+            href="https://calendly.com/narciso-solarya/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
             style={{ background: '#ff5c36', color: 'white' }}
           >
             Agendar Visita Técnica Gratuita
-          </button>
+          </a>
           <p className="text-sm text-slate-500">Respuesta en menos de 24 horas · Sin letra pequeña</p>
 
           <div className="mt-8 flex items-center justify-center gap-8 flex-wrap text-sm text-slate-600">
