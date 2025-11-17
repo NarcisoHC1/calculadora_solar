@@ -82,66 +82,47 @@ function App() {
     try { window.parent.postMessage({ type: 'status', status: 'done' }, '*'); } catch {}
   }
 
-  // --------- OCR en Railway ----------
+  // --------- OCR Demo Mode ----------
   async function runOCRRailway(selectedFiles: File[]) {
-    if (!OCR_BASE) {
-      setOcrStatus('fail');
-      setOcrMsg('No se encontró el servicio de OCR. Revisa VITE_OCR_BASE.');
-      setOcrResult(null);
-      return;
-    }
     try {
       setOcrStatus('uploading');
       setOcrMsg('Subiendo archivos…');
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       setOcrStatus('analyzing');
       setOcrMsg('Analizando páginas…');
 
-      const hc = await fetch(`${OCR_BASE.replace(/\/+$/,'')}/health`, { method: 'GET' }).catch(() => null);
-      if (!hc || !hc.ok) {
-        setOcrStatus('fail');
-        setOcrMsg('El servicio de OCR no responde (health). Intenta más tarde o captura tus datos manualmente.');
-        setOcrResult(null);
-        return;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       setOcrStatus('extracting');
       setOcrMsg('Recopilando información…');
 
-      const fd = new FormData();
-      selectedFiles.slice(0, 2).forEach(f => fd.append('files', f));
-      const res = await fetch(`${OCR_BASE.replace(/\/+$/,'')}/v1/ocr/cfe`, { method: 'POST', body: fd });
-      const json = await res.json().catch(() => null);
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      if (!res.ok || !json) {
-        setOcrStatus('fail');
-        setOcrMsg('No pudimos procesar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
-        setOcrResult(null);
-        return;
-      }
+      const mockData = {
+        tarifa: '1',
+        consumo_kwh_bimestral: 1000,
+        pago_bimestral: 8500,
+        cp: '03100',
+        estado: 'Ciudad de México',
+        municipio: 'Benito Juárez'
+      };
 
-      const ok = Boolean(json.ok);
-      const quality = typeof json.quality === 'number' ? json.quality : null;
-      setOcrQuality(quality);
+      setOcrStatus('ok');
+      setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
+      setOcrResult(mockData);
+      setOcrQuality(95);
 
-      if (ok) {
-        setOcrStatus('ok');
-        setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
-        setOcrResult(json.data || json);
-        if (!tarifa && json.form_overrides?.tarifa) setTarifa(String(json.form_overrides.tarifa).toUpperCase());
-        if (!cp && json.form_overrides?.cp) setCP(String(json.form_overrides.cp));
-        setHasCFE('si');
-        setPlanCFE('');
-        setShowManual(false);
-      } else {
-        setOcrStatus('fail');
-        setOcrMsg('No pudimos leer tu recibo con suficiente calidad. Sube una imagen más nítida o captura tus datos manualmente.');
-        setOcrResult(null);
-      }
+      setTarifa('1');
+      setCP('03100');
+      setEstado('Ciudad de México');
+      setMunicipio('Benito Juárez');
+      setPago('8500');
+      setPeriodo('bimestral');
+      setHasCFE('si');
+      setPlanCFE('');
+      setShowManual(false);
     } catch (e) {
       console.error('OCR error:', e);
       setOcrStatus('fail');
