@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { ProposalData, DualProposal } from './types';
 import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock } from 'lucide-react';
 
@@ -35,22 +35,11 @@ function getFirstName(fullName: string): string {
 }
 
 function CalendlyWidget() {
-  const calendlyRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (calendlyRef.current && window.Calendly) {
-      window.Calendly.initInlineWidget({
-        url: 'https://calendly.com/narciso-solarya/30min',
-        parentElement: calendlyRef.current,
-      });
-    }
-  }, []);
-
   return (
     <div className="mt-6">
       <div
-        ref={calendlyRef}
         className="calendly-inline-widget"
+        data-url="https://calendly.com/narciso-solarya/30min"
         style={{ minWidth: '320px', height: '700px' }}
       />
     </div>
