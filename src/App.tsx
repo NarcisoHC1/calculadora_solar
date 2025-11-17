@@ -1283,7 +1283,7 @@ function App() {
       {/* Modals */}
       {showResultModal && generatedProposal && (
         <div className="fixed inset-0 bg-slate-50 overflow-y-auto z-50">
-          <ProposalComponent proposal={generatedProposal} onClose={() => setShowResultModal(false)} />
+          <ProposalComponent proposal={generatedProposal} onClose={() => setShowResultModal(false)} userName={nombre} />
         </div>
       )}
 
