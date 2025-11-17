@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { getEstadosUnique, getMunicipiosByEstado, getLocationInfo } from './locationData';
+import { generateProposal } from './calculationEngine';
+import type { Proposal } from './types';
+import ProposalComponent from './Proposal';
 
 type Step = 1 | 2 | 3;
 
@@ -62,6 +65,7 @@ function App() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
+  const [generatedProposal, setGeneratedProposal] = useState<Proposal | null>(null);
 
   // Flow flags
   const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
@@ -331,41 +335,39 @@ function App() {
     const ocr = ocrResult ? { ok: true, quality: ocrQuality, data: ocrResult } : null;
 
     try {
-      const res = await fetch(`${API_BASE}/api/cotizacion_v2`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ req_id, flow, flow_reason, utms, ocr, form: formPayload })
-      });
-      const json = await res.json();
-
-      if (!res.ok || json.ok === false) {
-        throw new Error(json?.error || 'cotizacion_error');
-      }
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const bridge = (window as any).SYBridge;
 
-      if (json.mode === 'AUTO' && json.pid) {
-        bridge?.gtm?.('cotizador_v2_auto', { pid: json.pid });
+      if (flow === 'MANUAL') {
         hideLoading();
-        bridge?.navigate?.(`/propuesta-v2?pid=${encodeURIComponent(json.pid)}`, { proposal: json.proposal || null });
-        return;
-      }
-
-      if (json.mode === 'MANUAL') {
-        hideLoading();
-        bridge?.gtm?.('cotizador_v2_manual', { reason: json.reason || flow_reason });
+        bridge?.gtm?.('cotizador_v2_manual', { reason: flow_reason });
         setShowContactModal(true);
         return;
       }
 
-      if (json.mode === 'BLOCKED') {
+      if (flow === 'BLOCKED') {
         hideLoading();
-        bridge?.gtm?.('cotizador_v2_blocked', { reason: json.reason || flow_reason });
+        bridge?.gtm?.('cotizador_v2_blocked', { reason: flow_reason });
         alert('Por el momento no podemos atender tu caso.');
         return;
       }
 
+      const proposalInput = {
+        tarifa: formPayload.tarifa || '1',
+        pago_bimestral: formPayload.periodicidad === 'bimestral'
+          ? formPayload.pago_promedio_mxn
+          : formPayload.pago_promedio_mxn * 2,
+        loads: loads,
+        estado: estado || 'Ciudad de México',
+        municipio: municipio || 'Benito Juárez'
+      };
+
+      const proposal = generateProposal(proposalInput);
+
       hideLoading();
+      bridge?.gtm?.('cotizador_v2_auto', { pid: req_id });
+      setGeneratedProposal(proposal);
       setShowResultModal(true);
     } catch (err) {
       console.error(err);
@@ -1279,26 +1281,9 @@ function App() {
       </div>
 
       {/* Modals */}
-      {showResultModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowResultModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#3cd07022' }}>
-                <CheckCircle2 className="w-10 h-10" style={{ color: '#3cd070' }} />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Propuesta lista!</h3>
-              <p className="text-slate-600 mb-6">
-                Aquí mostraríamos tu simulación de ahorro, equipo sugerido y ROI estimado.
-              </p>
-              <button
-                onClick={() => setShowResultModal(false)}
-                className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
-                style={{ background: '#3cd070' }}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
+      {showResultModal && generatedProposal && (
+        <div className="fixed inset-0 bg-slate-50 overflow-y-auto z-50">
+          <ProposalComponent proposal={generatedProposal} onClose={() => setShowResultModal(false)} />
         </div>
       )}
 
