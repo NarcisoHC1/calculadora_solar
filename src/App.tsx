@@ -596,8 +596,14 @@ function App() {
                           setShowError(false);
                           setErrorMessage('');
                         }}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
+                        className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                        style={{
+                          outlineColor: '#3cd070',
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
                       >
                         <option value="">Selecciona una opción</option>
                         <option value="si">Sí</option>
@@ -622,8 +628,14 @@ function App() {
                             setMunicipioSearch('');
                             setExpand('');
                           }}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                          style={{ outlineColor: '#3cd070' }}
+                          className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                          style={{
+                            outlineColor: '#3cd070',
+                            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                            backgroundPosition: 'right 0.5rem center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: '1.5em 1.5em'
+                          }}
                         >
                           <option value="">Selecciona una opción</option>
                           <option value="si">Sí</option>
@@ -645,8 +657,14 @@ function App() {
                               setNumPersonasCasa('');
                               setRangoPersonasNegocio('');
                             }}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                            style={{ outlineColor: '#3cd070' }}
+                            className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                            style={{
+                              outlineColor: '#3cd070',
+                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                              backgroundPosition: 'right 0.5rem center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '1.5em 1.5em'
+                            }}
                           >
                             <option value="">Selecciona una opción</option>
                             <option value="casa">Casa</option>
@@ -665,8 +683,14 @@ function App() {
                               onChange={(e) => setNumPersonasCasa(e.target.value)}
                               placeholder="Ej. 4"
                               min="1"
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
+                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                              style={{
+                                outlineColor: '#3cd070',
+                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                backgroundPosition: 'right 0.5rem center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundSize: '1.5em 1.5em'
+                              }}
                             />
                           </div>
                         )}
@@ -679,8 +703,14 @@ function App() {
                             <select
                               value={rangoPersonasNegocio}
                               onChange={(e) => setRangoPersonasNegocio(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
+                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                              style={{
+                                outlineColor: '#3cd070',
+                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                backgroundPosition: 'right 0.5rem center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundSize: '1.5em 1.5em'
+                              }}
                             >
                               <option value="">Selecciona un rango</option>
                               <option value="1-10">1-10</option>
@@ -702,8 +732,14 @@ function App() {
                               setMunicipio('');
                               setMunicipioSearch('');
                             }}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                            style={{ outlineColor: '#3cd070' }}
+                            className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                            style={{
+                              outlineColor: '#3cd070',
+                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                              backgroundPosition: 'right 0.5rem center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '1.5em 1.5em'
+                            }}
                           >
                             <option value="">Selecciona tu estado</option>
                             {getEstadosUnique().map((est) => (
@@ -720,8 +756,14 @@ function App() {
                             <select
                               value={municipio}
                               onChange={(e) => setMunicipio(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
+                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                              style={{
+                                outlineColor: '#3cd070',
+                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                backgroundPosition: 'right 0.5rem center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundSize: '1.5em 1.5em'
+                              }}
                             >
                               <option value="">Selecciona tu municipio</option>
                               {getMunicipiosByEstado(estado)
@@ -740,8 +782,14 @@ function App() {
                             <select
                               value={expand}
                               onChange={(e) => setExpand(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
+                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                              style={{
+                                outlineColor: '#3cd070',
+                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                backgroundPosition: 'right 0.5rem center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundSize: '1.5em 1.5em'
+                              }}
                             >
                               <option value="">Selecciona una opción</option>
                               <option>Sí</option>
@@ -764,8 +812,14 @@ function App() {
                               value={pago}
                               onChange={(e) => setPago(e.target.value)}
                               placeholder="Ej. 3,200"
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
+                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                              style={{
+                                outlineColor: '#3cd070',
+                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                backgroundPosition: 'right 0.5rem center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundSize: '1.5em 1.5em'
+                              }}
                             />
                             <p className="text-xs text-slate-500 mt-1">
                               Si usas <em>diablitos</em>, este pago no refleja tu consumo real
@@ -778,8 +832,14 @@ function App() {
                             <select
                               value={periodo}
                               onChange={(e) => setPeriodo(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
+                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                              style={{
+                                outlineColor: '#3cd070',
+                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                backgroundPosition: 'right 0.5rem center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundSize: '1.5em 1.5em'
+                              }}
                             >
                               <option value="bimestral">Bimestral</option>
                               <option value="mensual">Mensual</option>
@@ -801,8 +861,14 @@ function App() {
                                 setMunicipio('');
                               }
                             }}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                            style={{ outlineColor: '#3cd070' }}
+                            className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                            style={{
+                              outlineColor: '#3cd070',
+                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                              backgroundPosition: 'right 0.5rem center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '1.5em 1.5em'
+                            }}
                           >
                             <option value="">Selecciona una opción</option>
                             <option value="si">Sí</option>
@@ -819,8 +885,14 @@ function App() {
                               <select
                                 value={tarifa}
                                 onChange={(e) => setTarifa(e.target.value)}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                                style={{ outlineColor: '#3cd070' }}
+                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                style={{
+                                  outlineColor: '#3cd070',
+                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                  backgroundPosition: 'right 0.5rem center',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundSize: '1.5em 1.5em'
+                                }}
                               >
                                 <option value="">Selecciona tu tarifa</option>
                                 <option>1</option>
@@ -847,8 +919,14 @@ function App() {
                                   setEstado(e.target.value);
                                   setMunicipio('');
                                 }}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                                style={{ outlineColor: '#3cd070' }}
+                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                style={{
+                                  outlineColor: '#3cd070',
+                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                  backgroundPosition: 'right 0.5rem center',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundSize: '1.5em 1.5em'
+                                }}
                               >
                                 <option value="">Selecciona tu estado</option>
                                 {getEstadosUnique().map((est) => (
@@ -864,8 +942,14 @@ function App() {
                                 <select
                                   value={municipio}
                                   onChange={(e) => setMunicipio(e.target.value)}
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                                  style={{ outlineColor: '#3cd070' }}
+                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                  style={{
+                                    outlineColor: '#3cd070',
+                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                    backgroundPosition: 'right 0.5rem center',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundSize: '1.5em 1.5em'
+                                  }}
                                 >
                                   <option value="">Selecciona tu municipio</option>
                                   {getMunicipiosByEstado(estado)
@@ -887,8 +971,14 @@ function App() {
                               <select
                                 value={usoCasaNegocio}
                                 onChange={(e) => setUsoCasaNegocio(e.target.value)}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                                style={{ outlineColor: '#3cd070' }}
+                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                style={{
+                                  outlineColor: '#3cd070',
+                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                  backgroundPosition: 'right 0.5rem center',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundSize: '1.5em 1.5em'
+                                }}
                               >
                                 <option value="">Selecciona una opción</option>
                                 <option value="casa">Casa</option>
@@ -907,8 +997,14 @@ function App() {
                                   setMunicipio('');
                                   setMunicipioSearch('');
                                 }}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                                style={{ outlineColor: '#3cd070' }}
+                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                style={{
+                                  outlineColor: '#3cd070',
+                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                  backgroundPosition: 'right 0.5rem center',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundSize: '1.5em 1.5em'
+                                }}
                               >
                                 <option value="">Selecciona tu estado</option>
                                 {getEstadosUnique().map((est) => (
@@ -925,8 +1021,14 @@ function App() {
                                 <select
                                   value={municipio}
                                   onChange={(e) => setMunicipio(e.target.value)}
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                                  style={{ outlineColor: '#3cd070' }}
+                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                  style={{
+                                    outlineColor: '#3cd070',
+                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                    backgroundPosition: 'right 0.5rem center',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundSize: '1.5em 1.5em'
+                                  }}
                                 >
                                   <option value="">Selecciona tu municipio</option>
                                   {getMunicipiosByEstado(estado)
@@ -946,8 +1048,14 @@ function App() {
                           <select
                             value={expand}
                             onChange={(e) => setExpand(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                            style={{ outlineColor: '#3cd070' }}
+                            className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                            style={{
+                              outlineColor: '#3cd070',
+                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                              backgroundPosition: 'right 0.5rem center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '1.5em 1.5em'
+                            }}
                           >
                             <option value="">Selecciona una opción</option>
                             <option>Sí</option>
@@ -1102,8 +1210,14 @@ function App() {
                       <select
                         value={tipoInmueble}
                         onChange={(e) => setTipoInmueble(e.target.value)}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
+                        className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                        style={{
+                          outlineColor: '#3cd070',
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
                       >
                         <option value="">Selecciona una opción</option>
                         <option value="1">Casa o negocio independiente de 1-2 pisos</option>
@@ -1128,8 +1242,14 @@ function App() {
                           onChange={(e) => setPisos(e.target.value)}
                           placeholder="Ej. 8"
                           min="1"
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                          style={{ outlineColor: '#3cd070' }}
+                          className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                          style={{
+                            outlineColor: '#3cd070',
+                            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                            backgroundPosition: 'right 0.5rem center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: '1.5em 1.5em'
+                          }}
                         />
                       </div>
                     )}
@@ -1192,8 +1312,14 @@ function App() {
                         onChange={(e) => setNombre(e.target.value)}
                         placeholder="Ej. María López"
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
+                        className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                        style={{
+                          outlineColor: '#3cd070',
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
                       />
                     </div>
                     <div>
@@ -1206,8 +1332,14 @@ function App() {
                         onChange={(e) => setCorreo(e.target.value)}
                         placeholder="tunombre@email.com"
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
+                        className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                        style={{
+                          outlineColor: '#3cd070',
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
                       />
                     </div>
                   </div>
