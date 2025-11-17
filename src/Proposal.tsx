@@ -9,12 +9,22 @@ interface ProposalProps {
 }
 
 function formatCurrency(amount: number): string {
+  if (!isFinite(amount) || isNaN(amount)) {
+    amount = 0;
+  }
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(amount);
+}
+
+function safeToFixed(value: number, decimals: number): string {
+  if (!isFinite(value) || isNaN(value)) {
+    return '0';
+  }
+  return value.toFixed(decimals);
 }
 
 function getFirstName(fullName: string): string {
@@ -50,7 +60,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-4 text-center border-2" style={{ borderColor: '#ff5c36' }}>
+          <div className="bg-white rounded-lg p-4 text-center border-2" style={{ borderColor: '#ff9b7a' }}>
             <p className="text-xs font-semibold text-slate-600 mb-1">AHORRO CADA BIMESTRE</p>
             <p className="text-4xl font-bold" style={{ color: '#ff5c36' }}>
               {formatCurrency(financial.ahorroBimestral)}
@@ -86,11 +96,11 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
               </div>
               <h5 className="text-sm font-bold text-slate-700">Tu Sistema Solar</h5>
             </div>
-            <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{(system.potenciaTotal / 1000).toFixed(1)} kilowatts</p>
+            <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(system.potenciaTotal / 1000, 1)} kilowatts</p>
             <div className="space-y-1 text-sm text-slate-600">
               <p><strong className="text-slate-900">{system.numPaneles}</strong> paneles solares de <strong className="text-slate-900">{system.potenciaPorPanel}</strong> watts</p>
               <p>Energía generada: <strong className="text-slate-900">{Math.round(system.generacionMensualKwh)}</strong> kWh/mes</p>
-              <p>Generas <strong className="text-slate-900">{porcentajeCobertura.toFixed(0)}%</strong> de la energía que consumes</p>
+              <p>Generas <strong className="text-slate-900">{safeToFixed(porcentajeCobertura, 0)}%</strong> de la energía que consumes</p>
             </div>
           </div>
 
@@ -101,7 +111,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
               </div>
               <h5 className="text-sm font-bold text-slate-700">Retorno de Inversión</h5>
             </div>
-            <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{financial.anosRetorno.toFixed(1)} años</p>
+            <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(financial.anosRetorno, 1)} años</p>
             <div className="space-y-1 text-sm text-slate-600">
               <p>Ahorro en 25 años:</p>
               <p className="text-xl font-bold text-slate-900">{formatCurrency(financial.ahorroBimestral * 6 * 25)}</p>
@@ -164,7 +174,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
           <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
 
           <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff5c36' }}>
+            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff9b7a' }}>
               <h5 className="text-base font-bold text-slate-900 mb-4">💰 Beneficios Económicos</h5>
               <div className="space-y-3 text-sm text-slate-700">
                 <div className="flex items-start gap-3">
@@ -177,7 +187,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
                   <div>
-                    <p className="font-semibold text-slate-900">Retorno en {financial.anosRetorno.toFixed(1)} años</p>
+                    <p className="font-semibold text-slate-900">Retorno en {safeToFixed(financial.anosRetorno, 1)} años</p>
                     <p className="text-slate-600">recuperación de inversión</p>
                   </div>
                 </div>
@@ -192,7 +202,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
               </div>
             </div>
 
-            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#1e3a2b' }}>
+            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff9b7a' }}>
               <h5 className="text-base font-bold text-slate-900 mb-4">🛡️ Servicios y Garantías</h5>
               <div className="space-y-3 text-sm text-slate-700">
                 <div className="flex items-start gap-3">
@@ -209,16 +219,21 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <div>
-                    <p className="font-semibold text-slate-900">2/12/25 años</p>
-                    <p className="text-slate-600">garantías instalación/equipos/paneles</p>
-                  </div>
+                  <p>Garantía de instalación: 2 años</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                  <p>Garantía de equipos: 12 años</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                  <p>Garantía de paneles: 25 años</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff5c36' }}>
+          <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff9b7a' }}>
             <h5 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
               <TreePine className="w-5 h-5" style={{ color: '#3cd070' }} />
               Impacto Ambiental Anual
@@ -268,7 +283,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
           <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff5c36' }}>
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
               <div className="flex items-center gap-3 mb-3">
                 <img src="/logo_longi_2.jpg" alt="JA Solar" className="w-12 h-12 object-contain" />
                 <div>
@@ -283,7 +298,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
               </div>
             </div>
 
-            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#1e3a2b' }}>
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
                   H
@@ -300,7 +315,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
               </div>
             </div>
 
-            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff5c36' }}>
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
                   H
@@ -317,7 +332,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
               </div>
             </div>
 
-            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#1e3a2b' }}>
+            <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
                   A
@@ -357,7 +372,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
                 <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
                   1
                 </div>
-                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff5c36' }}>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <h5 className="font-bold text-slate-900">Visita Técnica</h5>
                     <span className="text-sm text-slate-600 flex items-center gap-1">
@@ -373,7 +388,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
                 <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
                   2
                 </div>
-                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#1e3a2b' }}>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
                     <span className="text-sm text-slate-600 flex items-center gap-1">
@@ -389,7 +404,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
                 <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
                   3
                 </div>
-                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff5c36' }}>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <h5 className="font-bold text-slate-900">Instalación</h5>
                     <span className="text-sm text-slate-600 flex items-center gap-1">
@@ -405,7 +420,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
                 <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
                   4
                 </div>
-                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#1e3a2b' }}>
+                <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
                     <span className="text-sm text-slate-600 flex items-center gap-1">
@@ -419,7 +434,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
             </div>
           </div>
 
-          <div className="mt-6 bg-slate-50 border-2 rounded-xl p-4 text-center" style={{ borderColor: '#ff5c36' }}>
+          <div className="mt-6 bg-slate-50 border-2 rounded-xl p-4 text-center" style={{ borderColor: '#ff9b7a' }}>
             <p className="text-sm font-semibold" style={{ color: '#1e3a2b' }}>
               ⏱️ Tiempo total estimado: 4-6 semanas desde la visita hasta interconexión completa
             </p>
@@ -520,9 +535,9 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               <img
                 src="/SolarYa logos_Primary Logo.png"
                 alt="SolarYa"
-                className="h-12 md:h-16 w-auto"
+                className="h-8 md:h-10 w-auto opacity-90"
               />
-              <p className="text-slate-600 font-semibold mt-2 text-sm md:text-base">Accesible. Confiable. Simple.</p>
+              <p className="text-slate-500 text-xs md:text-sm mt-1.5">Accesible. Confiable. Simple.</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
@@ -567,7 +582,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff5c36' }}>
+        <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff9b7a' }}>
           <div className="text-6xl mb-4">🚀</div>
           <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
             Da el Primer Paso Hacia Tu Independencia Energética
