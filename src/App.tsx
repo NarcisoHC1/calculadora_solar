@@ -68,8 +68,8 @@ function App() {
   const [generatedProposal, setGeneratedProposal] = useState<Proposal | null>(null);
 
   // Flow flags
-  const isNoCFEPlanningFlow = hasCFE === 'no' && planCFE === 'si';
-  const isNoCFENoPlanning = hasCFE === 'no' && (planCFE === 'no' || planCFE === 'aislado');
+  const isNoCFEPlanningFlow = hasCFE === 'no' && (planCFE === 'si' || planCFE === 'aislado');
+  const isNoCFENoPlanning = hasCFE === 'no' && planCFE === 'no';
 
   // Helpers overlay + aviso al padre (iframe)
   function showLoading(msg = 'Calculando tu propuesta…') {
@@ -203,7 +203,7 @@ function App() {
         if (planCFE === 'aislado' && !expand) return false;
         return true;
       }
-      return planCFE === 'no';
+      return false;
     }
 
     if (hasCFE === 'si') {
@@ -211,7 +211,7 @@ function App() {
       if (!knowsTariff) return false;
 
       if (knowsTariff === 'si') {
-        if (!tarifa || !cp) return false;
+        if (!tarifa || !estado || !municipio) return false;
       }
 
       if (knowsTariff === 'no') {
@@ -246,11 +246,7 @@ function App() {
         if (ocrStatus === 'ok') setCurrentStep(2);
         return;
       }
-      // Manual
-      if (isNoCFENoPlanning || isNoCFEPlanningFlow) {
-        setCurrentStep(3);
-        return;
-      }
+      // Para flujo manual, todos van a step 2 para llenar cargas extra
     }
     if (currentStep < 3) {
       setCurrentStep((currentStep + 1) as Step);
@@ -611,7 +607,6 @@ function App() {
                           <option value="">Selecciona una opción</option>
                           <option value="si">Sí</option>
                           <option value="aislado">No, quiero instalar un sistema aislado</option>
-                          <option value="no">No</option>
                         </select>
                       </div>
                     )}
@@ -701,14 +696,6 @@ function App() {
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                               Municipio
                             </label>
-                            <input
-                              type="text"
-                              value={municipioSearch}
-                              onChange={(e) => setMunicipioSearch(e.target.value)}
-                              placeholder="Busca tu municipio..."
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all mb-2"
-                              style={{ outlineColor: '#3cd070' }}
-                            />
                             <select
                               value={municipio}
                               onChange={(e) => setMunicipio(e.target.value)}
@@ -717,7 +704,6 @@ function App() {
                             >
                               <option value="">Selecciona tu municipio</option>
                               {getMunicipiosByEstado(estado)
-                                .filter(mun => mun.toLowerCase().includes(municipioSearch.toLowerCase()))
                                 .map((mun) => (
                                   <option key={mun} value={mun}>{mun}</option>
                                 ))}
@@ -804,7 +790,7 @@ function App() {
                         </div>
 
                         {knowsTariff === 'si' && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <>
                             <div>
                               <label className="block text-sm font-semibold text-slate-700 mb-2">
                                 Tarifa
@@ -832,19 +818,43 @@ function App() {
                             </div>
                             <div>
                               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Código postal
+                                Estado
                               </label>
-                              <input
-                                type="text"
-                                value={cp}
-                                onChange={(e) => setCP(e.target.value)}
-                                placeholder="Ej. 06100"
-                                maxLength={5}
+                              <select
+                                value={estado}
+                                onChange={(e) => {
+                                  setEstado(e.target.value);
+                                  setMunicipio('');
+                                }}
                                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                                 style={{ outlineColor: '#3cd070' }}
-                              />
+                              >
+                                <option value="">Selecciona tu estado</option>
+                                {getEstadosUnique().map((est) => (
+                                  <option key={est} value={est}>{est}</option>
+                                ))}
+                              </select>
                             </div>
-                          </div>
+                            {estado && (
+                              <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                  Municipio
+                                </label>
+                                <select
+                                  value={municipio}
+                                  onChange={(e) => setMunicipio(e.target.value)}
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                  style={{ outlineColor: '#3cd070' }}
+                                >
+                                  <option value="">Selecciona tu municipio</option>
+                                  {getMunicipiosByEstado(estado)
+                                    .map((mun) => (
+                                      <option key={mun} value={mun}>{mun}</option>
+                                    ))}
+                                </select>
+                              </div>
+                            )}
+                          </>
                         )}
 
                         {knowsTariff === 'no' && (
@@ -891,14 +901,6 @@ function App() {
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                                   Municipio
                                 </label>
-                                <input
-                                  type="text"
-                                  value={municipioSearch}
-                                  onChange={(e) => setMunicipioSearch(e.target.value)}
-                                  placeholder="Busca tu municipio..."
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all mb-2"
-                                  style={{ outlineColor: '#3cd070' }}
-                                />
                                 <select
                                   value={municipio}
                                   onChange={(e) => setMunicipio(e.target.value)}
@@ -907,7 +909,6 @@ function App() {
                                 >
                                   <option value="">Selecciona tu municipio</option>
                                   {getMunicipiosByEstado(estado)
-                                    .filter(mun => mun.toLowerCase().includes(municipioSearch.toLowerCase()))
                                     .map((mun) => (
                                       <option key={mun} value={mun}>{mun}</option>
                                     ))}
