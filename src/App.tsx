@@ -201,35 +201,42 @@ function App() {
     }
   };
 
-  // Validaciones paso a paso
   const canProceedStep1 = () => {
-    // Si subió recibo y OCR OK, puede seguir
     if (fileUploaded) {
-      return ocrStatus === 'ok'; // 👈 sólo avanza si OCR fue OK
+      return ocrStatus === 'ok';
     }
-    // Si no hay recibo: flujo manual normal
     if (!showManual) return false;
     if (!hasCFE) return false;
 
     if (hasCFE === 'no') {
       if (!planCFE) return false;
-      if (planCFE === 'no' || planCFE === 'aislado') return true;
-      if (planCFE === 'si') {
+      if (planCFE === 'si' || planCFE === 'aislado') {
         if (!usoCasaNegocio) return false;
         if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
+        if (!estado || !municipio) return false;
+        if (planCFE === 'aislado' && !expand) return false;
         return true;
       }
+      return planCFE === 'no';
     }
 
     if (hasCFE === 'si') {
-      if (!pago || !tarifa || !cp || !expand) return false;
-      const pagoNum = parseFloat(pago);
-      const threshold = 2500;
-      const bimestral = periodo === 'bimestral' ? pagoNum : pagoNum * 2;
-      if (bimestral < threshold) return false;
+      if (!pago || !expand) return false;
+      if (!knowsTariff) return false;
+
+      if (knowsTariff === 'si') {
+        if (!tarifa || !cp) return false;
+      }
+
+      if (knowsTariff === 'no') {
+        if (!usoCasaNegocio || !estado || !municipio) return false;
+      }
+
+      if (showError) return false;
+      return true;
     }
-    return true;
+    return false;
   };
 
   const canProceedStep2 = () => {
@@ -275,11 +282,12 @@ function App() {
   const phoneDigits = telefono.replace(/\D/g, '');
   const phoneValid = phoneDigits.length === 10;
 
-  // SUBMIT a Netlify (incluye OCR si existe)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nombre || !correo || !telefono || !uso || !privacidad) return;
+    const finalUso = usoCasaNegocio || 'Casa';
+
+    if (!nombre || !correo || !telefono || !privacidad) return;
     if (!phoneValid) {
       alert('Tu WhatsApp debe tener 10 dígitos (sólo números).');
       return;
@@ -306,7 +314,7 @@ function App() {
       nombre,
       email: correo,
       telefono,
-      uso,
+      uso: finalUso,
       periodicidad: periodo || 'bimestral',
       pago_promedio_mxn: parseFloat(pago || '0') || 0,
       cp,
@@ -367,12 +375,44 @@ function App() {
   };
 
   useEffect(() => {
-    if (!showManual) return;
+    if (!showManual || hasCFE !== 'si' || !pago) {
+      setShowError(false);
+      setErrorMessage('');
+      return;
+    }
+
     const pagoNum = parseFloat(pago);
-    const threshold = 2500;
+    if (isNaN(pagoNum) || pagoNum <= 0) {
+      setShowError(false);
+      setErrorMessage('');
+      return;
+    }
+
     const bimestral = periodo === 'bimestral' ? pagoNum : pagoNum * 2;
-    setShowError(bimestral > 0 && bimestral < threshold);
-  }, [pago, periodo, showManual]);
+
+    let minThreshold = 2000;
+    let isCDMXorMexico = false;
+
+    if (knowsTariff === 'no' && estado && municipio) {
+      const locationInfo = getLocationInfo(estado, municipio);
+      if (locationInfo) {
+        minThreshold = locationInfo.min_bimonthly_payment_threshold;
+        isCDMXorMexico = estado === 'Ciudad de México' || estado === 'México';
+      }
+    }
+
+    if (bimestral < minThreshold) {
+      setShowError(true);
+      if (isCDMXorMexico) {
+        setErrorMessage(`Por ahora sólo atendemos a casas o negocios que gastan arriba de ${minThreshold.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 })} al bimestre.`);
+      } else {
+        setErrorMessage('Por ahora no atendemos en tu área, mantente en contacto para futuras oportunidades.');
+      }
+    } else {
+      setShowError(false);
+      setErrorMessage('');
+    }
+  }, [pago, periodo, showManual, hasCFE, knowsTariff, estado, municipio]);
 
   const progressPercentage = currentStep === 1 ? 33 : currentStep === 2 ? 66 : 100;
 
@@ -545,6 +585,16 @@ function App() {
                           setUsoCasaNegocio('');
                           setNumPersonasCasa('');
                           setRangoPersonasNegocio('');
+                          setPago('');
+                          setTarifa('');
+                          setKnowsTariff('');
+                          setCP('');
+                          setEstado('');
+                          setMunicipio('');
+                          setMunicipioSearch('');
+                          setExpand('');
+                          setShowError(false);
+                          setErrorMessage('');
                         }}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                         style={{ outlineColor: '#3cd070' }}
@@ -567,6 +617,10 @@ function App() {
                             setUsoCasaNegocio('');
                             setNumPersonasCasa('');
                             setRangoPersonasNegocio('');
+                            setEstado('');
+                            setMunicipio('');
+                            setMunicipioSearch('');
+                            setExpand('');
                           }}
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                           style={{ outlineColor: '#3cd070' }}
@@ -579,7 +633,7 @@ function App() {
                       </div>
                     )}
 
-                    {hasCFE === 'no' && planCFE === 'si' && (
+                    {hasCFE === 'no' && (planCFE === 'si' || planCFE === 'aislado') && (
                       <>
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -637,6 +691,74 @@ function App() {
                             </select>
                           </div>
                         )}
+
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            Estado
+                          </label>
+                          <select
+                            value={estado}
+                            onChange={(e) => {
+                              setEstado(e.target.value);
+                              setMunicipio('');
+                              setMunicipioSearch('');
+                            }}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                            style={{ outlineColor: '#3cd070' }}
+                          >
+                            <option value="">Selecciona tu estado</option>
+                            {getEstadosUnique().map((est) => (
+                              <option key={est} value={est}>{est}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {estado && (
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                              Municipio
+                            </label>
+                            <input
+                              type="text"
+                              value={municipioSearch}
+                              onChange={(e) => setMunicipioSearch(e.target.value)}
+                              placeholder="Busca tu municipio..."
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all mb-2"
+                              style={{ outlineColor: '#3cd070' }}
+                            />
+                            <select
+                              value={municipio}
+                              onChange={(e) => setMunicipio(e.target.value)}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
+                            >
+                              <option value="">Selecciona tu municipio</option>
+                              {getMunicipiosByEstado(estado)
+                                .filter(mun => mun.toLowerCase().includes(municipioSearch.toLowerCase()))
+                                .map((mun) => (
+                                  <option key={mun} value={mun}>{mun}</option>
+                                ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {planCFE === 'aislado' && (
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                              ¿Ya tienes sistema FV y quieres expandirlo?
+                            </label>
+                            <select
+                              value={expand}
+                              onChange={(e) => setExpand(e.target.value)}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                              style={{ outlineColor: '#3cd070' }}
+                            >
+                              <option value="">Selecciona una opción</option>
+                              <option>Sí</option>
+                              <option>No</option>
+                            </select>
+                          </div>
+                        )}
                       </>
                     )}
 
@@ -675,48 +797,142 @@ function App() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              Tarifa
-                            </label>
-                            <select
-                              value={tarifa}
-                              onChange={(e) => setTarifa(e.target.value)}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
-                            >
-                              <option value="">Selecciona tu tarifa</option>
-                              <option>1</option>
-                              <option>1A</option>
-                              <option>1B</option>
-                              <option>1C</option>
-                              <option>1D</option>
-                              <option>1E</option>
-                              <option>1F</option>
-                              <option>DAC</option>
-                              <option>PDBT</option>
-                              <option>GDBT</option>
-                              <option>GDMTH</option>
-                              <option>GDMTO</option>
-                              <option value="nose">No sé</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              Código postal
-                            </label>
-                            <input
-                              type="text"
-                              value={cp}
-                              onChange={(e) => setCP(e.target.value)}
-                              placeholder="Ej. 06100"
-                              maxLength={5}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                              style={{ outlineColor: '#3cd070' }}
-                            />
-                          </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            ¿Conoces tu tarifa de CFE?
+                          </label>
+                          <select
+                            value={knowsTariff}
+                            onChange={(e) => {
+                              setKnowsTariff(e.target.value);
+                              if (e.target.value === 'no') {
+                                setTarifa('');
+                                setEstado('');
+                                setMunicipio('');
+                              }
+                            }}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                            style={{ outlineColor: '#3cd070' }}
+                          >
+                            <option value="">Selecciona una opción</option>
+                            <option value="si">Sí</option>
+                            <option value="no">No</option>
+                          </select>
                         </div>
+
+                        {knowsTariff === 'si' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Tarifa
+                              </label>
+                              <select
+                                value={tarifa}
+                                onChange={(e) => setTarifa(e.target.value)}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                style={{ outlineColor: '#3cd070' }}
+                              >
+                                <option value="">Selecciona tu tarifa</option>
+                                <option>1</option>
+                                <option>1A</option>
+                                <option>1B</option>
+                                <option>1C</option>
+                                <option>1D</option>
+                                <option>1E</option>
+                                <option>1F</option>
+                                <option>DAC</option>
+                                <option>PDBT</option>
+                                <option>GDBT</option>
+                                <option>GDMTH</option>
+                                <option>GDMTO</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Código postal
+                              </label>
+                              <input
+                                type="text"
+                                value={cp}
+                                onChange={(e) => setCP(e.target.value)}
+                                placeholder="Ej. 06100"
+                                maxLength={5}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                style={{ outlineColor: '#3cd070' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {knowsTariff === 'no' && (
+                          <>
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                ¿Es para casa o negocio?
+                              </label>
+                              <select
+                                value={usoCasaNegocio}
+                                onChange={(e) => setUsoCasaNegocio(e.target.value)}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                style={{ outlineColor: '#3cd070' }}
+                              >
+                                <option value="">Selecciona una opción</option>
+                                <option value="casa">Casa</option>
+                                <option value="negocio">Negocio</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Estado
+                              </label>
+                              <select
+                                value={estado}
+                                onChange={(e) => {
+                                  setEstado(e.target.value);
+                                  setMunicipio('');
+                                  setMunicipioSearch('');
+                                }}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                style={{ outlineColor: '#3cd070' }}
+                              >
+                                <option value="">Selecciona tu estado</option>
+                                {getEstadosUnique().map((est) => (
+                                  <option key={est} value={est}>{est}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {estado && (
+                              <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                  Municipio
+                                </label>
+                                <input
+                                  type="text"
+                                  value={municipioSearch}
+                                  onChange={(e) => setMunicipioSearch(e.target.value)}
+                                  placeholder="Busca tu municipio..."
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all mb-2"
+                                  style={{ outlineColor: '#3cd070' }}
+                                />
+                                <select
+                                  value={municipio}
+                                  onChange={(e) => setMunicipio(e.target.value)}
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                  style={{ outlineColor: '#3cd070' }}
+                                >
+                                  <option value="">Selecciona tu municipio</option>
+                                  {getMunicipiosByEstado(estado)
+                                    .filter(mun => mun.toLowerCase().includes(municipioSearch.toLowerCase()))
+                                    .map((mun) => (
+                                      <option key={mun} value={mun}>{mun}</option>
+                                    ))}
+                                </select>
+                              </div>
+                            )}
+                          </>
+                        )}
 
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -737,9 +953,7 @@ function App() {
                         {showError && (
                           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-800">
-                              Por el momento, para tu nivel de consumo, no atendemos tu área. Mantente en contacto.
-                            </p>
+                            <p className="text-sm text-red-800">{errorMessage}</p>
                           </div>
                         )}
                       </div>
@@ -993,44 +1207,26 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        WhatsApp
-                      </label>
-                      <input
-                        type="tel"
-                        value={telefono}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, '');
-                          if (digits.length <= 10) setTelefono(digits);
-                        }}
-                        placeholder="55 1234 5678"
-                        maxLength={10}
-                        required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
-                      />
-                      {!phoneValid && telefono.length > 0 && (
-                        <p className="text-xs text-red-600 mt-1">Debe tener 10 dígitos.</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        Casa o negocio
-                      </label>
-                      <select
-                        value={uso}
-                        onChange={(e) => setUso(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                        style={{ outlineColor: '#3cd070' }}
-                      >
-                        <option value="">Selecciona</option>
-                        <option>Casa</option>
-                        <option>Negocio</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      WhatsApp
+                    </label>
+                    <input
+                      type="tel"
+                      value={telefono}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '');
+                        if (digits.length <= 10) setTelefono(digits);
+                      }}
+                      placeholder="55 1234 5678"
+                      maxLength={10}
+                      required
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                      style={{ outlineColor: '#3cd070' }}
+                    />
+                    {!phoneValid && telefono.length > 0 && (
+                      <p className="text-xs text-red-600 mt-1">Debe tener 10 dígitos.</p>
+                    )}
                   </div>
 
                   <div className="pt-4">
