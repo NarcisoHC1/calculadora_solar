@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
+import { getEstadosUnique, getMunicipiosByEstado, getLocationInfo } from './locationData';
 
 type Step = 1 | 2 | 3;
 
@@ -15,7 +16,7 @@ function App() {
   const [fileNames, setFileNames] = useState<string[]>([]);
 
   // OCR state
-  const [ocrStatus, setOcrStatus] = useState<'idle' | 'processing' | 'ok' | 'fail'>('idle');
+  const [ocrStatus, setOcrStatus] = useState<'idle' | 'uploading' | 'analyzing' | 'extracting' | 'ok' | 'fail'>('idle');
   const [ocrMsg, setOcrMsg] = useState('');
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [ocrQuality, setOcrQuality] = useState<number | null>(null);
@@ -30,9 +31,14 @@ function App() {
   const [pago, setPago] = useState('');
   const [periodo, setPeriodo] = useState('bimestral');
   const [tarifa, setTarifa] = useState('');
+  const [knowsTariff, setKnowsTariff] = useState('');
   const [cp, setCP] = useState('');
+  const [estado, setEstado] = useState('');
+  const [municipio, setMunicipio] = useState('');
+  const [municipioSearch, setMunicipioSearch] = useState('');
   const [expand, setExpand] = useState('');
   const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Step 2 fields
   const [cargas, setCargas] = useState<string[]>([]);
@@ -81,10 +87,14 @@ function App() {
       return;
     }
     try {
-      setOcrStatus('processing');
-      setOcrMsg('Extrayendo información de tu recibo de CFE…');
+      setOcrStatus('uploading');
+      setOcrMsg('Subiendo archivos…');
 
-      // Health check: puede fallar por CORS si CORS no está bien en Railway
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setOcrStatus('analyzing');
+      setOcrMsg('Analizando páginas…');
+
       const hc = await fetch(`${OCR_BASE.replace(/\/+$/,'')}/health`, { method: 'GET' }).catch(() => null);
       if (!hc || !hc.ok) {
         setOcrStatus('fail');
@@ -93,8 +103,13 @@ function App() {
         return;
       }
 
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setOcrStatus('extracting');
+      setOcrMsg('Recopilando información…');
+
       const fd = new FormData();
-      selectedFiles.slice(0, 2).forEach(f => fd.append('files', f)); // 👈 clave 'files' (FastAPI UploadFile)
+      selectedFiles.slice(0, 2).forEach(f => fd.append('files', f));
       const res = await fetch(`${OCR_BASE.replace(/\/+$/,'')}/v1/ocr/cfe`, { method: 'POST', body: fd });
       const json = await res.json().catch(() => null);
 
@@ -105,7 +120,6 @@ function App() {
         return;
       }
 
-      // Esperamos { ok, data, quality, form_overrides }
       const ok = Boolean(json.ok);
       const quality = typeof json.quality === 'number' ? json.quality : null;
       setOcrQuality(quality);
@@ -114,10 +128,8 @@ function App() {
         setOcrStatus('ok');
         setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
         setOcrResult(json.data || json);
-        // Si OCR trajo tarifa/cp, prellenamos (sin pisar si ya hay)
         if (!tarifa && json.form_overrides?.tarifa) setTarifa(String(json.form_overrides.tarifa).toUpperCase());
         if (!cp && json.form_overrides?.cp) setCP(String(json.form_overrides.cp));
-        // Forzamos "sí tiene CFE" y quitamos manual (si estaba)
         setHasCFE('si');
         setPlanCFE('');
         setShowManual(false);
@@ -168,8 +180,18 @@ function App() {
   };
 
   const handleCargaToggle = (carga: string, checked: boolean) => {
+    if (carga === 'ninguna') {
+      if (checked) {
+        setCargas(['ninguna']);
+        setCargaDetalles({});
+      } else {
+        setCargas([]);
+      }
+      return;
+    }
+
     if (checked) {
-      setCargas([...cargas, carga]);
+      setCargas([...cargas.filter(c => c !== 'ninguna'), carga]);
     } else {
       setCargas(cargas.filter(c => c !== carga));
       const newDetalles = { ...cargaDetalles };
@@ -417,17 +439,22 @@ function App() {
                       </>
                     )}
 
-                    {/* Animación mientras OCR procesa */}
-                    {ocrStatus === 'processing' && (
-                      <div className="flex flex-col items-center gap-3 py-4">
+                    {(ocrStatus === 'uploading' || ocrStatus === 'analyzing' || ocrStatus === 'extracting') && (
+                      <div className="flex flex-col items-center gap-3 py-6">
                         <div className="w-12 h-12 rounded-full border-4 border-slate-200 animate-spin" style={{ borderTopColor: '#1e3a2b' }} />
-                        <p className="text-slate-700 font-semibold">Extrayendo información de tu recibo de CFE…</p>
-                        <p className="text-xs text-slate-500">Esto puede tardar unos segundos.</p>
+                        <p className="text-slate-700 font-semibold">{ocrMsg}</p>
+                        <div className="flex gap-2 items-center">
+                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'uploading' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'analyzing' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'extracting' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                        </div>
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mt-2">
+                          <p className="text-xs text-amber-800 font-semibold">⚠️ No cierres el navegador</p>
+                        </div>
                       </div>
                     )}
 
-                    {/* Lista de archivos */}
-                    {fileUploaded && ocrStatus !== 'processing' && (
+                    {fileUploaded && ocrStatus !== 'uploading' && ocrStatus !== 'analyzing' && ocrStatus !== 'extracting' && (
                       <div className="mt-4 flex flex-col items-center gap-2" style={{ color: '#3cd070' }}>
                         {fileNames.map((n, i) => (
                           <div key={i} className="flex items-center gap-2">
@@ -451,7 +478,7 @@ function App() {
                       <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm text-green-800 font-semibold">Datos extraídos correctamente</p>
-                        {ocrQuality != null && <p className="text-xs text-green-700">Calidad OCR: {(ocrQuality * 100).toFixed(0)}%</p>}
+                        {ocrQuality != null && ocrQuality < 1 && <p className="text-xs text-green-700">Calidad OCR: {(ocrQuality * 100).toFixed(0)}%</p>}
                       </div>
                     </div>
                   )}
@@ -471,21 +498,25 @@ function App() {
                     </p>
                   </div>
 
-                  <div className="relative my-8">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-slate-300"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-white text-slate-500">¿No tienes el archivo?</span>
-                    </div>
-                  </div>
+                  {ocrStatus !== 'ok' && (
+                    <>
+                      <div className="relative my-8">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-slate-300"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                          <span className="px-4 bg-white text-slate-500">¿No tienes el archivo?</span>
+                        </div>
+                      </div>
 
-                  <button
-                    onClick={startManual}
-                    className="w-full py-3 px-4 bg-white border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-all"
-                  >
-                    Capturar datos manualmente
-                  </button>
+                      <button
+                        onClick={startManual}
+                        className="w-full py-3 px-4 bg-white border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-all"
+                      >
+                        Capturar datos manualmente
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : (
                 // ----- Captura manual original (intacta) -----
@@ -743,12 +774,13 @@ function App() {
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
                       ¿Planeas instalar alguno de estos en los próximos 3-6 meses?
                     </label>
-                    <p className="text-xs text-slate-500 mb-3">(Opcional - puedes elegir varias)</p>
+                    <p className="text-xs text-slate-500 mb-3">(Opcional - puedes elegir varias o ninguna)</p>
                     <div className="space-y-3">
                       {[
+                        { value: 'ninguna', label: 'Ninguna' },
                         { value: 'ev', label: 'Cargador para coche eléctrico' },
                         { value: 'minisplit', label: 'Minisplit / A/C' },
-                        { value: 'secadora', label: 'Secadora eléctrica' },
+                        { value: 'secadora', label: 'Secadora de ropa' },
                         { value: 'bomba', label: 'Bomba de agua / alberca' },
                         { value: 'otro', label: 'Otro' },
                       ].map((item) => (
@@ -969,8 +1001,12 @@ function App() {
                       <input
                         type="tel"
                         value={telefono}
-                        onChange={(e) => setTelefono(e.target.value)}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '');
+                          if (digits.length <= 10) setTelefono(digits);
+                        }}
                         placeholder="55 1234 5678"
+                        maxLength={10}
                         required
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
                         style={{ outlineColor: '#3cd070' }}
@@ -1093,13 +1129,15 @@ function App() {
         </div>
       )}
 
-      {/* Overlay cálculo global */}
       {loading && (
         <div className="fixed inset-0 z-[9999] bg-white/85 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center">
             <div className="w-11 h-11 border-4 border-slate-200 rounded-full animate-spin mx-auto mb-3"
                  style={{ borderTopColor: '#1e3a2b' }}></div>
             <div className="font-extrabold text-slate-900">{loadingMsg}</div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mt-4 inline-block">
+              <p className="text-xs text-amber-800 font-semibold">⚠️ No cierres el navegador</p>
+            </div>
           </div>
         </div>
       )}
