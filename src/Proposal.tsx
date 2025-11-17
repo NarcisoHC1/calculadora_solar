@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ProposalData, DualProposal } from './types';
 import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock } from 'lucide-react';
 
@@ -32,6 +32,29 @@ function getFirstName(fullName: string): string {
   const parts = trimmed.split(/\s+/);
   const firstName = parts[0];
   return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+}
+
+function CalendlyWidget() {
+  const calendlyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (calendlyRef.current && window.Calendly) {
+      window.Calendly.initInlineWidget({
+        url: 'https://calendly.com/narciso-solarya/30min',
+        parentElement: calendlyRef.current,
+      });
+    }
+  }, []);
+
+  return (
+    <div className="mt-6">
+      <div
+        ref={calendlyRef}
+        className="calendly-inline-widget"
+        style={{ minWidth: '320px', height: '700px' }}
+      />
+    </div>
+  );
 }
 
 function ProposalCard({ data, title, onClose, showSharedSections = true }: { data: ProposalData; title: string; onClose: () => void; showSharedSections?: boolean }) {
@@ -158,17 +181,15 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             </div>
           </div>
 
-          <div className="mt-6 text-center">
-            <a
-              href="https://calendly.com/narciso-solarya/30min"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full px-6 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
-              style={{ background: '#ff5c36', color: 'white' }}
-            >
-              Agendar visita técnica gratuita
-            </a>
-            <p className="text-xs text-slate-500 mt-2">Sin compromiso · Evaluación profesional · 100% gratis</p>
+          <div className="mt-6 border-t border-slate-200 pt-6">
+            <h4 className="text-xl font-bold text-center mb-4" style={{ color: '#1e3a2b' }}>
+              Agenda tu Visita Técnica Gratuita
+            </h4>
+            <p className="text-center text-slate-600 mb-4">
+              Selecciona la fecha y hora que mejor te convenga
+            </p>
+            <CalendlyWidget />
+            <p className="text-xs text-slate-500 mt-4 text-center">Sin compromiso · Evaluación profesional · 100% gratis</p>
           </div>
         </div>
 

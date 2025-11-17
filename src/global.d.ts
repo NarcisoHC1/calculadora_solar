@@ -7,5 +7,13 @@ declare global {
       navigate: (path: string, payload?: any) => void;
       getParentUtms: () => Record<string, any>;
     };
+    Calendly?: {
+      initInlineWidget: (options: {
+        url: string;
+        parentElement: HTMLElement;
+        prefill?: Record<string, any>;
+        utm?: Record<string, any>;
+      }) => void;
+    };
   }
 }

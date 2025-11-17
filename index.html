@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SolarYa</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
 
     <!-- Catcher de errores para no ver pantalla en blanco -->
     <style>#boot-error{white-space:pre-wrap;color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;padding:12px;border-radius:8px;margin:16px;display:none}</style>
@@ -29,6 +30,9 @@
 
     <!-- Bridge para comunicar el widget con el sitio padre -->
     <script src="./bridge.js"></script>
+
+    <!-- Calendly widget -->
+    <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
 
     <!-- Vite bundle -->
     <script type="module" src="./src/main.tsx"></script>
