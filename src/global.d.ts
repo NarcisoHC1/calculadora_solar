@@ -14,6 +14,11 @@ declare global {
         prefill?: Record<string, any>;
         utm?: Record<string, any>;
       }) => void;
+      initPopupWidget: (options: {
+        url: string;
+        prefill?: Record<string, any>;
+        utm?: Record<string, any>;
+      }) => void;
     };
   }
 }

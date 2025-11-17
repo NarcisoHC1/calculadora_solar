@@ -34,6 +34,13 @@ function getFirstName(fullName: string): string {
   return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
 }
 
+function openCalendlyPopup(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault();
+  if (window.Calendly) {
+    window.Calendly.initPopupWidget({ url: 'https://calendly.com/narciso-solarya/30min' });
+  }
+}
+
 function CalendlyWidget() {
   useEffect(() => {
     const script = document.createElement('script');
@@ -376,10 +383,9 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
 
           <div className="mt-6 text-center">
             <a
-              href="https://calendly.com/narciso-solarya/30min"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+              href=""
+              onClick={openCalendlyPopup}
+              className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg cursor-pointer"
               style={{ background: '#ff5c36', color: 'white' }}
             >
               Agendar visita técnica gratuita
@@ -470,10 +476,9 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
 
           <div className="mt-6 text-center">
             <a
-              href="https://calendly.com/narciso-solarya/30min"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+              href=""
+              onClick={openCalendlyPopup}
+              className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg cursor-pointer"
               style={{ background: '#ff5c36', color: 'white' }}
             >
               Agendar visita técnica gratuita
@@ -663,10 +668,9 @@ function SharedSections({ onClose }: { onClose: () => void }) {
 
         <div className="mt-6 text-center">
           <a
-            href="https://calendly.com/narciso-solarya/30min"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+            href=""
+            onClick={openCalendlyPopup}
+            className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
           >
             Agendar visita técnica gratuita
@@ -682,10 +686,9 @@ function SharedSections({ onClose }: { onClose: () => void }) {
         <div className="mt-8 pt-6 border-t border-slate-200 text-center">
           <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
           <a
-            href="https://calendly.com/narciso-solarya/30min"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
+            href=""
+            onClick={openCalendlyPopup}
+            className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90 cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
           >
             Agendar visita técnica gratuita
@@ -702,10 +705,9 @@ function SharedSections({ onClose }: { onClose: () => void }) {
           Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
         </p>
         <a
-          href="https://calendly.com/narciso-solarya/30min"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
+          href=""
+          onClick={openCalendlyPopup}
+          className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4 cursor-pointer"
           style={{ background: '#ff5c36', color: 'white' }}
         >
           Agendar Visita Técnica Gratuita
@@ -846,10 +848,9 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               <div className="mt-8 pt-6 border-t border-slate-200 text-center">
                 <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
                 <a
-                  href="https://calendly.com/narciso-solarya/30min"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
+                  href=""
+                  onClick={openCalendlyPopup}
+                  className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90 cursor-pointer"
                   style={{ background: '#ff5c36', color: 'white' }}
                 >
                   Agendar visita técnica gratuita
@@ -866,10 +867,9 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
           </p>
           <a
-            href="https://calendly.com/narciso-solarya/30min"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
+            href=""
+            onClick={openCalendlyPopup}
+            className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4 cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
           >
             Agendar Visita Técnica Gratuita
