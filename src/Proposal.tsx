@@ -34,7 +34,7 @@ function getFirstName(fullName: string): string {
   return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
 }
 
-function ProposalCard({ data, title, onClose }: { data: ProposalData; title: string; onClose: () => void }) {
+function ProposalCard({ data, title, onClose, showSharedSections = true }: { data: ProposalData; title: string; onClose: () => void; showSharedSections?: boolean }) {
   const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
 
   return (
@@ -278,8 +278,9 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-6 mt-6">
-          <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
+        {showSharedSections && (
+          <div className="border-t border-slate-200 pt-6 mt-6">
+            <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
           <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -360,9 +361,11 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
             </button>
           </div>
         </div>
+        )}
 
-        <div className="border-t border-slate-200 pt-6 mt-6">
-          <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
+        {showSharedSections && (
+          <div className="border-t border-slate-200 pt-6 mt-6">
+            <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
           <div className="relative">
             <div className="absolute left-6 top-12 bottom-12 w-0.5" style={{ background: '#ff5c36' }}></div>
@@ -451,6 +454,7 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
             <p className="text-xs text-slate-500 mt-2">Agenda tu cita ahora · Sin compromiso</p>
           </div>
         </div>
+        )}
 
         <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
           <p className="text-xs text-slate-700 leading-relaxed">
@@ -460,6 +464,235 @@ function ProposalCard({ data, title, onClose }: { data: ProposalData; title: str
         </div>
       </div>
     </div>
+  );
+}
+
+function SharedSections({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+        <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
+        <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/logo_longi_2.jpg" alt="JA Solar" className="w-12 h-12 object-contain" />
+              <div>
+                <h5 className="font-bold text-slate-900">JA Solar</h5>
+                <p className="text-xs text-slate-600">Paneles Solares</p>
+              </div>
+            </div>
+            <div className="space-y-1 text-sm text-slate-700">
+              <p>• #3 mundial en fabricación</p>
+              <p>• +90GW instalados globalmente</p>
+              <p>• Tecnología bifacial N-Type</p>
+            </div>
+          </div>
+
+          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
+                H
+              </div>
+              <div>
+                <h5 className="font-bold text-slate-900">Hoymiles</h5>
+                <p className="text-xs text-slate-600">Microinversores</p>
+              </div>
+            </div>
+            <div className="space-y-1 text-sm text-slate-700">
+              <p>• Líder global en microinversores</p>
+              <p>• +5M unidades instaladas</p>
+              <p>• Eficiencia hasta 97.3%</p>
+            </div>
+          </div>
+
+          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
+                H
+              </div>
+              <div>
+                <h5 className="font-bold text-slate-900">Huawei</h5>
+                <p className="text-xs text-slate-600">Inversores String</p>
+              </div>
+            </div>
+            <div className="space-y-1 text-sm text-slate-700">
+              <p>• Líder mundial en inversores</p>
+              <p>• Tecnología FusionSolar</p>
+              <p>• Eficiencia hasta 98.6%</p>
+            </div>
+          </div>
+
+          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
+                A
+              </div>
+              <div>
+                <h5 className="font-bold text-slate-900">Aluminext</h5>
+                <p className="text-xs text-slate-600">Sistema de Montaje</p>
+              </div>
+            </div>
+            <div className="space-y-1 text-sm text-slate-700">
+              <p>• Fabricante mexicano premium</p>
+              <p>• Aluminio grado industrial</p>
+              <p>• Diseño antisísmico certificado</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center">
+          <button
+            onClick={onClose}
+            className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+            style={{ background: '#ff5c36', color: 'white' }}
+          >
+            Agendar visita técnica gratuita
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+        <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
+
+        <div className="relative">
+          <div className="absolute left-6 top-12 bottom-12 w-0.5" style={{ background: '#ff5c36' }}></div>
+
+          <div className="space-y-8">
+            <div className="flex gap-4 relative">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                1
+              </div>
+              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Visita Técnica</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~1 día
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Evaluación gratuita y propuesta final</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 relative">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                2
+              </div>
+              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~1 día
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Firma y pago del 50%</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 relative">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                3
+              </div>
+              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Instalación</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~5 días
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Sistema funcionando</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 relative">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+                4
+              </div>
+              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
+                  <span className="text-sm text-slate-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    2-4 semanas
+                  </span>
+                </div>
+                <p className="text-sm text-slate-700">Trámites y medidor bidireccional</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-slate-50 border-2 rounded-xl p-4 text-center" style={{ borderColor: '#ff9b7a' }}>
+          <p className="text-sm font-semibold" style={{ color: '#1e3a2b' }}>
+            ⏱️ Tiempo total estimado: 4-6 semanas desde la visita hasta interconexión completa
+          </p>
+        </div>
+
+        <div className="mt-6 text-center">
+          <button
+            onClick={onClose}
+            className="px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
+            style={{ background: '#ff5c36', color: 'white' }}
+          >
+            Agendar visita técnica gratuita
+          </button>
+          <p className="text-xs text-slate-500 mt-2">Agenda tu cita ahora · Sin compromiso</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+        <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
+        <FAQAccordion />
+
+        <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+          <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
+          <button
+            onClick={onClose}
+            className="px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
+            style={{ background: '#ff5c36', color: 'white' }}
+          >
+            Agendar visita técnica gratuita
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff9b7a' }}>
+        <div className="text-6xl mb-4">🚀</div>
+        <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
+          Da el Primer Paso Hacia Tu Independencia Energética
+        </h3>
+        <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+          Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
+        </p>
+        <button
+          onClick={onClose}
+          className="px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4"
+          style={{ background: '#ff5c36', color: 'white' }}
+        >
+          Agendar Visita Técnica Gratuita
+        </button>
+        <p className="text-sm text-slate-500">Respuesta en menos de 24 horas · Sin letra pequeña</p>
+
+        <div className="mt-8 flex items-center justify-center gap-8 flex-wrap text-sm text-slate-600">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+            <span>Sin compromiso</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+            <span>100% gratis</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+            <span>Respuesta rápida</span>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -556,33 +789,38 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         )}
 
         {proposal.future ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} />
-            <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} />
-          </div>
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} showSharedSections={false} />
+              <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} />
+            </div>
+            <SharedSections onClose={onClose} />
+          </>
         ) : (
           <div className="mb-8">
             <ProposalCard data={proposal.current} title="Tu Propuesta Personalizada de Sistema de Paneles Solares" onClose={onClose} />
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
-          <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
-          <FAQAccordion />
+        {!proposal.future && (
+          <>
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+              <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
+              <FAQAccordion />
 
-          <div className="mt-8 pt-6 border-t border-slate-200 text-center">
-            <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
-            <button
-              onClick={onClose}
-              className="px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
-              style={{ background: '#ff5c36', color: 'white' }}
-            >
-              Agendar visita técnica gratuita
-            </button>
-          </div>
-        </div>
+              <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+                <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
+                <button
+                  onClick={onClose}
+                  className="px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90"
+                  style={{ background: '#ff5c36', color: 'white' }}
+                >
+                  Agendar visita técnica gratuita
+                </button>
+              </div>
+            </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff9b7a' }}>
+            <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff9b7a' }}>
           <div className="text-6xl mb-4">🚀</div>
           <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
             Da el Primer Paso Hacia Tu Independencia Energética
@@ -614,6 +852,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
