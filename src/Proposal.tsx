@@ -516,16 +516,13 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
           <div className="flex items-center justify-between flex-wrap gap-6">
-            <div className="flex items-center gap-4">
+            <div>
               <img
-                src="/SolarYa logos_-o- icon.png"
+                src="/SolarYa logos_Primary Logo.png"
                 alt="SolarYa"
-                className="w-16 h-16 md:w-20 md:h-20"
+                className="h-12 md:h-16 w-auto"
               />
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold" style={{ color: '#1e3a2b' }}>SolarYa</h1>
-                <p className="text-slate-600 font-semibold">Accesible. Confiable. Simple.</p>
-              </div>
+              <p className="text-slate-600 font-semibold mt-2 text-sm md:text-base">Accesible. Confiable. Simple.</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
