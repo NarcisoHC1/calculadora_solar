@@ -66,18 +66,20 @@ function calculatePDBTPayment(kwhBimonthly: number): number {
 }
 
 function estimateConsumptionKwh(input: ProposalInput): number {
-  if (input.consumoKwh) return input.consumoKwh;
+  if (input.consumoKwh && input.consumoKwh > 0) return input.consumoKwh;
 
   const paymentBimonthly = input.periodo === 'bimestral' ? input.pagoActual : input.pagoActual * 2;
 
   if (input.tarifa === 'DAC') {
     const withoutIVA = paymentBimonthly / (1 + IVA_RATE);
-    return (withoutIVA - TARIFA_DAC.fijo_mensual * 2) / TARIFA_DAC.precio_kwh;
+    const kwh = (withoutIVA - TARIFA_DAC.fijo_mensual * 2) / TARIFA_DAC.precio_kwh;
+    return Math.max(100, kwh);
   }
 
   if (input.tarifa === 'PDBT') {
     const withoutIVA = paymentBimonthly / (1 + IVA_RATE);
-    return (withoutIVA - TARIFA_PDBT.fijo_mensual * 2) / TARIFA_PDBT.precio_kwh;
+    const kwh = (withoutIVA - TARIFA_PDBT.fijo_mensual * 2) / TARIFA_PDBT.precio_kwh;
+    return Math.max(100, kwh);
   }
 
   const withoutIVA = paymentBimonthly / (1 + IVA_RATE);
@@ -97,7 +99,7 @@ function estimateConsumptionKwh(input: ProposalInput): number {
     }
   }
 
-  return kwh;
+  return Math.max(100, kwh);
 }
 
 function addFutureLoads(baseKwh: number, cargas: ProposalInput['cargas']): number {
@@ -254,7 +256,7 @@ function calculateFinancials(
     pagoFuturo += dapAmount;
   }
 
-  const ahorroBimestral = pagoActual - pagoFuturo;
+  const ahorroBimestral = Math.max(0, pagoActual - pagoFuturo);
   const precioLista = system.potenciaTotal * PRICE_PER_WATT;
   const descuento = precioLista * DISCOUNT_RATE;
   const subtotal = precioLista - descuento;
@@ -262,7 +264,7 @@ function calculateFinancials(
   const total = subtotal + iva;
   const anticipo = total * ANTICIPO_PERCENT;
   const pagoPostInterconexion = total - anticipo;
-  const anosRetorno = ahorroBimestral > 0 ? total / (ahorroBimestral * 6) : 999;
+  const anosRetorno = ahorroBimestral > 100 ? Math.min(25, total / (ahorroBimestral * 6)) : 15;
 
   return {
     pagoAhora: pagoActual,
@@ -280,9 +282,9 @@ function calculateFinancials(
 }
 
 function calculateEnvironmentalImpact(generacionAnualKwh: number): EnvironmentalImpact {
-  const arboles = Math.round((generacionAnualKwh / 1000) * 4.2);
-  const barrilesPetroleo = Math.round((generacionAnualKwh / 1600) * 0.6);
-  const toneladasCO2 = parseFloat(((generacionAnualKwh / 1000) * 0.6).toFixed(1));
+  const arboles = Math.max(1, Math.round((generacionAnualKwh / 1000) * 4.2));
+  const barrilesPetroleo = Math.max(1, Math.round((generacionAnualKwh / 1600) * 0.6));
+  const toneladasCO2 = Math.max(0.1, parseFloat(((generacionAnualKwh / 1000) * 0.6).toFixed(1)));
 
   return {
     arboles,
@@ -344,12 +346,12 @@ function generateComponents(system: SystemSpec): ComponentBreakdown[] {
 }
 
 export function generateProposal(input: ProposalInput): DualProposal {
-  const consumoBimestralKwh = estimateConsumptionKwh(input);
-  const pagoActualBimonthly = input.periodo === 'bimestral' ? input.pagoActual : input.pagoActual * 2;
+  const consumoBimestralKwh = Math.max(100, estimateConsumptionKwh(input));
+  const pagoActualBimonthly = Math.max(100, input.periodo === 'bimestral' ? input.pagoActual : input.pagoActual * 2);
 
   const system = calculateSystemSize(consumoBimestralKwh);
   const generacionBimestralKwh = system.generacionMensualKwh * 2;
-  const porcentajeCobertura = Math.min(100, (generacionBimestralKwh / consumoBimestralKwh) * 100);
+  const porcentajeCobertura = consumoBimestralKwh > 0 ? Math.min(100, (generacionBimestralKwh / consumoBimestralKwh) * 100) : 85;
 
   const financial = calculateFinancials(
     pagoActualBimonthly,
@@ -402,7 +404,7 @@ export function generateProposal(input: ProposalInput): DualProposal {
     const futureConsumoBimestralKwh = addFutureLoads(consumoBimestralKwh, input.cargas);
     const futureSystem = calculateSystemSize(futureConsumoBimestralKwh);
     const futureGeneracionBimestralKwh = futureSystem.generacionMensualKwh * 2;
-    const futurePorcentajeCobertura = Math.min(100, (futureGeneracionBimestralKwh / futureConsumoBimestralKwh) * 100);
+    const futurePorcentajeCobertura = futureConsumoBimestralKwh > 0 ? Math.min(100, (futureGeneracionBimestralKwh / futureConsumoBimestralKwh) * 100) : 85;
 
     let futurePagoActual = pagoActualBimonthly;
     if (input.tarifa === 'DAC') {
