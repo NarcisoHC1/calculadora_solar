@@ -943,56 +943,6 @@ function App() {
                                 <option>GDMTO</option>
                               </select>
                             </div>
-                            <div>
-                              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Estado donde se encuentra el inmueble
-                              </label>
-                              <select
-                                value={estado}
-                                onChange={(e) => {
-                                  setEstado(e.target.value);
-                                  setMunicipio('');
-                                }}
-                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                                style={{
-                                  outlineColor: '#3cd070',
-                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                  backgroundPosition: 'right 0.5rem center',
-                                  backgroundRepeat: 'no-repeat',
-                                  backgroundSize: '1.5em 1.5em'
-                                }}
-                              >
-                                <option value="">Selecciona tu estado</option>
-                                {getEstadosUnique().map((est) => (
-                                  <option key={est} value={est}>{est}</option>
-                                ))}
-                              </select>
-                            </div>
-                            {estado && (
-                              <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                  Municipio
-                                </label>
-                                <select
-                                  value={municipio}
-                                  onChange={(e) => setMunicipio(e.target.value)}
-                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                                  style={{
-                                    outlineColor: '#3cd070',
-                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                    backgroundPosition: 'right 0.5rem center',
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundSize: '1.5em 1.5em'
-                                  }}
-                                >
-                                  <option value="">Selecciona tu municipio</option>
-                                  {getMunicipiosByEstado(estado)
-                                    .map((mun) => (
-                                      <option key={mun} value={mun}>{mun}</option>
-                                    ))}
-                                </select>
-                              </div>
-                            )}
                           </>
                         )}
 
@@ -1019,59 +969,6 @@ function App() {
                                 <option value="negocio">Negocio</option>
                               </select>
                             </div>
-
-                            <div>
-                              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Estado
-                              </label>
-                              <select
-                                value={estado}
-                                onChange={(e) => {
-                                  setEstado(e.target.value);
-                                  setMunicipio('');
-                                  setMunicipioSearch('');
-                                }}
-                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                                style={{
-                                  outlineColor: '#3cd070',
-                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                  backgroundPosition: 'right 0.5rem center',
-                                  backgroundRepeat: 'no-repeat',
-                                  backgroundSize: '1.5em 1.5em'
-                                }}
-                              >
-                                <option value="">Selecciona tu estado</option>
-                                {getEstadosUnique().map((est) => (
-                                  <option key={est} value={est}>{est}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {estado && (
-                              <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                  Municipio
-                                </label>
-                                <select
-                                  value={municipio}
-                                  onChange={(e) => setMunicipio(e.target.value)}
-                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                                  style={{
-                                    outlineColor: '#3cd070',
-                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                    backgroundPosition: 'right 0.5rem center',
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundSize: '1.5em 1.5em'
-                                  }}
-                                >
-                                  <option value="">Selecciona tu municipio</option>
-                                  {getMunicipiosByEstado(estado)
-                                    .map((mun) => (
-                                      <option key={mun} value={mun}>{mun}</option>
-                                    ))}
-                                </select>
-                              </div>
-                            )}
                           </>
                         )}
 
