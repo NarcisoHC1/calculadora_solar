@@ -142,11 +142,20 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
         {showDACWarning && dacBimonthlyPayment && dacFinancial && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
             <p className="text-sm font-bold text-amber-900 mb-3">⚠️ Advertencia Tarifa DAC</p>
-            <div className="space-y-2 text-sm text-amber-800">
-              <p>Tu consumo bimestral de energía es alto y de seguir así los siguientes meses, la CFE podría pasarte a tarifa DAC (tarifa residencial de alto consumo).</p>
-              <p>Si caes en tarifa DAC, tu pago será de <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre.</p>
-              <p>Con SolarYa evitarás caer en DAC, ahorrando <strong>{formatCurrency(dacBimonthlyPayment - financial.pagoFuturo)}</strong> al bimestre.</p>
-            </div>
+            <ul className="space-y-2 text-sm text-amber-800">
+              <li className="flex items-start gap-2">
+                <span className="text-amber-900 font-bold mt-0.5">•</span>
+                <span>Tu consumo bimestral de energía es alto y de seguir así los siguientes meses, la CFE podría pasarte a tarifa DAC (tarifa residencial de alto consumo).</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-900 font-bold mt-0.5">•</span>
+                <span>Si caes en tarifa DAC, tu pago será de <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-900 font-bold mt-0.5">•</span>
+                <span>Con SolarYa evitarás caer en DAC, ahorrando <strong>{formatCurrency(dacBimonthlyPayment - financial.pagoFuturo)}</strong> al bimestre.</span>
+              </li>
+            </ul>
           </div>
         )}
 
@@ -207,15 +216,19 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
           </div>
 
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
-            <p className="text-sm font-bold text-slate-900 mb-3">Pago en 2 exhibiciones:</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="text-sm font-bold text-slate-900 mb-3">Pago en 3 exhibiciones:</p>
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <p className="text-xs text-slate-600 mb-1">Anticipo 50%</p>
-                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.anticipo)}</p>
+                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.5)}</p>
               </div>
               <div>
-                <p className="text-xs text-slate-600 mb-1">Pago final 50%</p>
-                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.pagoPostInterconexion)}</p>
+                <p className="text-xs text-slate-600 mb-1">2do pago 25%</p>
+                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.25)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-600 mb-1">3er pago 25%</p>
+                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.25)}</p>
               </div>
             </div>
           </div>
@@ -223,14 +236,18 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
         </div>
 
         {showSharedSections && (
-          <div className="mt-6 border-t border-slate-200 pt-6">
-            <h4 className="text-xl font-bold text-center mb-3" style={{ color: '#1e3a2b' }}>
-              Da el Siguiente Paso Hacia Tu Independencia Energética
-            </h4>
-            <p className="text-center text-slate-600 mb-4">
+          <div className="mt-6 border-t border-slate-200 pt-8">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
+              <h4 className="text-2xl md:text-3xl font-bold text-center" style={{ color: '#1e3a2b' }}>
+                Da el Siguiente Paso Hacia Tu Independencia Energética
+              </h4>
+              <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
+            </div>
+            <p className="text-center text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
               Agenda tu visita técnica <strong>100% GRATUITA</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
             </p>
-            <p className="text-center text-slate-700 font-semibold mb-4">
+            <p className="text-center text-slate-700 font-semibold mb-6 text-lg">
               Selecciona la fecha y hora que mejor te convenga
             </p>
             <CalendlyWidget />
@@ -250,19 +267,19 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Todos los trámites ante CFE</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>App de monitoreo de energía en tiempo real</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
                 <p>Garantía de instalación: <strong>2 años</strong></p>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Todos los trámites ante CFE</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
                 <p>Garantía de equipos: <strong>12 años</strong></p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>App de monitoreo de energía en tiempo real</p>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
@@ -279,7 +296,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             </div>
           </div>
 
-          <div className="bg-slate-50 border-2 rounded-xl p-4 max-w-2xl" style={{ borderColor: '#ff9b7a' }}>
+          <div className="bg-slate-50 border-2 rounded-xl p-4 max-w-2xl mx-auto" style={{ borderColor: '#ff9b7a' }}>
             <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
               <TreePine className="w-4 h-4" style={{ color: '#3cd070' }} />
               Instalar tu sistema de paneles solares equivale anualmente a:
@@ -353,13 +370,17 @@ function SharedSections({ onClose }: { onClose: () => void }) {
     <>
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
         <div className="border-b border-slate-200 pb-6 mb-6">
-          <h4 className="text-xl font-bold text-center mb-3" style={{ color: '#1e3a2b' }}>
-            Da el Siguiente Paso Hacia Tu Independencia Energética
-          </h4>
-          <p className="text-center text-slate-600 mb-4">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
+            <h4 className="text-2xl md:text-3xl font-bold text-center" style={{ color: '#1e3a2b' }}>
+              Da el Siguiente Paso Hacia Tu Independencia Energética
+            </h4>
+            <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
+          </div>
+          <p className="text-center text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
             Agenda tu visita técnica <strong>100% GRATUITA</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
           </p>
-          <p className="text-center text-slate-700 font-semibold mb-4">
+          <p className="text-center text-slate-700 font-semibold mb-6 text-lg">
             Selecciona la fecha y hora que mejor te convenga
           </p>
           <CalendlyWidget />
