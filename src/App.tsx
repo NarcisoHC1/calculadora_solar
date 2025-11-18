@@ -27,6 +27,7 @@ function App() {
   // Step 1 - manual capture toggles and fields
   const [showManual, setShowManual] = useState(false);
   const [hasCFE, setHasCFE] = useState('');
+  const [justMoved, setJustMoved] = useState('');
   const [planCFE, setPlanCFE] = useState('');
   const [usoCasaNegocio, setUsoCasaNegocio] = useState('');
   const [numPersonasCasa, setNumPersonasCasa] = useState('');
@@ -48,6 +49,7 @@ function App() {
   const [cargaDetalles, setCargaDetalles] = useState<{
     ev?: { modelo: string; km: string };
     minisplit?: { cantidad: string; horas: string };
+    secadora?: { horas: string };
   }>({});
   const [tipoInmueble, setTipoInmueble] = useState('');
   const [pisos, setPisos] = useState('');
@@ -207,19 +209,30 @@ function App() {
     }
 
     if (hasCFE === 'si') {
-      if (!pago || !expand) return false;
-      if (!knowsTariff) return false;
+      if (!justMoved) return false;
 
-      if (knowsTariff === 'si') {
-        if (!tarifa || !estado || !municipio) return false;
+      if (justMoved === 'si') {
+        if (!pago || !expand) return false;
+        if (!knowsTariff) return false;
+
+        if (knowsTariff === 'si') {
+          if (!tarifa) return false;
+        }
+
+        if (knowsTariff === 'no') {
+          if (!usoCasaNegocio) return false;
+        }
+        // NOTE: No bloqueamos aquí por showError, permitimos avanzar hasta cargas extra
+        return true;
       }
 
-      if (knowsTariff === 'no') {
-        if (!usoCasaNegocio || !estado || !municipio) return false;
+      if (justMoved === 'no') {
+        if (!usoCasaNegocio) return false;
+        if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
+        if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
+        if (!expand) return false;
+        return true;
       }
-
-      if (showError) return false;
-      return true;
     }
     return false;
   };
@@ -235,6 +248,16 @@ function App() {
     if (cargas.includes('minisplit')) {
       if (!cargaDetalles.minisplit?.cantidad || !cargaDetalles.minisplit?.horas) return false;
     }
+    if (cargas.includes('secadora')) {
+      if (!cargaDetalles.secadora?.horas) return false;
+    }
+
+    // Nueva lógica: Si showError (pago bajo threshold) y eligieron "ninguna" → bloquear
+    // Si eligieron cargas extra, permitimos avanzar (asumimos que con cargas extra superarán threshold)
+    if (showError && cargas.includes('ninguna')) {
+      return false;
+    }
+
     return true;
   };
 
@@ -808,7 +831,7 @@ function App() {
                         {planCFE === 'aislado' && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              ¿Ya tienes sistema FV y quieres expandirlo?
+                              ¿Ya tienes un sistema de paneles solares y planeas expandirlo?
                             </label>
                             <select
                               value={expand}
@@ -833,50 +856,149 @@ function App() {
 
                     {hasCFE === 'si' && (
                       <div className="space-y-5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              Pago a CFE (MXN)
-                            </label>
-                            <input
-                              type="number"
-                              value={pago}
-                              onChange={(e) => setPago(e.target.value)}
-                              placeholder="Ej. 3,200"
-                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                              style={{
-                                outlineColor: '#3cd070',
-                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                backgroundPosition: 'right 0.5rem center',
-                                backgroundRepeat: 'no-repeat',
-                                backgroundSize: '1.5em 1.5em'
-                              }}
-                            />
-                            <p className="text-xs text-slate-500 mt-1">
-                              Si usas <em>diablitos</em>, este pago no refleja tu consumo real
-                            </p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              Periodicidad
-                            </label>
-                            <select
-                              value={periodo}
-                              onChange={(e) => setPeriodo(e.target.value)}
-                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                              style={{
-                                outlineColor: '#3cd070',
-                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                backgroundPosition: 'right 0.5rem center',
-                                backgroundRepeat: 'no-repeat',
-                                backgroundSize: '1.5em 1.5em'
-                              }}
-                            >
-                              <option value="bimestral">Bimestral</option>
-                              <option value="mensual">Mensual</option>
-                            </select>
-                          </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            ¿Tienes ya un recibo de CFE de este inmueble?
+                          </label>
+                          <select
+                            value={justMoved}
+                            onChange={(e) => {
+                              setJustMoved(e.target.value);
+                              if (e.target.value === 'si') {
+                                setPago('');
+                                setPeriodo('bimestral');
+                              }
+                            }}
+                            className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                            style={{
+                              outlineColor: '#3cd070',
+                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                              backgroundPosition: 'right 0.5rem center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '1.5em 1.5em'
+                            }}
+                          >
+                            <option value="">Selecciona una opción</option>
+                            <option value="si">Sí, tengo recibo</option>
+                            <option value="no">No, apenas me mudé</option>
+                          </select>
                         </div>
+
+                        {justMoved === 'si' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Pago a CFE (MXN)
+                              </label>
+                              <input
+                                type="number"
+                                value={pago}
+                                onChange={(e) => setPago(e.target.value)}
+                                placeholder="Ej. 3,200"
+                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                style={{
+                                  outlineColor: '#3cd070',
+                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                  backgroundPosition: 'right 0.5rem center',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundSize: '1.5em 1.5em'
+                                }}
+                              />
+                              <p className="text-xs text-slate-500 mt-1">
+                                Si usas <em>diablitos</em>, este pago no refleja tu consumo real
+                              </p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Periodicidad
+                              </label>
+                              <select
+                                value={periodo}
+                                onChange={(e) => setPeriodo(e.target.value)}
+                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                style={{
+                                  outlineColor: '#3cd070',
+                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                  backgroundPosition: 'right 0.5rem center',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundSize: '1.5em 1.5em'
+                                }}
+                              >
+                                <option value="bimestral">Bimestral</option>
+                                <option value="mensual">Mensual</option>
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {justMoved === 'no' && (
+                          <>
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                ¿Es para casa o negocio?
+                              </label>
+                              <select
+                                value={usoCasaNegocio}
+                                onChange={(e) => setUsoCasaNegocio(e.target.value)}
+                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                style={{
+                                  outlineColor: '#3cd070',
+                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                  backgroundPosition: 'right 0.5rem center',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundSize: '1.5em 1.5em'
+                                }}
+                              >
+                                <option value="">Selecciona una opción</option>
+                                <option value="casa">Casa</option>
+                                <option value="negocio">Negocio</option>
+                              </select>
+                            </div>
+
+                            {usoCasaNegocio === 'casa' && (
+                              <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                  No. miembros de familia que viven en casa
+                                </label>
+                                <input
+                                  type="number"
+                                  value={numPersonasCasa}
+                                  onChange={(e) => setNumPersonasCasa(e.target.value)}
+                                  placeholder="Ej. 4"
+                                  min="1"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                  style={{ outlineColor: '#3cd070' }}
+                                />
+                              </div>
+                            )}
+
+                            {usoCasaNegocio === 'negocio' && (
+                              <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                  No. de personas que trabajan en el negocio
+                                </label>
+                                <select
+                                  value={rangoPersonasNegocio}
+                                  onChange={(e) => setRangoPersonasNegocio(e.target.value)}
+                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                  style={{
+                                    outlineColor: '#3cd070',
+                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                    backgroundPosition: 'right 0.5rem center',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundSize: '1.5em 1.5em'
+                                  }}
+                                >
+                                  <option value="">Selecciona un rango</option>
+                                  <option value="1-5">1-5 personas</option>
+                                  <option value="6-10">6-10 personas</option>
+                                  <option value="11-20">11-20 personas</option>
+                                  <option value="21+">Más de 20 personas</option>
+                                </select>
+                              </div>
+                            )}
+                          </>
+                        )}
 
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -1027,9 +1149,9 @@ function App() {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      ¿Planeas instalar alguno de estos en los próximos 3-6 meses?
+                      ¿Apenas instalaste o planeas instalar dentro de los siguientes 3-6 meses alguno de estos?
                     </label>
-                    <p className="text-xs text-slate-500 mb-3">(Opcional - puedes elegir varias o ninguna)</p>
+                    <p className="text-xs text-slate-500 mb-3">(Que todavía no esté reflejado en tu último recibo de CFE. Opcional - puedes elegir varias o ninguna)</p>
                     <div className="space-y-3">
                       {[
                         { value: 'ninguna', label: 'Ninguna' },
@@ -1131,9 +1253,36 @@ function App() {
                               </div>
                             </div>
                           )}
+
+                          {cargas.includes(item.value) && item.value === 'secadora' && (
+                            <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Horas semanales que planea usarla</label>
+                                <input
+                                  type="number"
+                                  value={cargaDetalles.secadora?.horas || ''}
+                                  onChange={(e) => setCargaDetalles({
+                                    ...cargaDetalles,
+                                    secadora: { horas: e.target.value }
+                                  })}
+                                  placeholder="Ej. 4"
+                                  step="0.5"
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
+
+                    {showError && cargas.includes('ninguna') && (
+                      <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-800">{errorMessage}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="border-t border-slate-200 pt-6">
@@ -1170,6 +1319,7 @@ function App() {
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           No. de pisos del edificio
                         </label>
+                        <p className="text-xs text-slate-500 mb-2">Generalmente conectamos el sistema del sótano del edificio al techo (donde van los paneles solares)</p>
                         <input
                           type="number"
                           value={pisos}

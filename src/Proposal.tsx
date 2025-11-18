@@ -49,7 +49,9 @@ function getComponentSpecs(concepto: string, marca: string, modelo: string): str
     return [
       `Potencia: ${watts}W`,
       'Tecnología: Monocristalino N-Type',
-      'Eficiencia: hasta 22.8%'
+      'Eficiencia: hasta 22.8%',
+      'Dimensiones: 2278mm × 1134mm × 35mm',
+      'Garantía: **25 años**'
     ];
   }
 
@@ -58,7 +60,7 @@ function getComponentSpecs(concepto: string, marca: string, modelo: string): str
     return [
       `Entradas: ${mppt} MPPT`,
       'Eficiencia: 97.3%',
-      'Garantía: 12 años'
+      'Garantía: **12 años**'
     ];
   }
 
@@ -67,7 +69,7 @@ function getComponentSpecs(concepto: string, marca: string, modelo: string): str
     return [
       `Potencia: ${kw}kW`,
       'Eficiencia: 98.6%',
-      'Garantía: 12 años'
+      'Garantía: **12 años**'
     ];
   }
 
@@ -170,7 +172,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(system.potenciaTotal / 1000, 1)} kilowatts</p>
             <div className="space-y-1 text-sm text-slate-600">
               <p><strong className="text-slate-900">{system.numPaneles}</strong> paneles solares de <strong className="text-slate-900">{system.potenciaPorPanel}</strong> watts c/u</p>
-              <p>Energía generada: <strong className="text-slate-900">{Math.round(system.generacionMensualKwh)}</strong> kWh/mes</p>
+              <p>Energía generada: <strong className="text-slate-900">{Math.round(system.generacionMensualKwh * 2)}</strong> kWh/bimestre</p>
               <p>Generas el <strong className="text-slate-900">{safeToFixed(porcentajeCobertura, 0)}%</strong> de tu consumo</p>
             </div>
           </div>
@@ -339,7 +341,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
                       {specs.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {specs.map((spec, specIdx) => (
-                            <p key={specIdx} className="text-xs text-slate-600">• {spec}</p>
+                            <p key={specIdx} className="text-xs text-slate-600" dangerouslySetInnerHTML={{ __html: `• ${spec.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}` }} />
                           ))}
                         </div>
                       )}
@@ -395,15 +397,15 @@ function SharedSections({ onClose }: { onClose: () => void }) {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
             <div className="flex items-center gap-3 mb-3">
-              <img src="/logo_longi_2.jpg" alt="JA Solar" className="w-12 h-12 object-contain" />
+              <img src="/logo_longi_2.jpg" alt="Canadian Solar" className="w-12 h-12 object-contain" />
               <div>
-                <h5 className="font-bold text-slate-900">JA Solar</h5>
+                <h5 className="font-bold text-slate-900">Canadian Solar</h5>
                 <p className="text-xs text-slate-600">Paneles Solares</p>
               </div>
             </div>
             <div className="space-y-1 text-sm text-slate-700">
-              <p>• #3 mundial en fabricación</p>
-              <p>• +90GW instalados globalmente</p>
+              <p>• #4 mundial en fabricación</p>
+              <p>• +86GW instalados globalmente</p>
               <p>• Tecnología bifacial N-Type</p>
             </div>
           </div>
@@ -675,15 +677,28 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   const firstName = getFirstName(userName);
   const [showFutureProposal, setShowFutureProposal] = useState(true);
 
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
-      <button
-        onClick={onClose}
-        className="fixed top-6 right-6 z-50 w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
-        aria-label="Cerrar propuesta"
-      >
-        <X className="w-6 h-6 text-slate-700" />
-      </button>
+      <div className="fixed top-6 right-6 z-50 flex gap-3">
+        <button
+          onClick={handleDownloadPDF}
+          className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
+          aria-label="Descargar PDF"
+        >
+          <Download className="w-6 h-6 text-slate-700" />
+        </button>
+        <button
+          onClick={onClose}
+          className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
+          aria-label="Cerrar propuesta"
+        >
+          <X className="w-6 h-6 text-slate-700" />
+        </button>
+      </div>
 
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
