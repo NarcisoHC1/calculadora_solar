@@ -710,9 +710,6 @@ function App() {
                             setUsoCasaNegocio('');
                             setNumPersonasCasa('');
                             setRangoPersonasNegocio('');
-                            setEstado('');
-                            setMunicipio('');
-                            setMunicipioSearch('');
                             setExpand('');
                           }}
                           className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
