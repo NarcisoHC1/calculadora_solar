@@ -402,7 +402,9 @@ function App() {
     }
 
     // Adjust threshold based on period
-    const effectiveThreshold = periodo === 'mensual' ? minThreshold * 2 : minThreshold;
+    // If mensual: threshold is half of bimonthly (since 1 month = 0.5 * bimonthly)
+    // If bimestral: threshold stays the same
+    const effectiveThreshold = periodo === 'mensual' ? minThreshold / 2 : minThreshold;
     const paymentAmount = parseFloat(pago) || 0;
 
     if (paymentAmount < effectiveThreshold) {
