@@ -401,10 +401,15 @@ function App() {
       }
     }
 
-    if (bimestral < minThreshold) {
+    // Adjust threshold based on period
+    const effectiveThreshold = periodo === 'mensual' ? minThreshold * 2 : minThreshold;
+    const paymentAmount = parseFloat(pago) || 0;
+
+    if (paymentAmount < effectiveThreshold) {
       setShowError(true);
       if (isCDMXorMexico) {
-        setErrorMessage(`Por ahora sólo atendemos a casas o negocios que gastan arriba de ${minThreshold.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 })} al bimestre.`);
+        const periodText = periodo === 'mensual' ? 'al mes' : 'al bimestre';
+        setErrorMessage(`Por ahora sólo atendemos a casas o negocios que gastan arriba de ${effectiveThreshold.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 })} ${periodText}.`);
       } else {
         setErrorMessage('Por ahora no atendemos en tu área, mantente en contacto para futuras oportunidades.');
       }
@@ -573,14 +578,18 @@ function App() {
                   </div>
 
                   <div className="space-y-5">
+                    {/* PASO 1: Estado */}
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        ¿Tienes contrato con CFE?
+                        Estado donde se encuentra el inmueble
                       </label>
                       <select
-                        value={hasCFE}
+                        value={estado}
                         onChange={(e) => {
-                          setHasCFE(e.target.value);
+                          setEstado(e.target.value);
+                          setMunicipio('');
+                          setMunicipioSearch('');
+                          setHasCFE('');
                           setPlanCFE('');
                           setUsoCasaNegocio('');
                           setNumPersonasCasa('');
@@ -589,9 +598,6 @@ function App() {
                           setTarifa('');
                           setKnowsTariff('');
                           setCP('');
-                          setEstado('');
-                          setMunicipio('');
-                          setMunicipioSearch('');
                           setExpand('');
                           setShowError(false);
                           setErrorMessage('');
@@ -605,11 +611,90 @@ function App() {
                           backgroundSize: '1.5em 1.5em'
                         }}
                       >
-                        <option value="">Selecciona una opción</option>
-                        <option value="si">Sí</option>
-                        <option value="no">No</option>
+                        <option value="">Selecciona tu estado</option>
+                        {getEstadosUnique().map((est) => (
+                          <option key={est} value={est}>{est}</option>
+                        ))}
                       </select>
                     </div>
+
+                    {/* PASO 2: Municipio */}
+                    {estado && (
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Municipio
+                        </label>
+                        <select
+                          value={municipio}
+                          onChange={(e) => {
+                            setMunicipio(e.target.value);
+                            setHasCFE('');
+                            setPlanCFE('');
+                            setUsoCasaNegocio('');
+                            setNumPersonasCasa('');
+                            setRangoPersonasNegocio('');
+                            setPago('');
+                            setTarifa('');
+                            setKnowsTariff('');
+                            setCP('');
+                            setExpand('');
+                            setShowError(false);
+                            setErrorMessage('');
+                          }}
+                          className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                          style={{
+                            outlineColor: '#3cd070',
+                            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                            backgroundPosition: 'right 0.5rem center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: '1.5em 1.5em'
+                          }}
+                        >
+                          <option value="">Selecciona tu municipio</option>
+                          {getMunicipiosByEstado(estado).map((mun) => (
+                            <option key={mun} value={mun}>{mun}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* PASO 3: ¿Tienes contrato con CFE? */}
+                    {municipio && (
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          ¿Tienes contrato con CFE?
+                        </label>
+                        <select
+                          value={hasCFE}
+                          onChange={(e) => {
+                            setHasCFE(e.target.value);
+                            setPlanCFE('');
+                            setUsoCasaNegocio('');
+                            setNumPersonasCasa('');
+                            setRangoPersonasNegocio('');
+                            setPago('');
+                            setTarifa('');
+                            setKnowsTariff('');
+                            setCP('');
+                            setExpand('');
+                            setShowError(false);
+                            setErrorMessage('');
+                          }}
+                          className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                          style={{
+                            outlineColor: '#3cd070',
+                            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                            backgroundPosition: 'right 0.5rem center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: '1.5em 1.5em'
+                          }}
+                        >
+                          <option value="">Selecciona una opción</option>
+                          <option value="si">Sí</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                    )}
 
                     {hasCFE === 'no' && (
                       <div>
@@ -717,59 +802,6 @@ function App() {
                               <option value="11-50">11-50</option>
                               <option value="51-250">51-250</option>
                               <option value="251+">251 o más</option>
-                            </select>
-                          </div>
-                        )}
-
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            Estado
-                          </label>
-                          <select
-                            value={estado}
-                            onChange={(e) => {
-                              setEstado(e.target.value);
-                              setMunicipio('');
-                              setMunicipioSearch('');
-                            }}
-                            className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                            style={{
-                              outlineColor: '#3cd070',
-                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                              backgroundPosition: 'right 0.5rem center',
-                              backgroundRepeat: 'no-repeat',
-                              backgroundSize: '1.5em 1.5em'
-                            }}
-                          >
-                            <option value="">Selecciona tu estado</option>
-                            {getEstadosUnique().map((est) => (
-                              <option key={est} value={est}>{est}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {estado && (
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              Municipio
-                            </label>
-                            <select
-                              value={municipio}
-                              onChange={(e) => setMunicipio(e.target.value)}
-                              className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                              style={{
-                                outlineColor: '#3cd070',
-                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                backgroundPosition: 'right 0.5rem center',
-                                backgroundRepeat: 'no-repeat',
-                                backgroundSize: '1.5em 1.5em'
-                              }}
-                            >
-                              <option value="">Selecciona tu municipio</option>
-                              {getMunicipiosByEstado(estado)
-                                .map((mun) => (
-                                  <option key={mun} value={mun}>{mun}</option>
-                                ))}
                             </select>
                           </div>
                         )}
@@ -911,7 +943,7 @@ function App() {
                             </div>
                             <div>
                               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Estado
+                                Estado donde se encuentra el inmueble
                               </label>
                               <select
                                 value={estado}
