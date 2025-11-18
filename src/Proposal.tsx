@@ -41,6 +41,47 @@ function openCalendlyPopup(e: React.MouseEvent<HTMLAnchorElement>) {
   }
 }
 
+function getComponentSpecs(concepto: string, marca: string, modelo: string): string[] {
+  const conceptoLower = concepto.toLowerCase();
+
+  if (conceptoLower.includes('panel')) {
+    const watts = modelo.match(/(\d+)w/i)?.[1] || '555';
+    return [
+      `Potencia: ${watts}W`,
+      'Tecnología: Monocristalino N-Type',
+      'Eficiencia: hasta 22.8%'
+    ];
+  }
+
+  if (conceptoLower.includes('microinversor')) {
+    const mppt = modelo.match(/(\d)mppt/i)?.[1] || '2';
+    return [
+      `Entradas: ${mppt} MPPT`,
+      'Eficiencia: 97.3%',
+      'Garantía: 12 años'
+    ];
+  }
+
+  if (conceptoLower.includes('inversor')) {
+    const kw = modelo.match(/(\d+)kw/i)?.[1] || '10';
+    return [
+      `Potencia: ${kw}kW`,
+      'Eficiencia: 98.6%',
+      'Garantía: 12 años'
+    ];
+  }
+
+  if (conceptoLower.includes('montaje') || conceptoLower.includes('estructura')) {
+    return [
+      'Material: Aluminio grado industrial',
+      'Certificación antisísmica',
+      'Resistente a corrosión'
+    ];
+  }
+
+  return [];
+}
+
 function CalendlyWidget() {
   useEffect(() => {
     const script = document.createElement('script');
@@ -75,23 +116,23 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
         <div className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200">
           <div className="flex items-center justify-center mb-4">
             <TrendingDown className="w-5 h-5" style={{ color: '#ff5c36' }} />
-            <h4 className="text-base font-bold text-slate-900 ml-2">Tu Ahorro</h4>
+            <h4 className="text-base font-bold text-slate-900 ml-2">Tu Ahorro con SolarYa</h4>
           </div>
 
           <div className="flex items-center justify-center gap-6 mb-5 flex-wrap">
             <div className="text-center">
-              <div className="text-xs font-semibold text-slate-600 mb-1">PAGAS AHORA</div>
+              <div className="text-xs font-semibold text-slate-600 mb-1">PAGAS AHORA A CFE</div>
               <div className="text-3xl font-bold text-slate-700 line-through">{formatCurrency(financial.pagoAhora)}</div>
             </div>
             <div className="text-4xl font-bold" style={{ color: '#ff5c36' }}>→</div>
             <div className="text-center">
-              <div className="text-xs font-semibold text-slate-600 mb-1">PAGARÁS</div>
+              <div className="text-xs font-semibold text-slate-600 mb-1">CON SOLARYA PAGARÁS</div>
               <div className="text-3xl font-bold" style={{ color: '#3cd070' }}>{formatCurrency(financial.pagoFuturo)}</div>
             </div>
           </div>
 
           <div className="bg-white rounded-lg p-4 text-center border-2" style={{ borderColor: '#ff9b7a' }}>
-            <p className="text-xs font-semibold text-slate-600 mb-1">AHORRO CADA BIMESTRE</p>
+            <p className="text-xs font-semibold text-slate-600 mb-1">AHORRAS CADA BIMESTRE</p>
             <p className="text-4xl font-bold" style={{ color: '#ff5c36' }}>
               {formatCurrency(financial.ahorroBimestral)}
             </p>
@@ -100,21 +141,12 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
 
         {showDACWarning && dacBimonthlyPayment && dacFinancial && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
-            <p className="text-sm font-bold text-amber-900 mb-3">⚠️ Advertencia DAC</p>
-            <ul className="space-y-2 text-sm text-amber-800">
-              <li className="flex items-start gap-2">
-                <span className="text-amber-900 font-bold mt-0.5">•</span>
-                <span>Tu consumo de <strong>{Math.round(data.input.consumoKwh || 0)} kWh</strong> bimestrales te hace candidato para tarifa DAC (tarifa residencial de alto consumo).</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-900 font-bold mt-0.5">•</span>
-                <span>Si caes en DAC, tu pago será de <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-900 font-bold mt-0.5">•</span>
-                <span>Con paneles solares en DAC: pagarás <strong>{formatCurrency(dacFinancial.pagoFuturo)}</strong> y ahorrarás <strong>{formatCurrency(dacFinancial.ahorroBimestral)}</strong> al bimestre.</span>
-              </li>
-            </ul>
+            <p className="text-sm font-bold text-amber-900 mb-3">⚠️ Advertencia Tarifa DAC</p>
+            <div className="space-y-2 text-sm text-amber-800">
+              <p>Tu consumo bimestral de energía es alto y de seguir así los siguientes meses, la CFE podría pasarte a tarifa DAC (tarifa residencial de alto consumo).</p>
+              <p>Si caes en tarifa DAC, tu pago será de <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre.</p>
+              <p>Con SolarYa evitarás caer en DAC, ahorrando <strong>{formatCurrency(dacBimonthlyPayment - financial.pagoFuturo)}</strong> al bimestre.</p>
+            </div>
           </div>
         )}
 
@@ -128,9 +160,9 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             </div>
             <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(system.potenciaTotal / 1000, 1)} kilowatts</p>
             <div className="space-y-1 text-sm text-slate-600">
-              <p><strong className="text-slate-900">{system.numPaneles}</strong> paneles solares de <strong className="text-slate-900">{system.potenciaPorPanel}</strong> watts</p>
+              <p><strong className="text-slate-900">{system.numPaneles}</strong> paneles solares de <strong className="text-slate-900">{system.potenciaPorPanel}</strong> watts c/u</p>
               <p>Energía generada: <strong className="text-slate-900">{Math.round(system.generacionMensualKwh)}</strong> kWh/mes</p>
-              <p>Generas <strong className="text-slate-900">{safeToFixed(porcentajeCobertura, 0)}%</strong> de la energía que consumes</p>
+              <p>Generas el <strong className="text-slate-900">{safeToFixed(porcentajeCobertura, 0)}%</strong> de tu consumo</p>
             </div>
           </div>
 
@@ -192,10 +224,13 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
 
         {showSharedSections && (
           <div className="mt-6 border-t border-slate-200 pt-6">
-            <h4 className="text-xl font-bold text-center mb-4" style={{ color: '#1e3a2b' }}>
-              Agenda tu Visita Técnica Gratuita
+            <h4 className="text-xl font-bold text-center mb-3" style={{ color: '#1e3a2b' }}>
+              Da el Siguiente Paso Hacia Tu Independencia Energética
             </h4>
             <p className="text-center text-slate-600 mb-4">
+              Agenda tu visita técnica <strong>100% GRATUITA</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
+            </p>
+            <p className="text-center text-slate-700 font-semibold mb-4">
               Selecciona la fecha y hora que mejor te convenga
             </p>
             <CalendlyWidget />
@@ -207,86 +242,63 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
         <div className="border-t border-slate-200 pt-6 mb-6">
           <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff9b7a' }}>
-              <h5 className="text-base font-bold text-slate-900 mb-4">💰 Beneficios Económicos</h5>
-              <div className="space-y-3 text-sm text-slate-700">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <div>
-                    <p className="font-semibold text-slate-900">{formatCurrency(financial.ahorroBimestral * 6 * 25)}</p>
-                    <p className="text-slate-600">ahorrados en 25 años</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <div>
-                    <p className="font-semibold text-slate-900">Retorno en {safeToFixed(financial.anosRetorno, 1)} años</p>
-                    <p className="text-slate-600">recuperación de inversión</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>Aumenta el valor de tu propiedad</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>Protección contra subidas de CFE</p>
-                </div>
+          <div className="bg-slate-50 border-2 rounded-xl p-6 mb-6" style={{ borderColor: '#ff9b7a' }}>
+            <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-sm text-slate-700">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Instalación por técnicos certificados</p>
               </div>
-            </div>
-
-            <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff9b7a' }}>
-              <h5 className="text-base font-bold text-slate-900 mb-4">🛡️ Servicios y Garantías</h5>
-              <div className="space-y-3 text-sm text-slate-700">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>Instalación por técnicos certificados</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>Trámites CFE gratis</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>App de monitoreo en tiempo real</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>Garantía de instalación: 2 años</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>Garantía de equipos: 12 años</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                  <p>Garantía de paneles: 25 años</p>
-                </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Todos los trámites ante CFE</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>App de monitoreo de energía en tiempo real</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Garantía de instalación: <strong>2 años</strong></p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Garantía de equipos: <strong>12 años</strong></p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Garantía de generación de energía: <strong>25 años</strong></p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Aumenta el valor de tu propiedad</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+                <p>Protección contra subidas de precios de CFE</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-50 border-2 rounded-xl p-6" style={{ borderColor: '#ff9b7a' }}>
-            <h5 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <TreePine className="w-5 h-5" style={{ color: '#3cd070' }} />
-              Impacto Ambiental Anual
+          <div className="bg-slate-50 border-2 rounded-xl p-4 max-w-2xl" style={{ borderColor: '#ff9b7a' }}>
+            <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+              <TreePine className="w-4 h-4" style={{ color: '#3cd070' }} />
+              Instalar tu sistema de paneles solares equivale anualmente a:
             </h5>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
-                <div className="text-4xl mb-2">🌳</div>
-                <p className="text-3xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
-                <p className="text-xs text-slate-600 font-semibold mt-1">árboles plantados</p>
+                <div className="text-2xl mb-1">🌳</div>
+                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
+                <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
               </div>
               <div className="text-center">
-                <div className="text-4xl mb-2">🛢️</div>
-                <p className="text-3xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
-                <p className="text-xs text-slate-600 font-semibold mt-1">barriles no usados</p>
+                <div className="text-2xl mb-1">🛢️</div>
+                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
+                <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
               </div>
               <div className="text-center">
-                <div className="text-4xl mb-2">☁️</div>
-                <p className="text-3xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
-                <p className="text-xs text-slate-600 font-semibold mt-1">ton CO₂ reducidas</p>
+                <div className="text-2xl mb-1">☁️</div>
+                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
+                <p className="text-xs text-slate-600 mt-0.5">toneladas de CO₂ reducidas</p>
               </div>
             </div>
           </div>
@@ -299,17 +311,29 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             Componentes del Sistema
           </h4>
           <div className="space-y-3">
-            {components.map((comp, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-lg p-4">
-                <div>
-                  <p className="font-bold text-slate-900">{comp.concepto}</p>
-                  <p className="text-sm text-slate-600 mt-1">{comp.marca} · {comp.modelo}</p>
+            {components.map((comp, idx) => {
+              const specs = getComponentSpecs(comp.concepto, comp.marca, comp.modelo);
+              return (
+                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-bold text-slate-900">{comp.concepto}</p>
+                      <p className="text-sm text-slate-600 mt-1">{comp.marca} · {comp.modelo}</p>
+                      {specs.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {specs.map((spec, specIdx) => (
+                            <p key={specIdx} className="text-xs text-slate-600">• {spec}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="text-xl font-bold" style={{ color: '#ff5c36' }}>×{comp.cantidad}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold" style={{ color: '#ff5c36' }}>×{comp.cantidad}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -329,10 +353,13 @@ function SharedSections({ onClose }: { onClose: () => void }) {
     <>
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
         <div className="border-b border-slate-200 pb-6 mb-6">
-          <h4 className="text-xl font-bold text-center mb-4" style={{ color: '#1e3a2b' }}>
-            Agenda tu Visita Técnica Gratuita
+          <h4 className="text-xl font-bold text-center mb-3" style={{ color: '#1e3a2b' }}>
+            Da el Siguiente Paso Hacia Tu Independencia Energética
           </h4>
           <p className="text-center text-slate-600 mb-4">
+            Agenda tu visita técnica <strong>100% GRATUITA</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
+          </p>
+          <p className="text-center text-slate-700 font-semibold mb-4">
             Selecciona la fecha y hora que mejor te convenga
           </p>
           <CalendlyWidget />
@@ -625,6 +652,7 @@ function FAQAccordion() {
 
 export default function Proposal({ proposal, onClose, userName }: ProposalProps) {
   const firstName = getFirstName(userName);
+  const [showFutureProposal, setShowFutureProposal] = useState(true);
 
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
@@ -656,18 +684,43 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
         {proposal.future && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
-            <p className="text-sm text-blue-900">
-              <strong>💡 Planificación inteligente:</strong> Hemos preparado dos propuestas para ti.
-              La segunda considera las cargas adicionales que planeas instalar, asegurando que tu sistema crezca con tus necesidades.
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-blue-900 mb-3">
+                  <strong>💡 Planificación inteligente:</strong> Hemos preparado dos propuestas para ti.
+                  La segunda considera las cargas adicionales que planeas instalar, asegurando que tu sistema crezca con tus necesidades.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs font-semibold text-blue-900 whitespace-nowrap">
+                  Comparar con cargas futuras
+                </span>
+                <button
+                  onClick={() => setShowFutureProposal(!showFutureProposal)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    showFutureProposal ? 'bg-blue-600' : 'bg-slate-300'
+                  }`}
+                  role="switch"
+                  aria-checked={showFutureProposal}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      showFutureProposal ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
         {proposal.future ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className={`mb-8 ${showFutureProposal ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : ''}`}>
               <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} showSharedSections={false} />
-              <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} />
+              {showFutureProposal && (
+                <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} />
+              )}
             </div>
             <SharedSections onClose={onClose} />
           </>
