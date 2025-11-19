@@ -1112,13 +1112,6 @@ function App() {
                             <option>No</option>
                           </select>
                         </div>
-
-                        {showError && (
-                          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-800">{errorMessage}</p>
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
@@ -1179,21 +1172,15 @@ function App() {
                           {cargas.includes(item.value) && item.value === 'ev' && (
                             <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                               <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Modelo</label>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Modelo</label>
                                 <select
                                   value={cargaDetalles.ev?.modelo || ''}
                                   onChange={(e) => setCargaDetalles({
                                     ...cargaDetalles,
                                     ev: { ...cargaDetalles.ev, modelo: e.target.value, km: cargaDetalles.ev?.km || '' }
                                   })}
-                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                                  style={{
-                                    outlineColor: '#3cd070',
-                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                    backgroundPosition: 'right 0.5rem center',
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundSize: '1.5em 1.5em'
-                                  }}
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                  style={{ outlineColor: '#3cd070' }}
                                 >
                                   <option value="">Selecciona el modelo</option>
                                   <option value="tesla-model3">Tesla Model 3</option>
@@ -1206,7 +1193,7 @@ function App() {
                                 </select>
                               </div>
                               <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Km diarios manejados</label>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Km diarios manejados</label>
                                 <input
                                   type="number"
                                   value={cargaDetalles.ev?.km || ''}
@@ -1215,7 +1202,7 @@ function App() {
                                     ev: { ...cargaDetalles.ev, modelo: cargaDetalles.ev?.modelo || '', km: e.target.value }
                                   })}
                                   placeholder="Ej. 40"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
                                 />
                               </div>
