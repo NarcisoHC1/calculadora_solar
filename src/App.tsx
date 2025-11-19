@@ -1065,7 +1065,7 @@ function App() {
                           </>
                         )}
 
-                        {knowsTariff === 'no' && (
+                        {knowsTariff === 'no' && justMoved === 'si' && (
                           <>
                             <div>
                               <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -1093,7 +1093,7 @@ function App() {
 
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            ¿Ya tienes sistema FV y quieres expandirlo?
+                            ¿Ya tienes un sistema de paneles solares y planeas expandirlo?
                           </label>
                           <select
                             value={expand}
@@ -1151,7 +1151,10 @@ function App() {
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
                       ¿Apenas instalaste o planeas instalar dentro de los siguientes 3-6 meses alguno de estos?
                     </label>
-                    <p className="text-xs text-slate-500 mb-3">(Que todavía no esté reflejado en tu último recibo de CFE. Opcional - puedes elegir varias o ninguna)</p>
+                    <ul className="text-xs text-slate-500 mb-3 list-disc pl-5 space-y-1">
+                      <li>Opcional - puedes elegir varias o ninguna.</li>
+                      <li>Elige los aparatos cuyo consumo no esté reflejado todavía en tu último recibo de CFE.</li>
+                    </ul>
                     <div className="space-y-3">
                       {[
                         { value: 'ninguna', label: 'Ninguna' },

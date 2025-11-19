@@ -298,8 +298,8 @@ function generateComponents(system: SystemSpec): ComponentBreakdown[] {
     {
       concepto: 'Paneles solares',
       cantidad: system.numPaneles,
-      marca: 'JA Solar',
-      modelo: `JAM${system.potenciaPorPanel}W`
+      marca: 'Canadian Solar',
+      modelo: `CS${system.potenciaPorPanel}W`
     },
     {
       concepto: 'Estructura de montaje',

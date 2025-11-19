@@ -77,7 +77,8 @@ function getComponentSpecs(concepto: string, marca: string, modelo: string): str
     return [
       'Material: Aluminio grado industrial',
       'Certificación antisísmica',
-      'Resistente a corrosión'
+      'Resistente a corrosión',
+      'Garantía: **25 años**'
     ];
   }
 
@@ -97,13 +98,25 @@ function CalendlyWidget() {
   }, []);
 
   return (
-    <div className="mt-6">
-      <div
-        className="calendly-inline-widget"
-        data-url="https://calendly.com/narciso-solarya/30min"
-        style={{ minWidth: '320px', height: '700px' }}
-      />
-    </div>
+    <>
+      <div className="mt-6">
+        <div
+          className="calendly-inline-widget"
+          data-url="https://calendly.com/narciso-solarya/30min"
+          style={{ minWidth: '320px', height: '700px' }}
+        />
+      </div>
+      <div className="print-cta mt-6 text-center">
+        <a
+          href="https://calendly.com/narciso-solarya/30min"
+          className="inline-block px-12 py-5 rounded-xl font-bold text-xl shadow-2xl mb-4"
+          style={{ background: '#ff5c36', color: 'white' }}
+        >
+          Agendar Visita Técnica Gratuita
+        </a>
+        <p className="text-sm text-slate-500">Visita: calendly.com/narciso-solarya/30min</p>
+      </div>
+    </>
   );
 }
 
@@ -682,23 +695,43 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
-      <div className="fixed top-6 right-6 z-50 flex gap-3">
-        <button
-          onClick={handleDownloadPDF}
-          className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
-          aria-label="Descargar PDF"
-        >
-          <Download className="w-6 h-6 text-slate-700" />
-        </button>
-        <button
-          onClick={onClose}
-          className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
-          aria-label="Cerrar propuesta"
-        >
-          <X className="w-6 h-6 text-slate-700" />
-        </button>
-      </div>
+    <>
+      <style>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          .calendly-inline-widget {
+            display: none !important;
+          }
+          .print-cta {
+            display: block !important;
+          }
+          @page {
+            margin: 0.5cm;
+          }
+        }
+        .print-cta {
+          display: none;
+        }
+      `}</style>
+      <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
+        <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
+          <button
+            onClick={handleDownloadPDF}
+            className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
+            aria-label="Descargar PDF"
+          >
+            <Download className="w-6 h-6 text-slate-700" />
+          </button>
+          <button
+            onClick={onClose}
+            className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
+            aria-label="Cerrar propuesta"
+          >
+            <X className="w-6 h-6 text-slate-700" />
+          </button>
+        </div>
 
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
@@ -821,6 +854,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           </>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
