@@ -52,6 +52,7 @@ function App() {
     secadora?: { horas: string };
   }>({});
   const [tipoInmueble, setTipoInmueble] = useState('');
+  const [distanciaTechoTablero, setDistanciaTechoTablero] = useState('');
   const [pisos, setPisos] = useState('');
   const [notas, setNotas] = useState('');
 
@@ -239,7 +240,8 @@ function App() {
 
   const canProceedStep2 = () => {
     if (!tipoInmueble) return false;
-    if (['2', '4', '5', '8'].includes(tipoInmueble) && !pisos) return false;
+    if (['2', '4', '5', '8', '9'].includes(tipoInmueble) && !pisos) return false;
+    if (['3', '6', '7'].includes(tipoInmueble) && !distanciaTechoTablero) return false;
 
     // Validate carga details
     if (cargas.includes('ev')) {
@@ -1296,6 +1298,7 @@ function App() {
                         <option value="1">Casa o negocio independiente de 1-2 pisos</option>
                         <option value="2">Departamento/local en edificio / condominio vertical</option>
                         <option value="3">Sólo áreas comunes de condominio / fraccionamiento</option>
+                        <option value="9">Sólo áreas comunes de edificio vertical</option>
                         <option value="4">Local en plaza comercial o edificio</option>
                         <option value="5">Conjunto habitacional vertical / condominio vertical</option>
                         <option value="6">Conjunto habitacional horizontal / condominio horizontal</option>
@@ -1304,7 +1307,7 @@ function App() {
                       </select>
                     </div>
 
-                    {['2', '4', '5', '8'].includes(tipoInmueble) && (
+                    {['2', '4', '5', '8', '9'].includes(tipoInmueble) && (
                       <div className="mt-4">
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           No. de pisos del edificio
@@ -1324,6 +1327,24 @@ function App() {
                             backgroundRepeat: 'no-repeat',
                             backgroundSize: '1.5em 1.5em'
                           }}
+                        />
+                      </div>
+                    )}
+                    {['3', '6', '7'].includes(tipoInmueble) && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          ¿Cuál es la distancia aproximada en metros de tu techo al centro de carga / tablero eléctrico del inmueble?
+                        </label>
+                        <p className="text-xs text-slate-500 mb-2">
+                          Esto nos sirve para saber la cantidad de cableado que se necesitará
+                        </p>
+                        <input
+                          type="number"
+                          value={distanciaTechoTablero}
+                          onChange={(e) => setDistanciaTechoTablero(e.target.value)}
+                          placeholder="Ej. 30"
+                          min="0"
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                         />
                       </div>
                     )}
