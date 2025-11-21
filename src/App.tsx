@@ -200,7 +200,7 @@ function App() {
       if (!planCFE) return false;
       if (planCFE === 'si' || planCFE === 'aislado') {
         if (!usoCasaNegocio) return false;
-        if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
+        if (usoCasaNegocio === 'casa' && (!numPersonasCasa || Number(numPersonasCasa) <= 0)) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
         if (!estado || !municipio) return false;
         if (planCFE === 'aislado' && !expand) return false;
@@ -213,7 +213,7 @@ function App() {
       if (!justMoved) return false;
 
       if (justMoved === 'si') {
-        if (!pago || !expand) return false;
+        if (!pago || Number(pago) <= 0 || !expand) return false;
         if (!knowsTariff) return false;
 
         if (knowsTariff === 'si') {
@@ -229,7 +229,7 @@ function App() {
 
       if (justMoved === 'no') {
         if (!usoCasaNegocio) return false;
-        if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
+        if (usoCasaNegocio === 'casa' && (!numPersonasCasa || Number(numPersonasCasa) <= 0)) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
         if (!expand) return false;
         return true;
@@ -897,6 +897,7 @@ function App() {
                                 value={pago}
                                 onChange={(e) => setPago(e.target.value)}
                                 placeholder="Ej. 3,200"
+                                min="1"
                                 className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
                                 style={{
                                   outlineColor: '#3cd070',
@@ -1012,8 +1013,6 @@ function App() {
                               setKnowsTariff(e.target.value);
                               if (e.target.value === 'no') {
                                 setTarifa('');
-                                setEstado('');
-                                setMunicipio('');
                               }
                             }}
                             className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
@@ -1204,6 +1203,7 @@ function App() {
                                     ev: { ...cargaDetalles.ev, modelo: cargaDetalles.ev?.modelo || '', km: e.target.value }
                                   })}
                                   placeholder="Ej. 40"
+                                  min="1"
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
                                 />
@@ -1238,6 +1238,7 @@ function App() {
                                     minisplit: { ...cargaDetalles.minisplit, cantidad: cargaDetalles.minisplit?.cantidad || '', horas: e.target.value }
                                   })}
                                   placeholder="Ej. 6"
+                                  min="0.5"
                                   step="0.5"
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
@@ -1258,6 +1259,7 @@ function App() {
                                     secadora: { horas: e.target.value }
                                   })}
                                   placeholder="Ej. 4"
+                                  min="0.5"
                                   step="0.5"
                                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
                                   style={{ outlineColor: '#3cd070' }}
@@ -1343,7 +1345,7 @@ function App() {
                           value={distanciaTechoTablero}
                           onChange={(e) => setDistanciaTechoTablero(e.target.value)}
                           placeholder="Ej. 30"
-                          min="0"
+                          min="1"
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                         />
                       </div>
