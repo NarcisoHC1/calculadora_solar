@@ -343,8 +343,6 @@ function App() {
     const ocr = ocrResult ? { ok: true, quality: ocrQuality, data: ocrResult } : null;
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       const bridge = (window as any).SYBridge;
 
       if (flow === 'MANUAL') {
@@ -360,6 +358,25 @@ function App() {
         alert('Por el momento no podemos atender tu caso.');
         return;
       }
+
+      console.log('📤 Enviando datos al backend...');
+
+      const response = await fetch('/api/cotizacion_v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formPayload)
+      });
+
+      console.log('📥 Respuesta recibida:', response.status);
+
+      const result = await response.json();
+      console.log('📋 Resultado:', result);
+
+      if (!result.ok) {
+        throw new Error(result.error || 'Error al procesar cotización');
+      }
+
+      console.log('✅ Datos guardados en Airtable correctamente');
 
       const proposalInput: any = {
         hasCFE: hasCFE === 'si',
