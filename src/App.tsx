@@ -345,20 +345,6 @@ function App() {
     try {
       const bridge = (window as any).SYBridge;
 
-      if (flow === 'MANUAL') {
-        hideLoading();
-        bridge?.gtm?.('cotizador_v2_manual', { reason: flow_reason });
-        setShowContactModal(true);
-        return;
-      }
-
-      if (flow === 'BLOCKED') {
-        hideLoading();
-        bridge?.gtm?.('cotizador_v2_blocked', { reason: flow_reason });
-        alert('Por el momento no podemos atender tu caso.');
-        return;
-      }
-
       console.log('📤 Enviando datos al backend...');
 
       const response = await fetch('/api/cotizacion_v2', {
@@ -377,6 +363,20 @@ function App() {
       }
 
       console.log('✅ Datos guardados en Airtable correctamente');
+
+      if (flow === 'MANUAL') {
+        hideLoading();
+        bridge?.gtm?.('cotizador_v2_manual', { reason: flow_reason });
+        setShowContactModal(true);
+        return;
+      }
+
+      if (flow === 'BLOCKED') {
+        hideLoading();
+        bridge?.gtm?.('cotizador_v2_blocked', { reason: flow_reason });
+        alert('Por el momento no podemos atender tu caso.');
+        return;
+      }
 
       const proposalInput: any = {
         hasCFE: hasCFE === 'si',
