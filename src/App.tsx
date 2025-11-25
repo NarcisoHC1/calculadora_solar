@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
-import { getEstadosUnique, getMunicipiosByEstado, getLocationInfo } from './locationData';
+import { getEstadosUnique, getStateThreshold, isCDMXorMexico } from './stateThresholds';
 import { generateProposal } from './calculationEngine';
 import type { Proposal } from './types';
 import ProposalComponent from './Proposal';
@@ -38,8 +38,6 @@ function App() {
   const [knowsTariff, setKnowsTariff] = useState('');
   const [cp, setCP] = useState('');
   const [estado, setEstado] = useState('');
-  const [municipio, setMunicipio] = useState('');
-  const [municipioSearch, setMunicipioSearch] = useState('');
   const [expand, setExpand] = useState('');
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -108,8 +106,7 @@ function App() {
         consumo_kwh_bimestral: 1000,
         pago_bimestral: 8500,
         cp: '03100',
-        estado: 'Ciudad de México',
-        municipio: 'Benito Juárez'
+        estado: 'Ciudad de México'
       };
 
       setOcrStatus('ok');
@@ -120,7 +117,6 @@ function App() {
       setTarifa('1');
       setCP('03100');
       setEstado('Ciudad de México');
-      setMunicipio('Benito Juárez');
       setPago('8500');
       setPeriodo('bimestral');
       setHasCFE('si');
@@ -202,7 +198,7 @@ function App() {
         if (!usoCasaNegocio) return false;
         if (usoCasaNegocio === 'casa' && (!numPersonasCasa || Number(numPersonasCasa) <= 0)) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
-        if (!estado || !municipio) return false;
+        if (!estado) return false;
         if (planCFE === 'aislado' && !expand) return false;
         return true;
       }
@@ -309,8 +305,7 @@ function App() {
     const isOutsideCDMXMexico = estado && estado !== 'Ciudad de México' && estado !== 'México';
 
     // Check if payment is above max threshold
-    const locationInfo = estado && municipio ? getLocationInfo(estado, municipio) : null;
-    const maxThreshold = locationInfo?.max_bimonthly_payment_threshold || 13000;
+    const maxThreshold = 13000;
     const aboveMaxThreshold = bimestralPayment > maxThreshold;
 
     let flow: 'AUTO' | 'MANUAL' | 'BLOCKED' = 'AUTO';
@@ -374,7 +369,6 @@ function App() {
         periodo: formPayload.periodicidad,
         pagoActual: formPayload.pago_promedio_mxn,
         estado: estado || 'Ciudad de México',
-        municipio: municipio || 'Benito Juárez',
         cargas: cargas.length > 0 ? {
           ev: cargas.includes('ev') ? cargaDetalles.ev : undefined,
           minisplit: cargas.includes('minisplit') ? cargaDetalles.minisplit : undefined,
@@ -416,14 +410,11 @@ function App() {
     const bimestral = periodo === 'bimestral' ? pagoNum : pagoNum * 2;
 
     let minThreshold = 2000;
-    let isCDMXorMexico = false;
+    let isHighThresholdState = false;
 
-    if (knowsTariff === 'no' && estado && municipio) {
-      const locationInfo = getLocationInfo(estado, municipio);
-      if (locationInfo) {
-        minThreshold = locationInfo.min_bimonthly_payment_threshold;
-        isCDMXorMexico = estado === 'Ciudad de México' || estado === 'México';
-      }
+    if (estado) {
+      minThreshold = getStateThreshold(estado);
+      isHighThresholdState = isCDMXorMexico(estado);
     }
 
     // Adjust threshold based on period
@@ -434,7 +425,7 @@ function App() {
 
     if (paymentAmount < effectiveThreshold) {
       setShowError(true);
-      if (isCDMXorMexico) {
+      if (isHighThresholdState) {
         const periodText = periodo === 'mensual' ? 'al mes' : 'al bimestre';
         setErrorMessage(`Por ahora sólo atendemos a casas o negocios que gastan arriba de ${effectiveThreshold.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 })} ${periodText}.`);
       } else {
@@ -444,7 +435,7 @@ function App() {
       setShowError(false);
       setErrorMessage('');
     }
-  }, [pago, periodo, showManual, hasCFE, knowsTariff, estado, municipio]);
+  }, [pago, periodo, showManual, hasCFE, knowsTariff, estado]);
 
   const progressPercentage = currentStep === 1 ? 33 : currentStep === 2 ? 66 : 100;
 
@@ -614,8 +605,6 @@ function App() {
                         value={estado}
                         onChange={(e) => {
                           setEstado(e.target.value);
-                          setMunicipio('');
-                          setMunicipioSearch('');
                           setHasCFE('');
                           setPlanCFE('');
                           setUsoCasaNegocio('');
@@ -645,48 +634,8 @@ function App() {
                       </select>
                     </div>
 
-                    {/* PASO 2: Municipio */}
+                    {/* PASO 2: ¿Tienes contrato con CFE? */}
                     {estado && (
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Municipio
-                        </label>
-                        <select
-                          value={municipio}
-                          onChange={(e) => {
-                            setMunicipio(e.target.value);
-                            setHasCFE('');
-                            setPlanCFE('');
-                            setUsoCasaNegocio('');
-                            setNumPersonasCasa('');
-                            setRangoPersonasNegocio('');
-                            setPago('');
-                            setTarifa('');
-                            setKnowsTariff('');
-                            setCP('');
-                            setExpand('');
-                            setShowError(false);
-                            setErrorMessage('');
-                          }}
-                          className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                          style={{
-                            outlineColor: '#3cd070',
-                            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                            backgroundPosition: 'right 0.5rem center',
-                            backgroundRepeat: 'no-repeat',
-                            backgroundSize: '1.5em 1.5em'
-                          }}
-                        >
-                          <option value="">Selecciona tu municipio</option>
-                          {getMunicipiosByEstado(estado).map((mun) => (
-                            <option key={mun} value={mun}>{mun}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {/* PASO 3: ¿Tienes contrato con CFE? */}
-                    {municipio && (
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           ¿Tienes contrato con CFE?

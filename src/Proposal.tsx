@@ -410,15 +410,17 @@ function SharedSections({ onClose }: { onClose: () => void }) {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
             <div className="flex items-center gap-3 mb-3">
-              <img src="/logo_longi_2.jpg" alt="Canadian Solar" className="w-12 h-12 object-contain" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
+                T1
+              </div>
               <div>
-                <h5 className="font-bold text-slate-900">Canadian Solar</h5>
+                <h5 className="font-bold text-slate-900">Paneles Tier 1</h5>
                 <p className="text-xs text-slate-600">Paneles Solares</p>
               </div>
             </div>
             <div className="space-y-1 text-sm text-slate-700">
-              <p>• #4 mundial en fabricación</p>
-              <p>• +86GW instalados globalmente</p>
+              <p>• Marca reconocida mundialmente</p>
+              <p>• Máxima calidad y confiabilidad</p>
               <p>• Tecnología bifacial N-Type</p>
             </div>
           </div>
@@ -715,14 +717,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
           }
-          * {
-            page-break-inside: avoid;
-          }
-          .bg-white {
+          .bg-white.rounded-2xl {
             page-break-inside: auto;
-          }
-          .rounded-2xl {
             page-break-after: auto;
+          }
+          h2, h3, h4 {
+            page-break-after: avoid;
           }
         }
         .print-cta {
@@ -822,15 +822,17 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
                   <div className="flex items-center gap-3 mb-3">
-                    <img src="/logo_longi_2.jpg" alt="Canadian Solar" className="w-12 h-12 object-contain" />
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
+                      T1
+                    </div>
                     <div>
-                      <h5 className="font-bold text-slate-900">Canadian Solar</h5>
+                      <h5 className="font-bold text-slate-900">Paneles Tier 1</h5>
                       <p className="text-xs text-slate-600">Paneles Solares</p>
                     </div>
                   </div>
                   <div className="space-y-1 text-sm text-slate-700">
-                    <p>• #4 mundial en fabricación</p>
-                    <p>• +86GW instalados globalmente</p>
+                    <p>• Marca reconocida mundialmente</p>
+                    <p>• Máxima calidad y confiabilidad</p>
                     <p>• Tecnología bifacial N-Type</p>
                   </div>
                 </div>
