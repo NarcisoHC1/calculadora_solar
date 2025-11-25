@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
-import { getEstadosUnique, getStateThreshold, isCDMXorMexico } from './stateThresholds';
+import { getEstadosUnique, getMinStateThreshold, getMaxStateThreshold, isCDMXorMexico } from './stateThresholds';
 import { generateProposal } from './calculationEngine';
 import type { Proposal } from './types';
 import ProposalComponent from './Proposal';
@@ -305,7 +305,7 @@ function App() {
     const isOutsideCDMXMexico = estado && estado !== 'Ciudad de México' && estado !== 'México';
 
     // Check if payment is above max threshold
-    const maxThreshold = 13000;
+    const maxThreshold = estado ? getMaxStateThreshold(estado) : 14000;
     const aboveMaxThreshold = bimestralPayment > maxThreshold;
 
     let flow: 'AUTO' | 'MANUAL' | 'BLOCKED' = 'AUTO';
@@ -409,11 +409,11 @@ function App() {
 
     const bimestral = periodo === 'bimestral' ? pagoNum : pagoNum * 2;
 
-    let minThreshold = 2000;
+    let minThreshold = 14000;
     let isHighThresholdState = false;
 
     if (estado) {
-      minThreshold = getStateThreshold(estado);
+      minThreshold = getMinStateThreshold(estado);
       isHighThresholdState = isCDMXorMexico(estado);
     }
 
