@@ -1133,12 +1133,26 @@ function App() {
                                   style={{ outlineColor: '#3cd070' }}
                                 >
                                   <option value="">Selecciona el modelo</option>
-                                  <option value="tesla-model3">Tesla Model 3</option>
-                                  <option value="tesla-modely">Tesla Model Y</option>
-                                  <option value="byd-seal">BYD Seal</option>
-                                  <option value="byd-dolphin">BYD Dolphin</option>
-                                  <option value="nissan-leaf">Nissan Leaf</option>
-                                  <option value="chevrolet-bolt">Chevrolet Bolt</option>
+                                  <option value="audi-etron-gt">Audi - e-tron GT</option>
+                                  <option value="byd-yuan-plus">BYD - Yuan Plus</option>
+                                  <option value="byd-dolphin-mini">BYD - Dolphin Mini (Seagull)</option>
+                                  <option value="byd-dolphin">BYD - Dolphin</option>
+                                  <option value="chevrolet-bolt-euv">Chevrolet - Bolt EUV</option>
+                                  <option value="ford-escape">Ford - Escape</option>
+                                  <option value="gwm-ora-03">GWM - Ora 03</option>
+                                  <option value="hyundai-kona-electric">Hyundai - Kona Electric</option>
+                                  <option value="hyundai-ioniq">Hyundai - Ioniq</option>
+                                  <option value="jac-esei4">JAC - E-SEI4</option>
+                                  <option value="kia-ev6">KIA - EV6</option>
+                                  <option value="mg-mg4">MG - MG4</option>
+                                  <option value="nissan-leaf">Nissan - Leaf</option>
+                                  <option value="renault-kwid-etech">Renault - Kwid E-Tech</option>
+                                  <option value="tesla-model3">Tesla - Model 3</option>
+                                  <option value="tesla-modely">Tesla - Model Y</option>
+                                  <option value="volkswagen-id4">Volkswagen - ID.4</option>
+                                  <option value="volvo-ex30">Volvo - EX30</option>
+                                  <option value="volvo-xc40-recharge">Volvo - XC40 Recharge</option>
+                                  <option value="volvo-xc60-recharge">Volvo - XC60 Recharge</option>
                                   <option value="otro">Otro</option>
                                 </select>
                               </div>
