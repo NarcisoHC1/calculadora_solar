@@ -1,6 +1,6 @@
 // netlify/functions/cotizacion_v2.js
 import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal } from "./lib/airtable.js";
-import { generateProposal } from "./lib/calculator.js";
+import { generateCompleteProposal } from "./lib/proposalEngine.js";
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -35,18 +35,63 @@ export async function handler(event) {
     const projectId = await createProject({ leadId });
     console.log("✅ Project:", projectId);
 
-    const submissionData = {
+    // Generar propuesta completa usando el nuevo motor
+    const formDataForEngine = {
+      // Basic info
       estado: body.estado || "",
-      tiene_contrato_cfe: body.has_cfe !== false,
-      tiene_recibo_cfe: body.tiene_recibo !== false,
+      municipio: body.municipio || "Ciudad de México",
+      has_cfe: body.has_cfe,
+      tiene_recibo: body.tiene_recibo,
       pago_promedio: Number(body.pago_promedio_mxn || 0),
       periodicidad: body.periodicidad || "bimestral",
       tarifa: body.tarifa || "",
+      kwh_consumidos: body.kwh_consumidos || null,
+
+      // Property
+      uso: body.uso || "Casa",
       casa_negocio: body.uso || "Casa",
       numero_personas: Number(body.numero_personas || 0),
-      quiere_aislado: body.plans_cfe === "aislado",
+      rango_personas_negocio: body.rango_personas_negocio || "",
       tipo_inmueble: body.tipo_inmueble || "",
-      texto_libre: body.notes || "",
+      pisos: Number(body.pisos || 0),
+      distancia_techo_tablero: Number(body.distancia_techo_tablero || 0),
+
+      // Loads
+      loads: {
+        ev: body.loads?.ev || null,
+        minisplit: body.loads?.minisplit || null,
+        secadora: body.loads?.secadora || null,
+        bomba: body.cargas?.includes("bomba") || false,
+        otro: body.cargas?.includes("otro") || false
+      }
+    };
+
+    const proposal = await generateCompleteProposal(formDataForEngine);
+    console.log("🧮 Propuesta completa calculada");
+
+    // Preparar datos para Submission_Details
+    const submissionData = {
+      ocr_manual: body.ocr_result ? "OCR" : "manual",
+      ocr_json: body.ocr_result ? JSON.stringify(body.ocr_result) : null,
+      estado: body.estado || "",
+      tiene_contrato_cfe: body.has_cfe !== false,
+      tiene_recibo_cfe: body.tiene_recibo !== false,
+      no_servicio_cfe: body.ocr_result?.no_servicio || "",
+      no_medidor_cfe: body.ocr_result?.no_medidor || "",
+      pago_promedio: Number(body.pago_promedio_mxn || 0),
+      periodicidad: body.periodicidad || "bimestral",
+      tarifa: body.tarifa || "",
+      kwh_consumidos: proposal.kwh_consumidos,
+      kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
+      pago_hipotetico_cargas_extra: proposal.pago_hipotetico_cargas_extra,
+      pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,
+      pago_dac_hipotetico_cargas_extra: proposal.pago_dac_hipotetico_cargas_extra,
+      quiere_aislado: body.plans_cfe === "aislado",
+      casa_negocio: body.uso || "Casa",
+      numero_personas: Number(body.numero_personas || 0),
+      ya_tiene_fv: body.ya_tiene_fv || false,
+      tipo_inmueble: body.tipo_inmueble || "",
+      metros_distancia: proposal.metros_distancia,
       modelo_ev: body.loads?.ev?.modelo || "",
       km_ev: Number(body.loads?.ev?.km || 0),
       no_minisplits: Number(body.loads?.minisplit?.cantidad || 0),
@@ -54,6 +99,7 @@ export async function handler(event) {
       horas_secadora: Number(body.loads?.secadora?.horas || 0),
       bomba_agua: body.cargas?.includes("bomba") || false,
       otro: body.cargas?.includes("otro") || false,
+      texto_libre: body.notes || "",
       ref: body.utms?.ref || "",
       utm_source: body.utms?.utm_source || "",
       utm_medium: body.utms?.utm_medium || "",
@@ -61,31 +107,13 @@ export async function handler(event) {
       utm_term: body.utms?.utm_term || "",
       utm_content: body.utms?.utm_content || "",
       gclid: body.utms?.gclid || "",
-      fbclid: body.utms?.fbclid || ""
+      fbclid: body.utms?.fbclid || "",
+      wbraid: body.utms?.wbraid || "",
+      gbraid: body.utms?.gbraid || "",
+      ttclid: body.utms?.ttclid || "",
+      li_fat_id: body.utms?.li_fat_id || "",
+      twclid: body.utms?.twclid || ""
     };
-
-    const formDataForCalc = {
-      pago_promedio: submissionData.pago_promedio,
-      periodicidad: submissionData.periodicidad,
-      tarifa: submissionData.tarifa,
-      tipo_inmueble: submissionData.tipo_inmueble,
-      pisos: Number(body.pisos || 0),
-      distancia_techo_tablero: Number(body.distancia_techo_tablero || 0),
-      cargas: {
-        ev: body.loads?.ev || null,
-        minisplit: body.loads?.minisplit || null,
-        secadora: { horas: submissionData.horas_secadora },
-        bomba: submissionData.bomba_agua,
-        otro: submissionData.otro
-      }
-    };
-
-    const proposalCalc = generateProposal(formDataForCalc);
-    console.log("🧮 Propuesta calculada");
-
-    submissionData.kwh_consumidos = proposalCalc.kwh_consumidos;
-    submissionData.kwh_consumidos_y_cargas_extra = proposalCalc.kwh_consumidos_y_cargas_extra;
-    submissionData.metros_distancia = proposalCalc.metros_distancia;
 
     const submissionId = await createSubmissionDetails({
       projectId,
@@ -95,7 +123,8 @@ export async function handler(event) {
 
     const proposalId = await createProposal({
       projectId,
-      proposalData: proposalCalc
+      proposalData: { ...proposal.propuesta_actual, kwh_consumidos: proposal.kwh_consumidos, kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra },
+      proposalCargasExtra: proposal.propuesta_cargas_extra
     });
     console.log("✅ Proposal:", proposalId);
 
@@ -107,13 +136,13 @@ export async function handler(event) {
         project_id: projectId,
         proposal_id: proposalId,
         proposal: {
-          kwp: proposalCalc.kwp,
-          cantidad_paneles: proposalCalc.cantidad_paneles,
-          potencia_panel: proposalCalc.potencia_panel,
-          total: proposalCalc.total,
-          subtotal: proposalCalc.subtotal,
-          iva: proposalCalc.iva,
-          precio_lista: proposalCalc.precio_lista
+          kwh_consumidos: proposal.kwh_consumidos,
+          kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
+          metros_distancia: proposal.metros_distancia,
+          propuesta_actual: proposal.propuesta_actual,
+          propuesta_cargas_extra: proposal.propuesta_cargas_extra,
+          pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,
+          pago_dac_hipotetico_cargas_extra: proposal.pago_dac_hipotetico_cargas_extra
         }
       })
     };

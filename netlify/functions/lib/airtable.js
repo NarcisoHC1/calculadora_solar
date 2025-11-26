@@ -97,21 +97,40 @@ export async function createProject({ leadId }) {
 export async function createSubmissionDetails({ projectId, data }) {
   const fields = { "Project_Id": [projectId] };
 
+  // OCR or Manual
+  if (data.ocr_manual) fields["OCR_Manual"] = data.ocr_manual;
+  if (data.ocr_json) fields["OCR_JSON"] = data.ocr_json;
+
+  // Location
   if (data.estado) fields["Estado"] = data.estado;
+
+  // CFE Info
   if (data.tiene_contrato_cfe !== undefined) fields["Tiene_Contrato_CFE"] = data.tiene_contrato_cfe ? "sí" : "no";
   if (data.tiene_recibo_cfe !== undefined) fields["Tiene_recibo_CFE"] = data.tiene_recibo_cfe ? "sí" : "no";
+  if (data.no_servicio_cfe) fields["No_de_servicio_CFE"] = data.no_servicio_cfe;
+  if (data.no_medidor_cfe) fields["No_de_medidor_CFE"] = data.no_medidor_cfe;
+
+  // Consumption & Payment
   if (data.pago_promedio) fields["Pago_Prom_MXN_Periodo"] = Math.round(data.pago_promedio);
   if (data.periodicidad) fields["Periodicidad"] = data.periodicidad;
   if (data.tarifa) fields["Tarifa"] = data.tarifa;
   if (data.kwh_consumidos) fields["kWh_consumidos"] = Math.round(data.kwh_consumidos);
   if (data.kwh_consumidos_y_cargas_extra) fields["kWh_consumidos_y_cargas_extra"] = Math.round(data.kwh_consumidos_y_cargas_extra);
+
+  // Hypothetical payments
+  if (data.pago_hipotetico_cargas_extra) fields["Pago_Prom_MXN_Hipotetico_Cargas_Extra"] = Math.round(data.pago_hipotetico_cargas_extra);
+  if (data.pago_dac_hipotetico_consumo_actual) fields["Pago_DAC_Hipotetico_Consumo_Actual"] = Math.round(data.pago_dac_hipotetico_consumo_actual);
+  if (data.pago_dac_hipotetico_cargas_extra) fields["Pago_DAC_Hipotetico_Cargas_Extra"] = Math.round(data.pago_dac_hipotetico_cargas_extra);
+
+  // Property info
+  if (data.quiere_aislado) fields["Quiere_Sistema_Aislado"] = data.quiere_aislado ? "sí" : "no";
   if (data.casa_negocio) fields["Casa_Negocio"] = data.casa_negocio;
   if (data.numero_personas) fields["Numero_Personas_Inmueble"] = data.numero_personas;
-  if (data.quiere_aislado) fields["Quiere_Sistema_Aislado"] = data.quiere_aislado ? "sí" : "no";
+  if (data.ya_tiene_fv) fields["Ya_Tiene_FV"] = data.ya_tiene_fv ? "sí" : "no";
   if (data.tipo_inmueble) fields["Tipo_Inmueble"] = data.tipo_inmueble;
   if (data.metros_distancia) fields["Metros_distancia"] = data.metros_distancia;
-  if (data.texto_libre) fields["Texto_Libre"] = data.texto_libre;
 
+  // Loads
   if (data.modelo_ev) fields["Modelo_EV"] = data.modelo_ev;
   if (data.km_ev) fields["Km_EV"] = data.km_ev;
   if (data.no_minisplits) fields["No_minisplits"] = data.no_minisplits;
@@ -120,6 +139,10 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.bomba_agua !== undefined) fields["Bomba_agua"] = data.bomba_agua ? "sí" : "no";
   if (data.otro !== undefined) fields["Otro"] = data.otro ? "sí" : "no";
 
+  // Notes
+  if (data.texto_libre) fields["Texto_Libre"] = data.texto_libre;
+
+  // UTMs and tracking
   if (data.ref) fields["ref"] = data.ref;
   if (data.utm_source) fields["utm_source"] = data.utm_source;
   if (data.utm_medium) fields["utm_medium"] = data.utm_medium;
@@ -128,33 +151,105 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.utm_content) fields["utm_content"] = data.utm_content;
   if (data.gclid) fields["gclid"] = data.gclid;
   if (data.fbclid) fields["fbclid"] = data.fbclid;
+  if (data.wbraid) fields["wbraid"] = data.wbraid;
+  if (data.gbraid) fields["gbraid"] = data.gbraid;
+  if (data.ttclid) fields["ttclid"] = data.ttclid;
+  if (data.li_fat_id) fields["li_fat_id"] = data.li_fat_id;
+  if (data.twclid) fields["twclid"] = data.twclid;
 
   const rec = await createRecord("Submission_Details", fields);
   return rec.id;
 }
 
-// Crear Proposal
-export async function createProposal({ projectId, proposalData }) {
+// Crear Proposal (con TODOS los campos del schema)
+export async function createProposal({ projectId, proposalData, proposalCargasExtra }) {
   const fields = {
     "Project_Id": [projectId],
     "Created_by": "auto",
     "Proposal_type": "prelim"
   };
 
+  // Consumo base
   if (proposalData.kwh_consumidos) fields["kWh_consumidos"] = Math.round(proposalData.kwh_consumidos);
   if (proposalData.kwh_consumidos_y_cargas_extra) fields["kWh_consumidos_y_cargas_extra"] = Math.round(proposalData.kwh_consumidos_y_cargas_extra);
+
+  // Sistema actual
+  if (proposalData.id_panel) fields["ID_Panel"] = proposalData.id_panel;
   if (proposalData.potencia_panel) fields["Potencia_Panel"] = proposalData.potencia_panel;
   if (proposalData.cantidad_paneles) fields["Cantidad_Paneles"] = proposalData.cantidad_paneles;
   if (proposalData.area_needed) fields["Area_needed"] = Math.round(proposalData.area_needed);
   if (proposalData.micro_central) fields["Micro_Central"] = proposalData.micro_central;
 
+  // Inversor central (si aplica)
+  if (proposalData.id_inversor) fields["ID_Inversor"] = proposalData.id_inversor;
+  if (proposalData.costo_inversor) fields["Costo_Inversor"] = Math.round(proposalData.costo_inversor);
+
+  // Microinversores (si aplica)
+  if (proposalData.id_micro_2_panel) fields["ID_Micro_2_Panel"] = proposalData.id_micro_2_panel;
+  if (proposalData.cantidad_micro_2_panel) fields["Cantidad_Micro_2_Panel"] = proposalData.cantidad_micro_2_panel;
+  if (proposalData.id_micro_4_panel) fields["ID_Micro_4_Panel"] = proposalData.id_micro_4_panel;
+  if (proposalData.cantidad_micro_4_panel) fields["Cantidad_Micro_4_Panel"] = proposalData.cantidad_micro_4_panel;
+  if (proposalData.costo_microinversores) fields["Costo_Microinversores"] = Math.round(proposalData.costo_microinversores);
+  if (proposalData.costo_extras_microinversores) fields["Costo_Extras_Microniversores"] = Math.round(proposalData.costo_extras_microinversores);
+
+  // Montaje
+  if (proposalData.id_montaje) fields["ID_Montaje"] = proposalData.id_montaje;
+  if (proposalData.costo_montaje) fields["Costo_Montaje"] = Math.round(proposalData.costo_montaje);
+
+  // Otros costos
+  if (proposalData.costo_paneles) fields["Costo_Paneles"] = Math.round(proposalData.costo_paneles);
+  if (proposalData.costo_bos) fields["Costo_BOS"] = Math.round(proposalData.costo_bos);
+  if (proposalData.costo_transporte_incl_seguro) fields["Costo_Transporte_Incl_Seguro"] = Math.round(proposalData.costo_transporte_incl_seguro);
+  if (proposalData.costo_mo) fields["Costo_MO"] = Math.round(proposalData.costo_mo);
+  if (proposalData.costo_seguro_rc) fields["Costo_Seguro_RC"] = Math.round(proposalData.costo_seguro_rc);
+  if (proposalData.costos_extraordinarios) fields["Costos_Extraordinarios"] = Math.round(proposalData.costos_extraordinarios);
+  if (proposalData.costos_viaticos !== undefined) fields["Costos_Viaticos"] = Math.round(proposalData.costos_viaticos);
+
+  // Totales
+  if (proposalData.costos_totales) fields["Costos_Totales"] = Math.round(proposalData.costos_totales);
+  if (proposalData.profit_margin !== undefined) fields["Profit_margin"] = proposalData.profit_margin;
+  if (proposalData.discount_rate !== undefined) fields["Discount_rate"] = proposalData.discount_rate;
   if (proposalData.tc) fields["TC"] = proposalData.tc;
-  if (proposalData.profit_margin) fields["Profit_margin"] = proposalData.profit_margin;
-  if (proposalData.discount_rate) fields["Discount_rate"] = proposalData.discount_rate;
   if (proposalData.precio_lista) fields["Precio_lista"] = Math.round(proposalData.precio_lista);
   if (proposalData.subtotal) fields["Subtotal"] = Math.round(proposalData.subtotal);
   if (proposalData.iva) fields["IVA"] = Math.round(proposalData.iva);
   if (proposalData.total) fields["Total"] = Math.round(proposalData.total);
+  if (proposalData.gross_profit) fields["Gross_profit"] = Math.round(proposalData.gross_profit);
+  if (proposalData.gross_profit_post_cac) fields["Gross_profit_post_CAC"] = Math.round(proposalData.gross_profit_post_cac);
+  if (proposalData.secuencia_exhibiciones) fields["Secuencia_Exhibiciones"] = proposalData.secuencia_exhibiciones;
+
+  // === PROPUESTA CON CARGAS EXTRA (si existe) ===
+  if (proposalCargasExtra) {
+    if (proposalCargasExtra.cantidad_paneles) fields["Cantidad_Paneles_Cargas_Extra"] = proposalCargasExtra.cantidad_paneles;
+    if (proposalCargasExtra.area_needed) fields["Area_needed_Cargas_Extra"] = Math.round(proposalCargasExtra.area_needed);
+    if (proposalCargasExtra.costo_paneles) fields["Costo_Paneles_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_paneles);
+    if (proposalCargasExtra.micro_central) fields["Micro_Central_Cargas_Extra"] = proposalCargasExtra.micro_central;
+
+    if (proposalCargasExtra.id_inversor) fields["ID_Inversor_Cargas_Extra"] = proposalCargasExtra.id_inversor;
+    if (proposalCargasExtra.costo_inversor) fields["Costo_Inversor_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_inversor);
+
+    if (proposalCargasExtra.id_micro_2_panel) fields["ID_Micro_2_Panel_Cargas_Extra"] = proposalCargasExtra.id_micro_2_panel;
+    if (proposalCargasExtra.cantidad_micro_2_panel) fields["Cantidad_Micro_2_Panel_Cargas_Extra"] = proposalCargasExtra.cantidad_micro_2_panel;
+    if (proposalCargasExtra.id_micro_4_panel) fields["ID_Micro_4_Panel_Cargas_Extra"] = proposalCargasExtra.id_micro_4_panel;
+    if (proposalCargasExtra.cantidad_micro_4_panel) fields["Cantidad_Micro_4_Panel_Cargas_Extra"] = proposalCargasExtra.cantidad_micro_4_panel;
+    if (proposalCargasExtra.costo_microinversores) fields["Costo_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_microinversores);
+    if (proposalCargasExtra.costo_extras_microinversores) fields["Costo_Extras_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_extras_microinversores);
+
+    if (proposalCargasExtra.id_montaje) fields["ID_Montaje_Cargas_Extra"] = proposalCargasExtra.id_montaje;
+    if (proposalCargasExtra.costo_montaje) fields["Costo_Montaje_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_montaje);
+
+    if (proposalCargasExtra.costo_transporte_incl_seguro) fields["Costo_Transporte_Incl_Seguro_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_transporte_incl_seguro);
+    if (proposalCargasExtra.costo_mo) fields["Costo_MO_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_mo);
+    if (proposalCargasExtra.costo_seguro_rc) fields["Costo_Seguro_RC_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_seguro_rc);
+
+    if (proposalCargasExtra.costos_totales) fields["Costos_Totales_Cargas_Extra"] = Math.round(proposalCargasExtra.costos_totales);
+    if (proposalCargasExtra.precio_lista) fields["Precio_lista_Cargas_Extra"] = Math.round(proposalCargasExtra.precio_lista);
+    if (proposalCargasExtra.subtotal) fields["Subtotal_Cargas_Extra"] = Math.round(proposalCargasExtra.subtotal);
+    if (proposalCargasExtra.iva) fields["IVA_Cargas_Extra"] = Math.round(proposalCargasExtra.iva);
+    if (proposalCargasExtra.total) fields["Total_Cargas_Extra"] = Math.round(proposalCargasExtra.total);
+    if (proposalCargasExtra.gross_profit) fields["Gross_profit_Cargas_Extra"] = Math.round(proposalCargasExtra.gross_profit);
+    if (proposalCargasExtra.gross_profit_post_cac) fields["Gross_profit_post_CAC_Cargas_Extra"] = Math.round(proposalCargasExtra.gross_profit_post_cac);
+  }
 
   const rec = await createRecord("Proposals", fields);
   return rec.id;
