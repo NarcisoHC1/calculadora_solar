@@ -19,7 +19,15 @@ async function fetchTable(tableName) {
   }
 
   const data = await response.json();
-  return data.records.map(r => r.fields);
+  const records = data.records.map(r => r.fields);
+
+  console.log(`📊 Fetched ${tableName}: ${records.length} records`);
+
+  if (records.length === 0) {
+    console.warn(`⚠️ WARNING: ${tableName} returned 0 records`);
+  }
+
+  return records;
 }
 
 export async function getParams() {
@@ -90,7 +98,8 @@ export async function getParams() {
     throw new Error("❌ Missing tarifa data in Airtable Params");
   }
 
-  // Get versioned parameters - only take first record (as per user: only row 1 has values)
+  // Get first record from each table (only first row has values per user)
+  // Ignore "Version"/"Parameter_Version" columns - just pseudo-IDs
   const prRecord = pr[0];
   const spaceMultiplierRecord = spaceMultiplier[0];
   const metersPerFloorRecord = metersPerFloor[0];
@@ -100,19 +109,28 @@ export async function getParams() {
   const deliveryCostsRecord = deliveryCosts[0];
   const commercialConditionsRecord = commercialConditions[0];
 
-  // Validate critical params exist
-  if (!prRecord?.PR) {
-    throw new Error("❌ Missing PR parameter in Airtable");
+  // Validate critical params with detailed logging
+  console.log("🔍 Validating params...");
+  console.log(`PR: ${pr.length} records, first:`, prRecord);
+  console.log(`Commercial_Conditions: ${commercialConditions.length} records, first:`, commercialConditionsRecord);
+
+  if (!prRecord) {
+    throw new Error(`❌ PR table returned 0 records. Check Airtable permissions.`);
+  }
+  if (prRecord.PR === undefined || prRecord.PR === null) {
+    throw new Error(`❌ PR field missing in record. Available keys: ${Object.keys(prRecord).join(', ')}`);
   }
   if (!commercialConditionsRecord) {
-    throw new Error("❌ Missing Commercial_Conditions in Airtable");
+    throw new Error(`❌ Commercial_Conditions table returned 0 records.`);
   }
-  if (!commercialConditionsRecord.MXN_USD) {
-    throw new Error("❌ Missing MXN_USD in Commercial_Conditions");
+  if (commercialConditionsRecord.MXN_USD === undefined || commercialConditionsRecord.MXN_USD === null) {
+    throw new Error(`❌ MXN_USD missing. Keys: ${Object.keys(commercialConditionsRecord).join(', ')}`);
   }
-  if (!commercialConditionsRecord.Profit_Margin) {
-    throw new Error("❌ Missing Profit_Margin in Commercial_Conditions");
+  if (commercialConditionsRecord.Profit_Margin === undefined || commercialConditionsRecord.Profit_Margin === null) {
+    throw new Error(`❌ Profit_Margin missing`);
   }
+
+  console.log("✅ Params validated successfully");
 
   paramsCache = {
     tarifa1: latestTarifa1,
