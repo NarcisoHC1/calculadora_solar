@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ProposalData, DualProposal } from './types';
-import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock } from 'lucide-react';
+import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check } from 'lucide-react';
 
 interface ProposalProps {
   proposal: DualProposal;
@@ -691,9 +691,50 @@ function FAQAccordion() {
 export default function Proposal({ proposal, onClose, userName }: ProposalProps) {
   const firstName = getFirstName(userName);
   const [showFutureProposal, setShowFutureProposal] = useState(true);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [referralLink, setReferralLink] = useState('');
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
 
   const handleDownloadPDF = () => {
     window.print();
+  };
+
+  const handleGenerateReferral = async () => {
+    setShowReferralModal(true);
+    setReferralLoading(true);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || ''}/api/referral`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userName,
+          email: '', // Could be captured from form if available
+          whatsapp: '' // Could be captured from form if available
+        })
+      });
+
+      const data = await response.json();
+      if (data.ok && data.link) {
+        setReferralLink(data.link);
+      }
+    } catch (error) {
+      console.error('Error generating referral:', error);
+    } finally {
+      setReferralLoading(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    setReferralCopied(true);
+    setTimeout(() => setReferralCopied(false), 2000);
+  };
+
+  const handleShareWhatsApp = () => {
+    const message = encodeURIComponent(`¡Hola! 👋 Te comparto este enlace para que cotices tu sistema solar con SolarYa. Es súper fácil y rápido: ${referralLink}`);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   return (
@@ -731,6 +772,14 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       `}</style>
       <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
         <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
+          <button
+            onClick={handleGenerateReferral}
+            className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
+            aria-label="Referir a un amigo"
+            title="Referir a un amigo"
+          >
+            <Share2 className="w-6 h-6 text-white" />
+          </button>
           <button
             onClick={handleDownloadPDF}
             className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
@@ -1048,6 +1097,79 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         )}
       </div>
       </div>
+
+      {/* Referral Modal */}
+      {showReferralModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] no-print" onClick={() => setShowReferralModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Share2 className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Comparte con tus amigos!</h3>
+              <p className="text-slate-600">
+                Ayuda a alguien más a ahorrar en su recibo de luz compartiendo este enlace
+              </p>
+            </div>
+
+            {referralLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+              </div>
+            ) : referralLink ? (
+              <div className="space-y-4">
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 mb-2">Tu enlace único:</p>
+                  <p className="text-sm font-mono text-slate-900 break-all">{referralLink}</p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCopyLink}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-semibold transition-colors"
+                  >
+                    {referralCopied ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        ¡Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-5 h-5" />
+                        Copiar
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleShareWhatsApp}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    WhatsApp
+                  </button>
+                </div>
+
+                <p className="text-xs text-center text-slate-500 mt-4">
+                  Los referidos que entren por tu enlace quedarán registrados en tu nombre
+                </p>
+              </div>
+            ) : (
+              <p className="text-center text-slate-600 py-4">
+                Hubo un error al generar tu enlace. Por favor intenta de nuevo.
+              </p>
+            )}
+
+            <button
+              onClick={() => setShowReferralModal(false)}
+              className="w-full mt-6 px-4 py-2 text-slate-600 hover:text-slate-900 font-semibold transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
