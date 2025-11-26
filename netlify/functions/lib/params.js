@@ -185,10 +185,11 @@ export async function getParams() {
   return paramsCache;
 }
 
-export function getHSPForMunicipio(municipio, params) {
-  const hspRecord = params.hsp.find(h => h.Municipio === municipio);
+export function getHSPForMunicipio(estado, params) {
+  // Function name kept for backwards compatibility but now uses Estado
+  const hspRecord = params.hsp.find(h => h.Estado === estado);
   if (!hspRecord?.HSP) {
-    throw new Error(`❌ HSP not found for municipio: ${municipio}`);
+    throw new Error(`❌ HSP not found for estado: ${estado}. Available estados: ${params.hsp.map(h => h.Estado).join(', ')}`);
   }
   return hspRecord.HSP;
 }

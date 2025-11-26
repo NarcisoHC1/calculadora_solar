@@ -64,8 +64,8 @@ export async function generateCompleteProposal(formData) {
     params
   );
 
-  // 5. Obtener HSP
-  const hsp = getHSPForMunicipio(formData.municipio || "Ciudad de México", params);
+  // 5. Obtener HSP (ahora por Estado, no municipio)
+  const hsp = getHSPForMunicipio(formData.estado || "Ciudad de México", params);
 
   // 6. Generar propuesta para consumo actual
   const propuestaActual = await generateSystemProposal(
