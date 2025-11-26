@@ -72,9 +72,33 @@ export function calculatePaymentFromKwhDAC(consumo, factorP, params) {
 // CÁLCULO DE CARGAS EXTRA
 // ========================================
 
+function getOtherLoadEnergy(loadType, dias, params) {
+  const record = params.otherLoads.find(l => l.Load_type === loadType);
+
+  if (!record?.Daily_Consumption_kWh) {
+    return 0;
+  }
+
+  const periodicidad = (record.Periodicidad || "diario").toLowerCase();
+
+  if (periodicidad === "semanal") {
+    return record.Daily_Consumption_kWh * (dias / 7);
+  }
+
+  if (periodicidad === "mensual") {
+    return record.Daily_Consumption_kWh * (dias / 30);
+  }
+
+  if (periodicidad === "bimestral") {
+    return record.Daily_Consumption_kWh * (dias / 60);
+  }
+
+  // Default: consumo diario
+  return record.Daily_Consumption_kWh * dias;
+}
+
 export function calculateExtraLoads(loads, periodicidad, params) {
   let suma = 0;
-  const factorP = periodicidad === "bimestral" ? 2 : 1;
   const dias = periodicidad === "bimestral" ? 60 : 30;
 
   // A. Auto Eléctrico (EV)
@@ -100,14 +124,12 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 
   // D. Bomba de Agua
   if (loads?.bomba) {
-    const bombaDaily = params.otherLoads.find(l => l.Load_type === "Bomba de agua")?.Daily_Consumption_kWh || 1.5;
-    suma += bombaDaily * dias;
+    suma += getOtherLoadEnergy("Bomba de agua / alberca", dias, params) || getOtherLoadEnergy("Bomba de agua", dias, params);
   }
 
   // E. Otros
   if (loads?.otro) {
-    const otroDaily = params.otherLoads.find(l => l.Load_type === "Otro")?.Daily_Consumption_kWh || 2.0;
-    suma += otroDaily * dias;
+    suma += getOtherLoadEnergy("Otro", dias, params);
   }
 
   return Math.round(suma);
