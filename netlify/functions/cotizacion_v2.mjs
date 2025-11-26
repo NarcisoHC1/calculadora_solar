@@ -1,6 +1,6 @@
-// netlify/functions/cotizacion_v2.js
-import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal } from "./lib/airtable.js";
-import { generateCompleteProposal } from "./lib/proposalEngine.js";
+// netlify/functions/cotizacion_v2.mjs
+import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal } from "./lib/airtable.mjs";
+import { generateCompleteProposal } from "./lib/proposalEngine.mjs";
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {

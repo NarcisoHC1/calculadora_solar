@@ -1,7 +1,7 @@
-// netlify/functions/lib/proposalEngine.js
+// netlify/functions/lib/proposalEngine.mjs
 // Main proposal generation engine
 
-import { getParams, getHSPForMunicipio } from './params.js';
+import { getParams, getHSPForMunicipio } from './params.mjs';
 import {
   calculateKwhFromPaymentTarifa1,
   calculateKwhFromPaymentPDBT,
@@ -17,7 +17,7 @@ import {
   selectCentralInverter,
   selectMontaje,
   calculateDACHypothetical
-} from './calculations.js';
+} from './calculations.mjs';
 
 const IVA = 1.16;
 

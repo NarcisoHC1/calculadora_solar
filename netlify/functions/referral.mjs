@@ -1,5 +1,5 @@
-// netlify/functions/referral.js
-import { CORS, queryRecords, createRecord, esc } from "./lib/airtable.js";
+// netlify/functions/referral.mjs
+import { CORS, queryRecords, createRecord, esc } from "./lib/airtable.mjs";
 
 const slug = s => String(s||"").toLowerCase().normalize("NFD")
   .replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');

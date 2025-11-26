@@ -1,4 +1,4 @@
-// netlify/functions/lib/calculator.js
+// netlify/functions/lib/calculator.mjs
 // Cálculos básicos de propuesta (ITERACIÓN 1 - Simplificado)
 
 const HSP = 5.5;

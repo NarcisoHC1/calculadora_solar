@@ -1,4 +1,4 @@
-// netlify/functions/lib/airtable.js
+// netlify/functions/lib/airtable.mjs
 // Módulo de conexión y operaciones básicas con Airtable
 
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;

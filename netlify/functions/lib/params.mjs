@@ -1,4 +1,4 @@
-// netlify/functions/lib/params.js
+// netlify/functions/lib/params.mjs
 // Fetches and caches parameters from Airtable Params database
 
 const PARAMS_BASE_ID = process.env.AIRTABLE_PARAMS_BASE || "appjBih1L25LKSgPJ";

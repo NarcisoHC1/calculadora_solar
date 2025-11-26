@@ -1,4 +1,4 @@
-// netlify/functions/lib/calculations.js
+// netlify/functions/lib/calculations.mjs
 // Complete calculation logic following the prompt specifications
 
 const IVA = 1.16;
