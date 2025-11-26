@@ -24,32 +24,34 @@ const IVA = 1.16;
 export async function generateCompleteProposal(formData) {
   const params = await getParams();
 
-  // 1. Determinar Factor_P
-  const factorP = formData.periodicidad === "bimestral" ? 2 : 1;
+  // 1. Determinar Factor_P (default: bimestral)
+  const factorP = formData.periodicidad === "mensual" ? 1 : 2;
 
-  // 2. Determinar kWh_consumidos
+  // 2. Adivinar tarifa si no se proporcionó
+  let tarifaFinal = formData.tarifa || "";
+  if (!tarifaFinal || tarifaFinal === "no conoce") {
+    tarifaFinal = guessTarifa(formData);
+  }
+
+  // 3. Determinar kWh_consumidos y pago
   let kwhConsumidos = 0;
+  let pagoPromedio = formData.pago_promedio || 0;
 
   if (formData.kwh_consumidos && formData.kwh_consumidos > 0) {
-    // Escenario 4: OCR o input manual con kWh conocido
+    // Tiene kWh conocido
     kwhConsumidos = formData.kwh_consumidos;
-  } else if (formData.pago_promedio && formData.tarifa && formData.tarifa !== "no conoce") {
-    // Escenario 1 o 4: Tiene pago y tarifa conocida - cálculo inverso
-    const tarifa = formData.tarifa.toUpperCase();
-
-    if (tarifa === "1" || tarifa.startsWith("1")) {
-      kwhConsumidos = calculateKwhFromPaymentTarifa1(formData.pago_promedio, factorP, params);
-    } else if (tarifa === "PDBT") {
-      kwhConsumidos = calculateKwhFromPaymentPDBT(formData.pago_promedio, factorP, params);
-    } else if (tarifa === "DAC") {
-      kwhConsumidos = calculateKwhFromPaymentDAC(formData.pago_promedio, factorP, params);
-    } else {
-      // Tarifa desconocida - estimar
-      kwhConsumidos = estimateKwhFromGuess(formData, params);
+    // Calcular pago si no lo tiene
+    if (!pagoPromedio) {
+      pagoPromedio = calculatePaymentFromKwh(kwhConsumidos, tarifaFinal, factorP, params);
     }
+  } else if (pagoPromedio && pagoPromedio > 0 && tarifaFinal && tarifaFinal !== "no conoce") {
+    // Tiene pago y tarifa - calcular kWh
+    kwhConsumidos = calculateKwhFromPayment(pagoPromedio, tarifaFinal, factorP, params);
   } else {
-    // Escenarios 2 y 3: Estimación por base de datos
-    kwhConsumidos = estimateKwhFromGuess(formData, params);
+    // No tiene ni kWh ni pago - estimar ambos desde guesses
+    const estimation = estimateFromGuess(formData, tarifaFinal, factorP, params);
+    kwhConsumidos = estimation.kwh;
+    pagoPromedio = estimation.pago;
   }
 
   // 3. Calcular cargas extra
@@ -97,7 +99,9 @@ export async function generateCompleteProposal(formData) {
     : null;
 
   return {
+    tarifa: tarifaFinal,
     kwh_consumidos: Math.round(kwhConsumidos),
+    pago_promedio: Math.round(pagoPromedio),
     kwh_consumidos_y_cargas_extra: Math.round(kwhConCargasExtra),
     metros_distancia: metrosDistancia,
     pago_hipotetico_cargas_extra: pagoHipoteticoCargasExtra,
@@ -108,17 +112,63 @@ export async function generateCompleteProposal(formData) {
   };
 }
 
-function estimateKwhFromGuess(formData, params) {
+function guessTarifa(formData) {
+  // Si es negocio, probablemente PDBT
+  if (formData.uso === "Negocio" || formData.casa_negocio === "Negocio") {
+    return "PDBT";
+  }
+  // Si es casa, tarifa 1 por defecto
+  return "1";
+}
+
+function calculateKwhFromPayment(pago, tarifa, factorP, params) {
+  const tarifaUpper = (tarifa || "1").toUpperCase();
+
+  if (tarifaUpper === "1" || tarifaUpper.startsWith("1")) {
+    return calculateKwhFromPaymentTarifa1(pago, factorP, params);
+  } else if (tarifaUpper === "PDBT") {
+    return calculateKwhFromPaymentPDBT(pago, factorP, params);
+  } else if (tarifaUpper === "DAC") {
+    return calculateKwhFromPaymentDAC(pago, factorP, params);
+  }
+
+  return calculateKwhFromPaymentTarifa1(pago, factorP, params);
+}
+
+function calculatePaymentFromKwh(kwh, tarifa, factorP, params) {
+  const tarifaUpper = (tarifa || "1").toUpperCase();
+
+  if (tarifaUpper === "1" || tarifaUpper.startsWith("1")) {
+    return calculatePaymentFromKwhTarifa1(kwh, factorP, params);
+  } else if (tarifaUpper === "PDBT") {
+    return calculatePaymentFromKwhPDBT(kwh, factorP, params);
+  } else if (tarifaUpper === "DAC") {
+    return calculatePaymentFromKwhDAC(kwh, factorP, params);
+  }
+
+  return calculatePaymentFromKwhTarifa1(kwh, factorP, params);
+}
+
+function estimateFromGuess(formData, tarifa, factorP, params) {
+  let kwhBimestral = 300;
+
   if (formData.uso === "Casa" || formData.casa_negocio === "Casa") {
     const members = Number(formData.numero_personas) || 2;
     const guess = params.houseLoadsGuess.find(h => h.Members === members);
-    return guess?.kWh_Bimestre || 300;
+    kwhBimestral = guess?.kWh_Bimestre || 300;
   } else {
-    // Negocio
     const range = formData.rango_personas_negocio || "1-5";
     const guess = params.businessLoadsGuess.find(b => b.Range === range);
-    return guess?.kWh_Bimestre || 500;
+    kwhBimestral = guess?.kWh_Bimestre || 500;
   }
+
+  // Adjust to periodicidad
+  const kwh = factorP === 1 ? kwhBimestral / 2 : kwhBimestral;
+
+  // Calculate payment based on tarifa
+  const pago = calculatePaymentFromKwh(kwh, tarifa, factorP, params);
+
+  return { kwh, pago };
 }
 
 function calculateHypotheticalPayment(kwh, tarifa, factorP, params) {

@@ -807,14 +807,14 @@
     },
     {
       "division": "Bajío",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Jilotepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Bajío",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Polotitlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
@@ -2830,7 +2830,7 @@
     },
     {
       "division": "Centro Oriente",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ixtapaluca",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
@@ -5182,315 +5182,315 @@
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Acambay de Ruíz Castañeda",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Aculco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Almoloya de Alquisiras",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Almoloya de Juárez",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Amanalco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Amatepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Atlacomulco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chapa de Mota",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Coatepec Harinas",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Donato Guerra",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "El Oro",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ixtapan de la Sal",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ixtapan del Oro",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ixtlahuaca",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Jilotepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Jiquipilco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Jocotitlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Luvianos",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Morelos",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Otzoloapan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Polotitlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "San Felipe del Progreso",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "San José del Rincón",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "San Simón de Guerrero",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Santo Tomás",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Soyaniquilpan de Juárez",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Sultepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tejupilco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Temascalcingo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Temascaltepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Temoaya",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tenancingo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Texcaltitlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Timilpan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tlatlaya",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tonatico",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Valle de Bravo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Villa de Allende",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Villa del Carbón",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Villa Guerrero",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Villa Victoria",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Zacazonapan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Zacualpan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Zinacantepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "Centro Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Zumpahuacán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
@@ -17817,84 +17817,84 @@
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Atenco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chiautla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chicoloapan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chiconcuac",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chimalhuacán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Huixquilucan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "La Paz",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Naucalpan de Juárez",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Nezahualcóyotl",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Papalotla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tepetlaoxtoc",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Centro",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Texcoco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
@@ -17929,273 +17929,273 @@
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Acolman",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Apaxco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Atenco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Atizapán de Zaragoza",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Axapusco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chiautla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Coacalco de Berriozábal",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Coyotepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Cuautitlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Cuautitlán Izcalli",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ecatepec de Morelos",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Huehuetoca",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Hueypoxtla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Huixquilucan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Isidro Fabela",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Jaltenco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Jilotzingo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Melchor Ocampo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Naucalpan de Juárez",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Nextlalpan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Nezahualcóyotl",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Nicolás Romero",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Nopaltepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Otumba",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "San Martín de las Pirámides",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tecámac",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Temascalapa",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Teoloyucan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Teotihuacán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tepetlaoxtoc",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tepotzotlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tequixquiac",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Texcoco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tezoyuca",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tlalnepantla de Baz",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tonanitla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tultepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tultitlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Norte",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Zumpango",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
@@ -18265,273 +18265,273 @@
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Almoloya del Río",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Amecameca",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Atizapán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Atlautla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ayapango",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Calimaya",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Capulhuac",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chalco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Chapultepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Cocotitlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ecatzingo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Huixquilucan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ixtapaluca",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Joquicingo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Juchitepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Lerma",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Malinalco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Metepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Mexicaltzingo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ocoyoacac",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ocuilan",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Otzolotepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Ozumba",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Rayón",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "San Antonio la Isla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "San Mateo Atenco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Temamatla",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tenancingo",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tenango del Aire",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tenango del Valle",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tepetlixpa",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Texcalyacac",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tianguistenco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Tlalmanalco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Toluca",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Valle de Chalco Solidaridad",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Xalatlaco",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Xonacatlán",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000
     },
     {
       "division": "División Valle de México Sur",
-      "entidad": "México",
+      "entidad": "Estado de México",
       "municipio": "Zinacantepec",
       "min_payment_threshold": 1895,
       "max_payment_threshold": 14000

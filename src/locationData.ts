@@ -74,7 +74,7 @@ export const locationData: LocationEntry[] = [
   },
   {
     division: "Bajío",
-    entidad: "México",
+    entidad: "Estado de México",
     municipios: "Jilotepec, Polotitlán",
     cfe_tarifa: "1",
     min_bimonthly_payment_threshold: 2000,
@@ -114,7 +114,7 @@ export const locationData: LocationEntry[] = [
   },
   {
     division: "Centro Oriente",
-    entidad: "México",
+    entidad: "Estado de México",
     municipios: "Ixtapaluca",
     cfe_tarifa: "1",
     min_bimonthly_payment_threshold: 2000,
@@ -122,7 +122,7 @@ export const locationData: LocationEntry[] = [
   },
   {
     division: "Centro Sur",
-    entidad: "México",
+    entidad: "Estado de México",
     municipios: "Acambay de Ruíz Castañeda, Aculco, Almoloya de Alquisiras, Almoloya de Juárez, Amanalco, Amatepec, Atlacomulco, Chapa de Mota, Coatepec Harinas, Donato Guerra, El Oro, Ixtapan de la Sal, Ixtapan del Oro, Ixtlahuaca, Jilotepec, Jiquipilco, Jocotitlán, Luvianos, Morelos, Otzoloapan, Polotitlán, San Felipe del Progreso, San José del Rincón, San Simón de Guerrero, Santo Tomás, Soyaniquilpan de Juárez, Sultepec, Tejupilco, Temascalcingo, Temascaltepec, Temoaya, Tenancingo, Texcaltitlán, Timilpan, Tlatlaya, Tonatico, Valle de Bravo, Villa de Allende, Villa del Carbón, Villa Guerrero, Villa Victoria, Zacazonapan, Zacualpan, Zinacantepec, Zumpahuacán",
     cfe_tarifa: "1",
     min_bimonthly_payment_threshold: 2000,
@@ -138,7 +138,7 @@ export const locationData: LocationEntry[] = [
   },
   {
     division: "División Valle de México Centro",
-    entidad: "México",
+    entidad: "Estado de México",
     municipios: "Atenco, Chiautla, Chicoloapan, Chiconcuac, Chimalhuacán, Huixquilucan, La Paz, Naucalpan de Juárez, Nezahualcóyotl, Papalotla, Tepetlaoxtoc, Texcoco",
     cfe_tarifa: "1",
     min_bimonthly_payment_threshold: 2000,
@@ -154,7 +154,7 @@ export const locationData: LocationEntry[] = [
   },
   {
     division: "División Valle de México Norte",
-    entidad: "México",
+    entidad: "Estado de México",
     municipios: "Acolman, Apaxco, Atenco, Atizapán de Zaragoza, Axapusco, Chiautla, Coacalco de Berriozábal, Coyotepec, Cuautitlán, Cuautitlán Izcalli, Ecatepec de Morelos, Huehuetoca, Hueypoxtla, Huixquilucan, Isidro Fabela, Jaltenco, Jilotzingo, Melchor Ocampo, Naucalpan de Juárez, Nextlalpan, Nezahualcóyotl, Nicolás Romero, Nopaltepec, Otumba, San Martín de las Pirámides, Tecámac, Temascalapa, Teoloyucan, Teotihuacán, Tepetlaoxtoc, Tepotzotlán, Tequixquiac, Texcoco, Tezoyuca, Tlalnepantla de Baz, Tonanitla, Tultepec, Tultitlán, Zumpango",
     cfe_tarifa: "1",
     min_bimonthly_payment_threshold: 2000,
@@ -170,7 +170,7 @@ export const locationData: LocationEntry[] = [
   },
   {
     division: "División Valle de México Sur",
-    entidad: "México",
+    entidad: "Estado de México",
     municipios: "Almoloya del Río, Amecameca, Atizapán, Atlautla, Ayapango, Calimaya, Capulhuac, Chalco, Chapultepec, Cocotitlán, Ecatzingo, Huixquilucan, Ixtapaluca, Joquicingo, Juchitepec, Lerma, Malinalco, Metepec, Mexicaltzingo, Ocoyoacac, Ocuilan, Otzolotepec, Ozumba, Rayón, San Antonio la Isla, San Mateo Atenco, Temamatla, Tenancingo, Tenango del Aire, Tenango del Valle, Tepetlixpa, Texcalyacac, Tianguistenco, Tlalmanalco, Toluca, Valle de Chalco Solidaridad, Xalatlaco, Xonacatlán, Zinacantepec",
     cfe_tarifa: "1",
     min_bimonthly_payment_threshold: 2000,

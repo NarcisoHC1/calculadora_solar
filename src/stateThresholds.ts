@@ -21,7 +21,7 @@ export const stateThresholds: StateThreshold[] = [
   { estado: "Jalisco", min_bimonthly_payment_threshold: 14000, max_bimonthly_payment_threshold: 14000 },
   { estado: "Michoacán de Ocampo", min_bimonthly_payment_threshold: 14000, max_bimonthly_payment_threshold: 14000 },
   { estado: "Morelos", min_bimonthly_payment_threshold: 14000, max_bimonthly_payment_threshold: 14000 },
-  { estado: "México", min_bimonthly_payment_threshold: 2000, max_bimonthly_payment_threshold: 14000 },
+  { estado: "Estado de México", min_bimonthly_payment_threshold: 2000, max_bimonthly_payment_threshold: 14000 },
   { estado: "Nayarit", min_bimonthly_payment_threshold: 14000, max_bimonthly_payment_threshold: 14000 },
   { estado: "Nuevo León", min_bimonthly_payment_threshold: 14000, max_bimonthly_payment_threshold: 14000 },
   { estado: "Oaxaca", min_bimonthly_payment_threshold: 14000, max_bimonthly_payment_threshold: 14000 },
@@ -54,5 +54,5 @@ export function getEstadosUnique(): string[] {
 }
 
 export function isCDMXorMexico(estado: string): boolean {
-  return estado === 'Ciudad de México' || estado === 'México';
+  return estado === 'Ciudad de México' || estado === 'Estado de México';
 }

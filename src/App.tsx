@@ -181,6 +181,7 @@ function App() {
       const newDetalles = { ...cargaDetalles };
       if (carga === 'ev') delete newDetalles.ev;
       if (carga === 'minisplit') delete newDetalles.minisplit;
+      if (carga === 'secadora') delete newDetalles.secadora;
       setCargaDetalles(newDetalles);
     }
   };
