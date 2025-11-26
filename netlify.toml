@@ -3,6 +3,9 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+
 # API endpoints apuntan a funciones locales
 [[redirects]]
   from = "/api/cotizacion_v2"
