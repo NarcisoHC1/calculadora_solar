@@ -15,16 +15,30 @@ async function fetchTable(tableName) {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${tableName}: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch ${tableName}: ${response.status} ${response.statusText}\n${errorText}`);
   }
 
   const data = await response.json();
+
+  console.log(`📊 ${tableName}: received ${data.records?.length || 0} records from Airtable`);
+
+  if (!data.records || data.records.length === 0) {
+    console.warn(`⚠️ WARNING: ${tableName} has no records`);
+    return [];
+  }
+
+  // Log first record structure to debug
+  if (data.records[0]) {
+    console.log(`   First record structure:`, JSON.stringify(data.records[0], null, 2).substring(0, 500));
+  }
+
   const records = data.records.map(r => r.fields);
 
-  console.log(`📊 Fetched ${tableName}: ${records.length} records`);
-
-  if (records.length === 0) {
-    console.warn(`⚠️ WARNING: ${tableName} returned 0 records`);
+  // Check if fields are empty
+  if (records[0] && Object.keys(records[0]).length === 0) {
+    console.error(`❌ ${tableName}: First record has empty fields object!`);
+    console.error(`   Raw record:`, JSON.stringify(data.records[0]));
   }
 
   return records;
