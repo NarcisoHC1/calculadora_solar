@@ -175,14 +175,19 @@ function App() {
     }
 
     if (checked) {
-      setCargas([...cargas.filter(c => c !== 'ninguna'), carga]);
+      setCargas(prev => [...prev.filter(c => c !== 'ninguna'), carga]);
+      if (carga === 'secadora') {
+        setCargaDetalles(prev => ({ ...prev, secadora: { horas: '' } }));
+      }
     } else {
-      setCargas(cargas.filter(c => c !== carga));
-      const newDetalles = { ...cargaDetalles };
-      if (carga === 'ev') delete newDetalles.ev;
-      if (carga === 'minisplit') delete newDetalles.minisplit;
-      if (carga === 'secadora') delete newDetalles.secadora;
-      setCargaDetalles(newDetalles);
+      setCargas(prev => prev.filter(c => c !== carga));
+      setCargaDetalles(prev => {
+        const next = { ...prev } as any;
+        if (carga === 'ev') delete next.ev;
+        if (carga === 'minisplit') delete next.minisplit;
+        if (carga === 'secadora') delete next.secadora;
+        return next;
+      });
     }
   };
 
@@ -288,7 +293,11 @@ function App() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const finalUso = usoCasaNegocio || 'Casa';
+    const finalUso = usoCasaNegocio
+      ? usoCasaNegocio === 'negocio'
+        ? 'Negocio'
+        : 'Casa'
+      : '';
 
     if (!nombre || !correo || !telefono || !privacidad) return;
     if (!phoneValid) {
@@ -303,7 +312,7 @@ function App() {
     // Check conditions for MANUAL flow
     const industrialTariff = ['GDBT', 'GDMTH', 'GDMTO'].includes(tarifa.toUpperCase());
     const isAislado = planCFE === 'aislado';
-    const isOutsideCDMXMexico = estado && estado !== 'Ciudad de México' && estado !== 'México';
+    const isOutsideCDMXMexico = estado && estado !== 'Ciudad de México' && estado !== 'Estado de México';
 
     // Check if payment is above max threshold
     const maxThreshold = estado ? getMaxStateThreshold(estado) : 14000;
@@ -318,7 +327,13 @@ function App() {
 
     showLoading('Calculando tu propuesta…');
 
-    const loads = cargaDetalles || {};
+    const loads = {
+      ev: cargas.includes('ev') ? cargaDetalles.ev : undefined,
+      minisplit: cargas.includes('minisplit') ? cargaDetalles.minisplit : undefined,
+      secadora: cargas.includes('secadora') ? cargaDetalles.secadora : undefined,
+      bomba: cargas.includes('bomba'),
+      otro: cargas.includes('otro')
+    };
     const bridge = (window as any).SYBridge;
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
@@ -341,11 +356,7 @@ function App() {
       numero_personas: usoCasaNegocio === 'casa' ? parseInt(numPersonasCasa || '0', 10) : 0,
       rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
-      loads: {
-        ...loads,
-        bomba: cargas.includes('bomba'),
-        otro: cargas.includes('otro')
-      },
+      loads,
       has_cfe: hasCFE !== 'no',
       tiene_recibo: hasCFE === 'si',
       plans_cfe: planCFE,

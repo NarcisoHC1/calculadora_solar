@@ -123,10 +123,10 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.pago_dac_hipotetico_cargas_extra) fields["Pago_DAC_Hipotetico_Cargas_Extra"] = Math.round(data.pago_dac_hipotetico_cargas_extra);
 
   // Property info
-  if (data.quiere_aislado) fields["Quiere_Sistema_Aislado"] = data.quiere_aislado ? "sí" : "no";
+  if (data.quiere_aislado !== undefined) fields["Quiere_Sistema_Aislado"] = data.quiere_aislado ? "sí" : "no";
   if (data.casa_negocio) fields["Casa_Negocio"] = data.casa_negocio;
   if (data.numero_personas) fields["Numero_Personas_Inmueble"] = data.numero_personas;
-  if (data.ya_tiene_fv) fields["Ya_Tiene_FV"] = data.ya_tiene_fv ? "sí" : "no";
+  if (data.ya_tiene_fv !== undefined) fields["Ya_Tiene_FV"] = data.ya_tiene_fv ? "sí" : "no";
   if (data.tipo_inmueble) fields["Tipo_Inmueble"] = data.tipo_inmueble;
   if (data.metros_distancia) fields["Metros_distancia"] = data.metros_distancia;
 
