@@ -81,34 +81,60 @@ export async function getParams() {
     fetchTable("House_Loads_Guess")
   ]);
 
-  // Get commercial conditions with fallback defaults
-  const commercialConditionsRecord = commercialConditions.find(c => c.Parameter_Version === "v1") || commercialConditions[0];
+  // Get latest tarifa records (most recent by year/month)
+  const latestTarifa1 = tarifa1.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0];
+  const latestTarifaPDBT = tarifaPDBT.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0];
+  const latestTarifaDAC = tarifaDAC.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0];
 
+  if (!latestTarifa1 || !latestTarifaPDBT || !latestTarifaDAC) {
+    throw new Error("❌ Missing tarifa data in Airtable Params");
+  }
+
+  // Get versioned parameters - only take first record (as per user: only row 1 has values)
+  const prRecord = pr[0];
+  const spaceMultiplierRecord = spaceMultiplier[0];
+  const metersPerFloorRecord = metersPerFloor[0];
+  const oversizingFactorRecord = oversizingFactor[0];
+  const acConsumptionRecord = acConsumption[0];
+  const secadoraConsumptionRecord = secadoraConsumption[0];
+  const deliveryCostsRecord = deliveryCosts[0];
+  const commercialConditionsRecord = commercialConditions[0];
+
+  // Validate critical params exist
+  if (!prRecord?.PR) {
+    throw new Error("❌ Missing PR parameter in Airtable");
+  }
   if (!commercialConditionsRecord) {
-    console.warn("⚠️ No Commercial_Conditions found in Airtable, using defaults");
+    throw new Error("❌ Missing Commercial_Conditions in Airtable");
+  }
+  if (!commercialConditionsRecord.MXN_USD) {
+    throw new Error("❌ Missing MXN_USD in Commercial_Conditions");
+  }
+  if (!commercialConditionsRecord.Profit_Margin) {
+    throw new Error("❌ Missing Profit_Margin in Commercial_Conditions");
   }
 
   paramsCache = {
-    tarifa1: tarifa1.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0],
-    tarifaPDBT: tarifaPDBT.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0],
-    tarifaDAC: tarifaDAC.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0],
+    tarifa1: latestTarifa1,
+    tarifaPDBT: latestTarifaPDBT,
+    tarifaDAC: latestTarifaDAC,
     hsp: hsp,
-    pr: pr.find(p => p.Version === "v1")?.PR || 0.835,
-    spaceMultiplier: spaceMultiplier.find(p => p.Version === "v1")?.Space_Multiplier || 1.3,
-    metersPerFloor: metersPerFloor.find(p => p.Version === "v1")?.Meters_per_floor || 3.0,
-    oversizingFactor: oversizingFactor.find(p => p.Version === "v1")?.Oversizing_factor || 1.2,
+    pr: prRecord.PR,
+    spaceMultiplier: spaceMultiplierRecord?.Space_Multiplier,
+    metersPerFloor: metersPerFloorRecord?.Meters_per_floor,
+    oversizingFactor: oversizingFactorRecord?.Oversizing_factor,
     evSpecs: evSpecs,
-    acConsumption: acConsumption.find(p => p.Version === "v1")?.["kWh/h"] || 1.5,
-    secadoraConsumption: secadoraConsumption.find(p => p.Version === "v1")?.["kWh/h"] || 2.5,
+    acConsumption: acConsumptionRecord?.["kWh/h"],
+    secadoraConsumption: secadoraConsumptionRecord?.["kWh/h"],
     otherLoads: otherLoads,
     commercialConditions: {
-      MXN_USD: commercialConditionsRecord?.MXN_USD || 20,
-      Profit_Margin: commercialConditionsRecord?.Profit_Margin || 0.25,
-      Discount_Rate: commercialConditionsRecord?.Discount_Rate || 0.10,
-      Insurance_Rate: commercialConditionsRecord?.Insurance_Rate || 0.015,
-      Extraordinarios: commercialConditionsRecord?.Extraordinarios || 3000,
-      CAC: commercialConditionsRecord?.CAC || 10000,
-      Secuencia_Exhibiciones: commercialConditionsRecord?.Secuencia_Exhibiciones || "0.5,0.5"
+      MXN_USD: commercialConditionsRecord.MXN_USD,
+      Profit_Margin: commercialConditionsRecord.Profit_Margin,
+      Discount_Rate: commercialConditionsRecord.Discount_Rate,
+      Insurance_Rate: commercialConditionsRecord.Insurance_Rate,
+      Extraordinarios: commercialConditionsRecord.Extraordinarios,
+      CAC_MXN: commercialConditionsRecord.CAC_MXN,
+      Secuencia_Exhibiciones: commercialConditionsRecord.Secuencia_Exhibiciones
     },
     panelSpecs: panelSpecs,
     microinverterSpecs: microinverterSpecs,
@@ -116,7 +142,7 @@ export async function getParams() {
     dtuSpecs: dtuSpecs,
     inverterSpecs: inverterSpecs,
     montajeSpecs: montajeSpecs,
-    deliveryCosts: deliveryCosts.find(d => d.Version === "v1")?.Percentage || 0.08,
+    deliveryCosts: deliveryCostsRecord?.Percentage,
     businessLoadsGuess: businessLoadsGuess,
     houseLoadsGuess: houseLoadsGuess
   };
@@ -129,20 +155,32 @@ export async function getParams() {
 
 export function getHSPForMunicipio(municipio, params) {
   const hspRecord = params.hsp.find(h => h.Municipio === municipio);
-  return hspRecord?.HSP || 5.5; // Default fallback
+  if (!hspRecord?.HSP) {
+    throw new Error(`❌ HSP not found for municipio: ${municipio}`);
+  }
+  return hspRecord.HSP;
 }
 
 export function getBombaConsumption(params) {
   const bomba = params.otherLoads.find(l => l.Load_type === "Bomba de agua");
-  return bomba?.Daily_Consumption_kWh || 1.5;
+  if (!bomba?.Daily_Consumption_kWh) {
+    throw new Error("❌ Bomba consumption not found in Airtable");
+  }
+  return bomba.Daily_Consumption_kWh;
 }
 
 export function getOtroConsumption(params) {
   const otro = params.otherLoads.find(l => l.Load_type === "Otro");
-  return otro?.Daily_Consumption_kWh || 2.0;
+  if (!otro?.Daily_Consumption_kWh) {
+    throw new Error("❌ Otro consumption not found in Airtable");
+  }
+  return otro.Daily_Consumption_kWh;
 }
 
 export function getEVConsumption(modelo, params) {
   const ev = params.evSpecs.find(e => e.Model === modelo);
-  return ev?.["kWh/100km"] || 18; // Default
+  if (!ev?.["kWh/100km"]) {
+    throw new Error(`❌ EV consumption not found for model: ${modelo}`);
+  }
+  return ev["kWh/100km"];
 }

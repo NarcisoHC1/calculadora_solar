@@ -22,40 +22,6 @@ export async function handler(event) {
       };
     }
 
-    // Verificar si tenemos credenciales de Airtable
-    if (!process.env.AIRTABLE_TOKEN || !process.env.AIRTABLE_BASE) {
-      console.warn("⚠️ No Airtable credentials found - returning mock data");
-
-      const mockProposal = {
-        kwh_consumidos: 300,
-        kwh_consumidos_y_cargas_extra: 450,
-        metros_distancia: 30,
-        propuesta_actual: {
-          potencia_panel: 555,
-          cantidad_paneles: 12,
-          kwp: "6.66",
-          total: 373364,
-          subtotal: 321866,
-          iva: 51498,
-          precio_lista: 375000
-        },
-        propuesta_cargas_extra: null
-      };
-
-      return {
-        statusCode: 200,
-        headers: CORS,
-        body: JSON.stringify({
-          ok: true,
-          dev_mode: true,
-          message: "Using mock data - configure AIRTABLE_TOKEN in Netlify",
-          project_id: "mock",
-          proposal_id: "mock",
-          proposal: mockProposal
-        })
-      };
-    }
-
     console.log("📥 Recibiendo cotización:", body);
 
     const leadId = await upsertLead({
