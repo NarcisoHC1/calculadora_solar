@@ -81,6 +81,13 @@ export async function getParams() {
     fetchTable("House_Loads_Guess")
   ]);
 
+  // Get commercial conditions with fallback defaults
+  const commercialConditionsRecord = commercialConditions.find(c => c.Parameter_Version === "v1") || commercialConditions[0];
+
+  if (!commercialConditionsRecord) {
+    console.warn("⚠️ No Commercial_Conditions found in Airtable, using defaults");
+  }
+
   paramsCache = {
     tarifa1: tarifa1.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0],
     tarifaPDBT: tarifaPDBT.sort((a, b) => b.Ano - a.Ano || b.Mes - a.Mes)[0],
@@ -94,7 +101,15 @@ export async function getParams() {
     acConsumption: acConsumption.find(p => p.Version === "v1")?.["kWh/h"] || 1.5,
     secadoraConsumption: secadoraConsumption.find(p => p.Version === "v1")?.["kWh/h"] || 2.5,
     otherLoads: otherLoads,
-    commercialConditions: commercialConditions.find(c => c.Parameter_Version === "v1"),
+    commercialConditions: {
+      MXN_USD: commercialConditionsRecord?.MXN_USD || 20,
+      Profit_Margin: commercialConditionsRecord?.Profit_Margin || 0.25,
+      Discount_Rate: commercialConditionsRecord?.Discount_Rate || 0.10,
+      Insurance_Rate: commercialConditionsRecord?.Insurance_Rate || 0.015,
+      Extraordinarios: commercialConditionsRecord?.Extraordinarios || 3000,
+      CAC: commercialConditionsRecord?.CAC || 10000,
+      Secuencia_Exhibiciones: commercialConditionsRecord?.Secuencia_Exhibiciones || "0.5,0.5"
+    },
     panelSpecs: panelSpecs,
     microinverterSpecs: microinverterSpecs,
     microExtras: microExtras,
