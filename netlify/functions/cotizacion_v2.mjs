@@ -61,8 +61,8 @@ export async function handler(event) {
         ev: body.loads?.ev || null,
         minisplit: body.loads?.minisplit || null,
         secadora: body.loads?.secadora || null,
-        bomba: body.loads?.bomba || false,
-        otro: body.loads?.otro || false
+        bomba: body.loads?.bomba === true,
+        otro: body.loads?.otro === true
       },
 
       // Planning flags
@@ -74,10 +74,10 @@ export async function handler(event) {
     console.log("🧮 Propuesta completa calculada");
 
     // Determine field values with proper logic
-    const hasCFE = body.has_cfe !== false;
-    const tieneReciboCFE = hasCFE && body.tiene_recibo !== false;
+    const hasCFE = body.has_cfe === true;
+    const tieneReciboCFE = hasCFE && body.tiene_recibo === true;
     const quiereAislado = body.plans_cfe === "aislado";
-    const yaTieneFV = body.ya_tiene_fv === true || body.ya_tiene_fv === "si";
+    const yaTieneFV = body.ya_tiene_fv === true || body.ya_tiene_fv === "sí" || body.ya_tiene_fv === "si";
 
     // Determine casa_negocio - only set if explicitly asked
     const casaNegocio = body.uso ? body.uso : "";
@@ -128,6 +128,7 @@ export async function handler(event) {
       quiere_aislado: quiereAislado ? "sí" : "no",
       casa_negocio: casaNegocio,
       numero_personas: Number(body.numero_personas || 0),
+      rango_personas_negocio: body.rango_personas_negocio || "",
       ya_tiene_fv: yaTieneFV ? "sí" : "no",
       tipo_inmueble: tipoInmuebleMapped,
       metros_distancia: proposal.metros_distancia,
@@ -136,8 +137,8 @@ export async function handler(event) {
       no_minisplits: Number(body.loads?.minisplit?.cantidad || 0),
       horas_minisplit: Number(body.loads?.minisplit?.horas || 0),
       horas_secadora: Number(body.loads?.secadora?.horas || 0),
-      bomba_agua: body.loads?.bomba ? "sí" : "no",
-      otro: body.loads?.otro ? "sí" : "no",
+      bomba_agua: body.loads?.bomba === true ? "sí" : "no",
+      otro: body.loads?.otro === true ? "sí" : "no",
       texto_libre: body.notes || "",
       ref: body.utms?.ref || "",
       utm_source: body.utms?.utm_source || "",
