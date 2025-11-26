@@ -83,7 +83,7 @@ export async function handler(event) {
     const casaNegocio = body.uso ? body.uso : "";
 
     // Map tipo_inmueble to correct values
-    const tipoInmuebleMap: { [key: string]: string } = {
+    const tipoInmuebleMap = {
       "Casa o negocio independiente de 1-2 pisos": "casa",
       "1": "casa",
       "Departamento/local en edificio / condominio vertical": "depto",
