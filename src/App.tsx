@@ -331,13 +331,25 @@ function App() {
       periodicidad: periodo || 'bimestral',
       pago_promedio_mxn: parseFloat(pago || '0') || 0,
       cp,
+      estado: estado || '',
+      municipio: estado || '',
       tarifa: tarifa || (ocrResult?.tarifa || ''),
+      kwh_consumidos: ocrResult?.kwh_consumidos || null,
       tipo_inmueble: tipoInmueble || '',
       pisos: parseInt(pisos || '0', 10) || 0,
+      distancia_techo_tablero: parseInt(distanciaTechoTablero || '0', 10) || 0,
+      numero_personas: usoCasaNegocio === 'casa' ? parseInt(numPersonasCasa || '0', 10) : 0,
+      rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
-      loads,
+      loads: {
+        ...loads,
+        bomba: cargas.includes('bomba'),
+        otro: cargas.includes('otro')
+      },
       has_cfe: hasCFE !== 'no',
-      plans_cfe: planCFE !== 'no' && planCFE !== 'aislado'
+      tiene_recibo: hasCFE === 'si',
+      plans_cfe: planCFE,
+      ya_tiene_fv: expand === 'si'
     };
 
     // el OCR va incrustado tal cual se recibió de Railway (si hubo éxito)

@@ -75,9 +75,9 @@ export async function handler(event) {
 
     // Determine field values with proper logic
     const hasCFE = body.has_cfe === true;
-    const tieneReciboCFE = hasCFE && body.tiene_recibo === true;
+    const tieneReciboCFE = body.tiene_recibo === true;
     const quiereAislado = body.plans_cfe === "aislado";
-    const yaTieneFV = body.ya_tiene_fv === true || body.ya_tiene_fv === "sí" || body.ya_tiene_fv === "si";
+    const yaTieneFV = body.ya_tiene_fv === true;
 
     // Determine casa_negocio - only set if explicitly asked
     const casaNegocio = body.uso ? body.uso : "";
@@ -137,8 +137,8 @@ export async function handler(event) {
       no_minisplits: Number(body.loads?.minisplit?.cantidad || 0),
       horas_minisplit: Number(body.loads?.minisplit?.horas || 0),
       horas_secadora: Number(body.loads?.secadora?.horas || 0),
-      bomba_agua: body.loads?.bomba === true ? "sí" : "no",
-      otro: body.loads?.otro === true ? "sí" : "no",
+      bomba_agua: body.loads?.bomba === true ? "sí" : "",
+      otro: body.loads?.otro === true ? "sí" : "",
       texto_libre: body.notes || "",
       ref: body.utms?.ref || "",
       utm_source: body.utms?.utm_source || "",
