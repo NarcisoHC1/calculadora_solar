@@ -31,12 +31,22 @@ function findEvSpecBySelection(selection, evSpecs) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return evSpecs.find(e => {
+  const legacyMatch = evSpecs.find(e => {
     const slug = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
     return slug === legacySlug;
+  });
+  if (legacyMatch) return legacyMatch;
+
+  const normalizedValue = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  return evSpecs.find(e => {
+    const normalizedSpec = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    return normalizedSpec === normalizedValue;
   }) || null;
 }
 
