@@ -3,6 +3,8 @@
 
 const IVA = 1.16;
 
+export const MONTAGE_GREEDY_PROMPT = "Ordena montajes por capacidad, toma el mayor posible sin exceder los paneles restantes y repite; si sobra un residuo, reemplaza una de las piezas grandes por combinaciones de montajes más pequeños hasta cubrir exactamente el total, priorizando menos piezas y menor costo.";
+
 function findEvSpecBySelection(selection, evSpecs) {
   if (!selection) return null;
   const value = selection.trim();
@@ -229,7 +231,7 @@ export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params)
       const generacion = (panel.Capacity_W / 1000) * numPaneles * hsp * pr * dias;
       const error = Math.abs(generacion - kwhTarget) / kwhTarget;
 
-      if (error < bestError) {
+      if (!bestConfig || error < bestError) {
         bestError = error;
         bestConfig = {
           panelId: panel.ID,
@@ -239,6 +241,57 @@ export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params)
           error,
           panel
         };
+        continue;
+      }
+
+      // Tie-breakers: prefer lower price/W and better warranties when error ties
+      if (Math.abs(error - bestError) < 1e-6) {
+        const currentPrice = panel.Price_USD_W;
+        const bestPrice = bestConfig.panel.Price_USD_W;
+
+        if (currentPrice < bestPrice) {
+          bestConfig = {
+            panelId: panel.ID,
+            potenciaPanel: panel.Capacity_W,
+            cantidadPaneles: numPaneles,
+            generacion,
+            error,
+            panel
+          };
+          bestError = error;
+          continue;
+        }
+
+        if (currentPrice === bestPrice) {
+          const currentProdW = panel.Product_Warranty_Years || 0;
+          const bestProdW = bestConfig.panel.Product_Warranty_Years || 0;
+          if (currentProdW > bestProdW) {
+            bestConfig = {
+              panelId: panel.ID,
+              potenciaPanel: panel.Capacity_W,
+              cantidadPaneles: numPaneles,
+              generacion,
+              error,
+              panel
+            };
+            bestError = error;
+            continue;
+          }
+
+          const currentGenW = panel.Generation_Warranty_Years || 0;
+          const bestGenW = bestConfig.panel.Generation_Warranty_Years || 0;
+          if (currentGenW > bestGenW) {
+            bestConfig = {
+              panelId: panel.ID,
+              potenciaPanel: panel.Capacity_W,
+              cantidadPaneles: numPaneles,
+              generacion,
+              error,
+              panel
+            };
+            bestError = error;
+          }
+        }
       }
     }
   }
@@ -277,15 +330,27 @@ export function calculateMicroinverters(cantidadPaneles, params) {
   let idMicro2Panel = null;
   let idMicro4Panel = null;
 
+  const pickMicro = (predicate) => {
+    const candidates = params.microinverterSpecs
+      .filter(predicate)
+      .sort((a, b) => {
+        if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
+        const aw = a["Product Warranty_Years"] || 0;
+        const bw = b["Product Warranty_Years"] || 0;
+        return bw - aw;
+      });
+    return candidates[0] || null;
+  };
+
   if (cantidadMicro2Panel > 0) {
     // Sistema MIXTO - requiere Trunk (No_Trunk="no")
-    const micro2 = params.microinverterSpecs.find(m => m.MPPT === 2 && m.No_Trunk === "no");
-    const micro4 = params.microinverterSpecs.find(m => m.MPPT === 4 && m.No_Trunk === "no");
+    const micro2 = pickMicro(m => m.MPPT === 2 && m.No_Trunk === "no");
+    const micro4 = pickMicro(m => m.MPPT === 4 && m.No_Trunk === "no");
     idMicro2Panel = micro2?.ID || null;
     idMicro4Panel = micro4?.ID || null;
   } else {
     // Sistema PURO 4T - preferir DW (No_Trunk="si")
-    const micro4 = params.microinverterSpecs.find(m => m.MPPT === 4 && m.No_Trunk === "si");
+    const micro4 = pickMicro(m => m.MPPT === 4 && m.No_Trunk === "si");
     idMicro4Panel = micro4?.ID || null;
   }
 
@@ -348,6 +413,116 @@ export function calculateMicroCosts(microConfig, params) {
 }
 
 // ========================================
+// GREEDY DE MONTAJES (2 tipos máx.)
+// ========================================
+
+export function buildMontajeCombination(cantidadPaneles, params) {
+  const montajes = (params.montajeSpecs || [])
+    .filter(m => m.No_Panels)
+    .sort((a, b) => {
+      if (b.No_Panels !== a.No_Panels) return b.No_Panels - a.No_Panels;
+      if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
+      const aw = a.Product_Warranty_Years || 0;
+      const bw = b.Product_Warranty_Years || 0;
+      return bw - aw;
+    });
+
+  const candidates = [];
+
+  for (const montA of montajes) {
+    const maxA = Math.floor(cantidadPaneles / montA.No_Panels);
+    for (let countA = maxA; countA >= 0; countA--) {
+      const restante = cantidadPaneles - (countA * montA.No_Panels);
+      if (restante === 0) {
+        candidates.push({
+          idA: montA.ID,
+          countA,
+          idB: null,
+          countB: 0,
+          costUSD: (montA.Price_USD || 0) * countA
+        });
+        continue;
+      }
+
+      for (const montB of montajes) {
+        if (montB.No_Panels > restante) continue;
+        if (restante % montB.No_Panels !== 0) continue;
+        const countB = restante / montB.No_Panels;
+        candidates.push({
+          idA: montA.ID,
+          countA,
+          idB: montB.ID,
+          countB,
+          costUSD: (montA.Price_USD || 0) * countA + (montB.Price_USD || 0) * countB
+        });
+      }
+    }
+  }
+
+  const selectBest = (list) => {
+    return list
+      .filter(c => (c.countA + c.countB) > 0)
+      .sort((a, b) => {
+        if ((a.countA + a.countB) !== (b.countA + b.countB)) return (a.countA + a.countB) - (b.countA + b.countB);
+        if (a.costUSD !== b.costUSD) return a.costUSD - b.costUSD;
+        const panelsA = (montajes.find(m => m.ID === a.idA)?.No_Panels || 0) * a.countA + (montajes.find(m => m.ID === a.idB)?.No_Panels || 0) * a.countB;
+        const panelsB = (montajes.find(m => m.ID === b.idA)?.No_Panels || 0) * b.countA + (montajes.find(m => m.ID === b.idB)?.No_Panels || 0) * b.countB;
+        return panelsB - panelsA;
+      })[0];
+  };
+
+  let best = selectBest(candidates);
+
+  if (!best) {
+    // Fallback greedy puro si no hubo combinación exacta
+    let restante = cantidadPaneles;
+    const taken = [];
+    for (const mont of montajes) {
+      const canTake = Math.floor(restante / mont.No_Panels);
+      if (canTake > 0) {
+        taken.push({ mont, count: canTake });
+        restante -= canTake * mont.No_Panels;
+      }
+    }
+
+    const primario = taken[0];
+    const secundario = taken[1];
+    best = {
+      idA: primario?.mont?.ID || null,
+      countA: primario?.count || 0,
+      idB: secundario?.mont?.ID || null,
+      countB: secundario?.count || 0,
+      costUSD:
+        (primario ? (primario.mont.Price_USD || 0) * primario.count : 0) +
+        (secundario ? (secundario.mont.Price_USD || 0) * secundario.count : 0)
+    };
+  }
+
+  return best || { idA: null, countA: 0, idB: null, countB: 0, costUSD: 0 };
+}
+
+// ========================================
+// IMPACTO AMBIENTAL
+// ========================================
+
+export function calculateEnvironmentalImpact(generacionAnualKwh, params) {
+  const factor = (concept) => {
+    const record = (params.environmentalImpact || []).find(e => (e.Concept || "").toLowerCase() === concept.toLowerCase());
+    return record?.Factor || 0;
+  };
+
+  const carbon = generacionAnualKwh * factor("Carbon");
+  const trees = generacionAnualKwh * factor("Trees_Annual");
+  const oil = generacionAnualKwh * factor("Oil_Barrels");
+
+  return {
+    carbon,
+    trees,
+    oil
+  };
+}
+
+// ========================================
 // SELECCIÓN DE INVERSOR CENTRAL
 // ========================================
 
@@ -370,25 +545,71 @@ export function selectCentralInverter(cantidadPaneles, potenciaPanel, params) {
 // ========================================
 
 export function selectMontaje(cantidadPaneles, params) {
-  const montaje = params.montajeSpecs.find(m => m.No_Panels === cantidadPaneles);
-  return montaje || null;
+  const candidates = params.montajeSpecs
+    .filter(m => m.No_Panels === cantidadPaneles)
+    .sort((a, b) => {
+      if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
+      const aw = a.Product_Warranty_Years || 0;
+      const bw = b.Product_Warranty_Years || 0;
+      return bw - aw;
+    });
+
+  return candidates[0] || null;
 }
 
 // ========================================
 // CÁLCULO DE PAGO DAC HIPOTÉTICO
 // ========================================
 
-export function calculateDACHypothetical(kwhConsumidos, periodicidad, params) {
+export function calculateDACHypothetical(kwhConsumidos, periodicidad, tarifaBase, params) {
+  // Sólo aplica cuando la tarifa reportada/asignada es "1"
+  if ((tarifaBase || "").toString().toUpperCase() !== "1") return null;
+
   const factorP = periodicidad === "bimestral" ? 2 : 1;
   const dac = params.tarifaDAC;
 
-  const limiteDAC = periodicidad === "bimestral"
-    ? 2 * dac.Limite_Mensual_kWh
-    : dac.Limite_Mensual_kWh;
+  const limiteDAC = dac.Limite_Mensual_kWh * factorP;
+  if (kwhConsumidos < limiteDAC) return null;
 
-  if (kwhConsumidos >= limiteDAC) {
-    return dac.Fijo_Mensual * factorP * IVA + dac.Variable * kwhConsumidos * IVA;
+  const fijo = dac.Fijo_Mensual * 2 * IVA; // siempre se usa 2 meses
+  const variableMultiplier = periodicidad === "bimestral" ? 1 : 2;
+  const variable = dac.Variable * kwhConsumidos * variableMultiplier * IVA;
+
+  return fijo + variable;
+}
+
+export function calculatePostSolarPayment(netoBimestralKwh, tarifa, params) {
+  if (netoBimestralKwh === null || netoBimestralKwh === undefined) return null;
+
+  const factorP = 2; // Siempre evaluamos en equivalente bimestral
+  const tarifaUpper = (tarifa || "").toString().toUpperCase();
+
+  if (netoBimestralKwh < 0) {
+    if (tarifaUpper === "1" || tarifaUpper.startsWith("1")) {
+      return params.tarifa1.Min_Mensual_kWh * params.tarifa1.Basico * factorP * IVA;
+    }
+    if (tarifaUpper === "PDBT") {
+      return params.tarifaPDBT.Fijo_Mensual * factorP * IVA;
+    }
+    if (tarifaUpper === "DAC") {
+      return params.tarifaDAC.Fijo_Mensual * factorP * IVA;
+    }
+    return null;
   }
 
-  return null;
+  if (tarifaUpper === "1" || tarifaUpper.startsWith("1")) {
+    const pago = calculatePaymentFromKwhTarifa1(netoBimestralKwh, factorP, params);
+    const minimo = params.tarifa1.Min_Mensual_kWh * params.tarifa1.Basico * factorP * IVA;
+    return Math.max(pago, minimo);
+  }
+
+  if (tarifaUpper === "PDBT") {
+    return calculatePaymentFromKwhPDBT(netoBimestralKwh, factorP, params);
+  }
+
+  if (tarifaUpper === "DAC") {
+    return calculatePaymentFromKwhDAC(netoBimestralKwh, factorP, params);
+  }
+
+  return calculatePaymentFromKwhTarifa1(netoBimestralKwh, factorP, params);
 }

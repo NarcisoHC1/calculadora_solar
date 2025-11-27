@@ -119,7 +119,8 @@ export async function getParams() {
     montajeSpecs,
     deliveryCosts,
     businessLoadsGuess,
-    houseLoadsGuess
+    houseLoadsGuess,
+    environmentalImpact
   ] = await Promise.all([
     fetchTable("Tarifa_1_CFE"),
     fetchTable("Tarifa_PDBT_CFE"),
@@ -142,7 +143,8 @@ export async function getParams() {
     fetchTable("Montaje_Specs"),
     fetchTable("Delivery_Costs"),
     fetchTable("Business_Loads_Guess"),
-    fetchTable("House_Loads_Guess")
+    fetchTable("House_Loads_Guess"),
+    fetchTable("Environmental_Impact")
   ]);
 
   // Get latest tarifa records (most recent by year/month)
@@ -218,7 +220,8 @@ export async function getParams() {
     montajeSpecs: montajeSpecs,
     deliveryCosts: deliveryCostsRecord?.Percentage,
     businessLoadsGuess: businessLoadsGuess,
-    houseLoadsGuess: houseLoadsGuess
+    houseLoadsGuess: houseLoadsGuess,
+    environmentalImpact
   };
 
   cacheTimestamp = now;
