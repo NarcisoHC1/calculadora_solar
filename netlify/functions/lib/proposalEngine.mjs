@@ -24,13 +24,15 @@ const IVA = 1.16;
 export async function generateCompleteProposal(formData) {
   const params = await getParams();
 
+  const periodicidad = formData.periodicidad || "bimestral";
+
   // 1. Determinar Factor_P (default: bimestral)
-  const factorP = formData.periodicidad === "mensual" ? 1 : 2;
+  const factorP = periodicidad === "mensual" ? 1 : 2;
 
   // 2. Adivinar tarifa si no se proporcionó
   let tarifaFinal = formData.tarifa || "";
   if (!tarifaFinal || tarifaFinal === "no conoce") {
-    tarifaFinal = guessTarifa(formData);
+    tarifaFinal = guessTarifa(formData, params, factorP);
   }
 
   // 3. Determinar kWh_consumidos y pago
@@ -55,7 +57,7 @@ export async function generateCompleteProposal(formData) {
   }
 
   // 3. Calcular cargas extra
-  const extraKwh = calculateExtraLoads(formData.loads, formData.periodicidad, params);
+  const extraKwh = calculateExtraLoads(formData.loads, periodicidad, params);
   const kwhConCargasExtra = kwhConsumidos + extraKwh;
 
   // 4. Calcular metros distancia
@@ -72,7 +74,7 @@ export async function generateCompleteProposal(formData) {
   // 6. Generar propuesta para consumo actual
   const propuestaActual = await generateSystemProposal(
     kwhConsumidos,
-    formData.periodicidad,
+    periodicidad,
     hsp,
     params
   );
@@ -82,7 +84,7 @@ export async function generateCompleteProposal(formData) {
   if (extraKwh > 0) {
     propuestaCargasExtra = await generateSystemProposal(
       kwhConCargasExtra,
-      formData.periodicidad,
+      periodicidad,
       hsp,
       params
     );
@@ -90,12 +92,12 @@ export async function generateCompleteProposal(formData) {
 
   // 8. Calcular pagos hipotéticos
   const pagoHipoteticoCargasExtra = extraKwh > 0
-    ? calculateHypotheticalPayment(kwhConCargasExtra, formData.tarifa, factorP, params)
+    ? calculateHypotheticalPayment(kwhConCargasExtra, tarifaFinal, factorP, params)
     : null;
 
-  const pagoDACActual = calculateDACHypothetical(kwhConsumidos, formData.periodicidad, params);
+  const pagoDACActual = calculateDACHypothetical(kwhConsumidos, periodicidad, params);
   const pagoDACCargasExtra = extraKwh > 0
-    ? calculateDACHypothetical(kwhConCargasExtra, formData.periodicidad, params)
+    ? calculateDACHypothetical(kwhConCargasExtra, periodicidad, params)
     : null;
 
   return {
@@ -112,12 +114,32 @@ export async function generateCompleteProposal(formData) {
   };
 }
 
-function guessTarifa(formData) {
+function guessTarifa(formData, params, factorP) {
   // Si es negocio, probablemente PDBT
   if (formData.uso === "Negocio" || formData.casa_negocio === "Negocio") {
     return "PDBT";
   }
-  // Si es casa, tarifa 1 por defecto
+
+  // Si tenemos consumo conocido, verificar si supera el límite DAC mensual
+  const dacLimit = params.tarifaDAC?.Limite_Mensual_kWh || Infinity;
+  const consumoMensual = formData.kwh_consumidos
+    ? (factorP === 1 ? formData.kwh_consumidos : formData.kwh_consumidos / 2)
+    : null;
+
+  if (consumoMensual && consumoMensual > dacLimit) {
+    return "DAC";
+  }
+
+  // Si tenemos pago aproximado, inferir consumo y comparar con DAC
+  if (formData.pago_promedio && formData.pago_promedio > 0) {
+    const estimadoKwh = calculateKwhFromPaymentTarifa1(formData.pago_promedio, factorP, params);
+    const estimadoMensual = estimadoKwh / factorP;
+    if (estimadoMensual > dacLimit) {
+      return "DAC";
+    }
+  }
+
+  // Si es casa y no hay más información, tarifa 1 por defecto
   return "1";
 }
 
@@ -152,13 +174,15 @@ function calculatePaymentFromKwh(kwh, tarifa, factorP, params) {
 function estimateFromGuess(formData, tarifa, factorP, params) {
   let kwhBimestral = 300;
 
-  if (formData.uso === "Casa" || formData.casa_negocio === "Casa") {
+  const isCasa = formData.uso === "Casa" || formData.casa_negocio === "Casa" || (!formData.uso && !formData.casa_negocio);
+
+  if (isCasa) {
     const members = Number(formData.numero_personas) || 2;
     const guess = params.houseLoadsGuess.find(h => h.Members === members);
     kwhBimestral = guess?.kWh_Bimestre || 300;
   } else {
-    const range = formData.rango_personas_negocio || "1-5";
-    const guess = params.businessLoadsGuess.find(b => b.Range === range);
+    const range = formData.rango_personas_negocio || "1-10";
+    const guess = findBestBusinessGuess(range, params.businessLoadsGuess);
     kwhBimestral = guess?.kWh_Bimestre || 500;
   }
 
@@ -183,6 +207,35 @@ function calculateHypotheticalPayment(kwh, tarifa, factorP, params) {
   }
 
   return calculatePaymentFromKwhTarifa1(kwh, factorP, params);
+}
+
+function findBestBusinessGuess(selectedRange, businessGuesses = []) {
+  const normalizeRange = (rangeStr = "") => {
+    const [minStr, maxStr] = rangeStr.split("-");
+    const min = Number(minStr.replace(/[^0-9]/g, "")) || 0;
+    const hasOpenUpperBound = /\+/.test(rangeStr) || /más/i.test(rangeStr) || /mas/i.test(rangeStr);
+    const max =
+      maxStr && !hasOpenUpperBound
+        ? Number(maxStr.replace(/[^0-9]/g, "")) || Infinity
+        : hasOpenUpperBound
+          ? Infinity
+          : min;
+    return { min, max, raw: rangeStr };
+  };
+
+  const desired = normalizeRange(selectedRange);
+  const parsedGuesses = businessGuesses.map(g => ({ ...normalizeRange(g.Range), guess: g }));
+
+  // Try exact match first
+  const exact = parsedGuesses.find(g => g.raw === selectedRange);
+  if (exact) return exact.guess;
+
+  // Then try overlap based on min boundary falling inside a guess bucket
+  const overlap = parsedGuesses.find(g => desired.min >= g.min && desired.min <= g.max);
+  if (overlap) return overlap.guess;
+
+  // Fallback to first available guess
+  return businessGuesses[0];
 }
 
 async function generateSystemProposal(kwhTarget, periodicidad, hsp, params) {
