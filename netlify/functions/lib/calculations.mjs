@@ -3,12 +3,40 @@
 
 const IVA = 1.16;
 
-function slugifyEV(brand, model = "") {
-  const parts = [brand, model].filter(Boolean).join(" ");
-  return parts
+function findEvSpecBySelection(selection, evSpecs) {
+  if (!selection) return null;
+  const value = selection.trim();
+
+  // Explicit "Otro" option: Brand === "Otro" and Model is empty
+  if (value === "Otro") {
+    return evSpecs.find(e => e.Brand === "Otro");
+  }
+
+  // Split the "Brand - Model" string coming from the dropdown
+  const parts = value.split(" - ");
+  if (parts.length === 2) {
+    const [brand, model] = parts.map(p => p.trim());
+    const match = evSpecs.find(e => (e.Brand || "").trim() === brand && (e.Model || "").trim() === model);
+    if (match) return match;
+  }
+
+  // Fallback: try an exact combined match without altering case
+  const combined = evSpecs.find(e => `${e.Brand} - ${e.Model}` === value);
+  if (combined) return combined;
+
+  // Final fallback: accept legacy slug values to avoid breaking older submissions
+  const legacySlug = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+  return evSpecs.find(e => {
+    const slug = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug === legacySlug;
+  }) || null;
 }
 
 // ========================================
@@ -87,9 +115,7 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 
   // A. Auto Eléctrico (EV)
   if (loads?.ev?.modelo && loads?.ev?.km) {
-    const evSpecsRecord = params.evSpecs.find(
-      e => slugifyEV(e.Brand, e.Model) === loads.ev.modelo
-    );
+    const evSpecsRecord = findEvSpecBySelection(loads.ev.modelo, params.evSpecs);
     if (!evSpecsRecord || evSpecsRecord["kWh/100km"] === undefined) {
       throw new Error(`❌ EV consumption not found for model: ${loads.ev.modelo}`);
     }

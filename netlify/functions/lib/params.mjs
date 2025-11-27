@@ -8,12 +8,36 @@ let paramsCache = null;
 let cacheTimestamp = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-function slugifyEV(brand, model = "") {
-  const parts = [brand, model].filter(Boolean).join(" ");
-  return parts
+function findEvSpecBySelection(selection, evSpecs) {
+  if (!selection) return null;
+  const value = selection.trim();
+
+  if (value === "Otro") {
+    return evSpecs.find(e => e.Brand === "Otro");
+  }
+
+  const parts = value.split(" - ");
+  if (parts.length === 2) {
+    const [brand, model] = parts.map(p => p.trim());
+    const match = evSpecs.find(e => (e.Brand || "").trim() === brand && (e.Model || "").trim() === model);
+    if (match) return match;
+  }
+
+  const combined = evSpecs.find(e => `${e.Brand} - ${e.Model}` === value);
+  if (combined) return combined;
+
+  const legacySlug = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+  return evSpecs.find(e => {
+    const slug = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug === legacySlug;
+  }) || null;
 }
 
 async function fetchTable(tableName) {
@@ -219,9 +243,7 @@ export function getOtroConsumption(params) {
 }
 
 export function getEVConsumption(modelo, params) {
-  const ev = params.evSpecs.find(
-    e => slugifyEV(e.Brand, e.Model) === modelo
-  );
+  const ev = findEvSpecBySelection(modelo, params.evSpecs);
   if (!ev?.["kWh/100km"]) {
     throw new Error(`❌ EV consumption not found for model: ${modelo}`);
   }
