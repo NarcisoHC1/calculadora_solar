@@ -42,6 +42,12 @@ export async function handler(event) {
         ? "Casa"
         : body.uso || "";
 
+    const parseYesNo = (value) => {
+      if (value === true || value === 'si' || value === 'sí' || value === 'yes') return true;
+      if (value === false || value === 'no') return false;
+      return undefined;
+    };
+
     // Generar propuesta completa usando el nuevo motor
     const formDataForEngine = {
       // Basic info
@@ -74,7 +80,7 @@ export async function handler(event) {
 
       // Planning flags
       plans_cfe: body.plans_cfe,
-      ya_tiene_fv: body.ya_tiene_fv
+      ya_tiene_fv: parseYesNo(body.ya_tiene_fv)
     };
 
     const proposal = await generateCompleteProposal(formDataForEngine);
@@ -84,7 +90,7 @@ export async function handler(event) {
     const hasCFE = body.has_cfe === true;
     const tieneReciboCFE = hasCFE && body.tiene_recibo === true;
     const quiereAislado = body.plans_cfe === "aislado";
-    const yaTieneFV = body.ya_tiene_fv === true ? true : (body.ya_tiene_fv === false ? false : undefined);
+    const yaTieneFV = parseYesNo(body.ya_tiene_fv);
     const propuestaAuto = body.propuesta_auto === true ? true : (body.propuesta_auto === false ? false : undefined);
     const metrosDistancia = Math.max(30, Number(proposal.metros_distancia || body.distancia_techo_tablero || 0));
 
