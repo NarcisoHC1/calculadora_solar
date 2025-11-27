@@ -86,3 +86,6 @@ export interface DualProposal {
   current: ProposalData;
   future?: ProposalData;
 }
+
+// Alias used by the app state
+export type Proposal = DualProposal;
