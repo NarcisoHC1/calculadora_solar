@@ -569,6 +569,14 @@ function App() {
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
 
+    const expandNormalized = expand
+      ? expand
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+      : '';
+
     const formPayload: any = {
       nombre,
       email: correo,
@@ -591,7 +599,7 @@ function App() {
       has_cfe: hasCFE !== 'no',
       tiene_recibo: hasCFE === 'si',
       plans_cfe: planCFE,
-      ya_tiene_fv: expand ? expand === 'si' : undefined,
+      ya_tiene_fv: expandNormalized ? expandNormalized === 'si' : undefined,
       propuesta_auto: flow === 'AUTO'
     };
 
@@ -1075,8 +1083,8 @@ function App() {
                               }}
                             >
                               <option value="">Selecciona una opción</option>
-                              <option>Sí</option>
-                              <option>No</option>
+                              <option value="si">Sí</option>
+                              <option value="no">No</option>
                             </select>
                           </div>
                         )}
@@ -1347,8 +1355,8 @@ function App() {
                             }}
                           >
                             <option value="">Selecciona una opción</option>
-                            <option>Sí</option>
-                            <option>No</option>
+                            <option value="si">Sí</option>
+                            <option value="no">No</option>
                           </select>
                         </div>
                       </div>
