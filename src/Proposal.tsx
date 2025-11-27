@@ -327,7 +327,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
               <div className="text-center">
                 <div className="text-2xl mb-1">☁️</div>
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
-                <p className="text-xs text-slate-600 mt-0.5">toneladas de CO₂ reducidas</p>
+                <p className="text-xs text-slate-600 mt-0.5">kg de CO₂ reducidos</p>
               </div>
             </div>
           </div>
@@ -413,7 +413,7 @@ function SharedSections({
                       <div className="text-center">
                         <div className="text-2xl mb-1">☁️</div>
                         <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{env.toneladasCO2}</p>
-                        <p className="text-xs text-slate-600 mt-0.5">toneladas de CO₂ reducidas</p>
+                        <p className="text-xs text-slate-600 mt-0.5">kg de CO₂ reducidos</p>
                       </div>
                     </div>
                   </div>
