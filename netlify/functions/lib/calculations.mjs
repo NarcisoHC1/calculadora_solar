@@ -3,6 +3,8 @@
 
 const IVA = 1.16;
 
+export const MONTAGE_GREEDY_PROMPT = "Ordena montajes por capacidad, toma el mayor posible sin exceder los paneles restantes y repite; si sobra un residuo, reemplaza una de las piezas grandes por combinaciones de montajes más pequeños hasta cubrir exactamente el total, priorizando menos piezas y menor costo.";
+
 function findEvSpecBySelection(selection, evSpecs) {
   if (!selection) return null;
   const value = selection.trim();
@@ -408,6 +410,116 @@ export function calculateMicroCosts(microConfig, params) {
   }
 
   return { costoMicroinversores, costoExtras };
+}
+
+// ========================================
+// GREEDY DE MONTAJES (2 tipos máx.)
+// ========================================
+
+export function buildMontajeCombination(cantidadPaneles, params) {
+  const montajes = (params.montajeSpecs || [])
+    .filter(m => m.No_Panels)
+    .sort((a, b) => {
+      if (b.No_Panels !== a.No_Panels) return b.No_Panels - a.No_Panels;
+      if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
+      const aw = a.Product_Warranty_Years || 0;
+      const bw = b.Product_Warranty_Years || 0;
+      return bw - aw;
+    });
+
+  const candidates = [];
+
+  for (const montA of montajes) {
+    const maxA = Math.floor(cantidadPaneles / montA.No_Panels);
+    for (let countA = maxA; countA >= 0; countA--) {
+      const restante = cantidadPaneles - (countA * montA.No_Panels);
+      if (restante === 0) {
+        candidates.push({
+          idA: montA.ID,
+          countA,
+          idB: null,
+          countB: 0,
+          costUSD: (montA.Price_USD || 0) * countA
+        });
+        continue;
+      }
+
+      for (const montB of montajes) {
+        if (montB.No_Panels > restante) continue;
+        if (restante % montB.No_Panels !== 0) continue;
+        const countB = restante / montB.No_Panels;
+        candidates.push({
+          idA: montA.ID,
+          countA,
+          idB: montB.ID,
+          countB,
+          costUSD: (montA.Price_USD || 0) * countA + (montB.Price_USD || 0) * countB
+        });
+      }
+    }
+  }
+
+  const selectBest = (list) => {
+    return list
+      .filter(c => (c.countA + c.countB) > 0)
+      .sort((a, b) => {
+        if ((a.countA + a.countB) !== (b.countA + b.countB)) return (a.countA + a.countB) - (b.countA + b.countB);
+        if (a.costUSD !== b.costUSD) return a.costUSD - b.costUSD;
+        const panelsA = (montajes.find(m => m.ID === a.idA)?.No_Panels || 0) * a.countA + (montajes.find(m => m.ID === a.idB)?.No_Panels || 0) * a.countB;
+        const panelsB = (montajes.find(m => m.ID === b.idA)?.No_Panels || 0) * b.countA + (montajes.find(m => m.ID === b.idB)?.No_Panels || 0) * b.countB;
+        return panelsB - panelsA;
+      })[0];
+  };
+
+  let best = selectBest(candidates);
+
+  if (!best) {
+    // Fallback greedy puro si no hubo combinación exacta
+    let restante = cantidadPaneles;
+    const taken = [];
+    for (const mont of montajes) {
+      const canTake = Math.floor(restante / mont.No_Panels);
+      if (canTake > 0) {
+        taken.push({ mont, count: canTake });
+        restante -= canTake * mont.No_Panels;
+      }
+    }
+
+    const primario = taken[0];
+    const secundario = taken[1];
+    best = {
+      idA: primario?.mont?.ID || null,
+      countA: primario?.count || 0,
+      idB: secundario?.mont?.ID || null,
+      countB: secundario?.count || 0,
+      costUSD:
+        (primario ? (primario.mont.Price_USD || 0) * primario.count : 0) +
+        (secundario ? (secundario.mont.Price_USD || 0) * secundario.count : 0)
+    };
+  }
+
+  return best || { idA: null, countA: 0, idB: null, countB: 0, costUSD: 0 };
+}
+
+// ========================================
+// IMPACTO AMBIENTAL
+// ========================================
+
+export function calculateEnvironmentalImpact(generacionAnualKwh, params) {
+  const factor = (concept) => {
+    const record = (params.environmentalImpact || []).find(e => (e.Concept || "").toLowerCase() === concept.toLowerCase());
+    return record?.Factor || 0;
+  };
+
+  const carbon = generacionAnualKwh * factor("Carbon");
+  const trees = generacionAnualKwh * factor("Trees_Annual");
+  const oil = generacionAnualKwh * factor("Oil_Barrels");
+
+  return {
+    carbon,
+    trees,
+    oil
+  };
 }
 
 // ========================================

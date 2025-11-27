@@ -55,6 +55,10 @@ export interface FinancialBreakdown {
   total: number;
   anticipo: number;
   pagoPostInterconexion: number;
+  pagosEnExhibiciones?: number[];
+  secuenciaExhibiciones?: number[];
+  descuentoPorcentaje?: number;
+  ahorroEn25?: number;
 }
 
 export interface EnvironmentalImpact {

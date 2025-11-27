@@ -15,9 +15,10 @@ import {
   calculateMicroinverters,
   calculateMicroCosts,
   selectCentralInverter,
-  selectMontaje,
   calculateDACHypothetical,
-  calculatePostSolarPayment
+  calculatePostSolarPayment,
+  buildMontajeCombination,
+  calculateEnvironmentalImpact
 } from './calculations.mjs';
 
 const IVA = 1.16;
@@ -165,6 +166,7 @@ export async function generateCompleteProposal(formData) {
 
   return {
     tarifa: tarifaFinal,
+    periodicidad,
     kwh_consumidos: kwhConsumidos != null ? Math.round(kwhConsumidos) : null,
     pago_promedio: pagoPromedio != null ? Math.round(pagoPromedio) : null,
     kwh_consumidos_y_cargas_extra: kwhConCargasExtra != null ? Math.round(kwhConCargasExtra) : null,
@@ -238,7 +240,9 @@ function calculatePaymentFromKwh(kwh, tarifa, factorP, params) {
 function estimateFromGuess(formData, tarifa, factorP, params) {
   let kwhBimestral = 300;
 
-  const isCasa = formData.uso === "Casa" || formData.casa_negocio === "Casa" || (!formData.uso && !formData.casa_negocio);
+  const isCasa = formData.rango_personas_negocio
+    ? false
+    : (formData.uso === "Casa" || formData.casa_negocio === "Casa" || (!formData.uso && !formData.casa_negocio));
 
   if (isCasa) {
     const members = Number(formData.numero_personas) || 2;
@@ -352,10 +356,12 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     costoExtrasMicroinversores = costs.costoExtras;
   }
 
-  // 5. Seleccionar montaje
-  const montaje = selectMontaje(cantidadPaneles, params);
-  const idMontaje = montaje?.ID || null;
-  const costoMontaje = montaje ? montaje.Price_USD * tc : 0;
+  // 5. Seleccionar montaje (greedy)
+  const montajeCombo = buildMontajeCombination(cantidadPaneles, params);
+  const montajeA = montajeCombo?.idA ? params.montajeSpecs.find(m => m.ID === montajeCombo.idA) : null;
+  const montajeB = montajeCombo?.idB ? params.montajeSpecs.find(m => m.ID === montajeCombo.idB) : null;
+  const costoMontajeUSD = montajeCombo?.costUSD || 0;
+  const costoMontaje = costoMontajeUSD * tc;
 
   // 6. Calcular BOS
   const costoBOS = 263 * (metrosDistancia || 0) + 7500;
@@ -401,6 +407,9 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
   const grossProfit = subtotal - costosTotales;
   const grossProfitPostCAC = grossProfit - params.commercialConditions.CAC_MXN;
 
+  const generacionAnual = (potenciaPanel / 1000) * cantidadPaneles * hsp * params.pr * 365;
+  const impactoAmbiental = calculateEnvironmentalImpact(generacionAnual, params);
+
   return {
     // Panel info
     potencia_panel: potenciaPanel,
@@ -410,6 +419,7 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     kwp: (potenciaPanel * cantidadPaneles / 1000).toFixed(2),
     annual_degradation: panel.Annual_Degradation || 0,
     generacion: panelConfig.generacion,
+    impacto_ambiental: impactoAmbiental,
 
     // Costos
     tc,
@@ -429,7 +439,11 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     costo_extras_microinversores: Math.round(costoExtrasMicroinversores),
 
     // Montaje
-    id_montaje: idMontaje,
+    id_montaje: montajeA?.ID || montajeB?.ID || null,
+    id_montaje_a: montajeA?.ID || null,
+    cantidad_montaje_a: montajeCombo?.countA || 0,
+    id_montaje_b: montajeB?.ID || null,
+    cantidad_montaje_b: montajeCombo?.countB || 0,
     costo_montaje: Math.round(costoMontaje),
 
     // Otros costos
@@ -477,7 +491,8 @@ function buildFrontendOutputs({
       propuesta: propuestaActual,
       hsp,
       params,
-      alertaDAC: pagoDACActual
+      alertaDAC: pagoDACActual,
+      impactoAmbiental: propuestaActual?.impacto_ambiental
     })
     : null;
 
@@ -490,14 +505,15 @@ function buildFrontendOutputs({
       propuesta: propuestaCargasExtra,
       hsp,
       params,
-      alertaDAC: pagoDACCargasExtra
+      alertaDAC: pagoDACCargasExtra,
+      impactoAmbiental: propuestaCargasExtra?.impacto_ambiental
     })
     : null;
 
   return { base, cargas_extra: extra };
 }
 
-function computeFrontendBlock({ periodicidad, tarifa, pagoActual, kwhObjetivo, propuesta, hsp, params, alertaDAC }) {
+function computeFrontendBlock({ periodicidad, tarifa, pagoActual, kwhObjetivo, propuesta, hsp, params, alertaDAC, impactoAmbiental }) {
   const dias = periodicidad === "bimestral" ? 60 : 30;
   const generacion = (propuesta.potencia_panel / 1000) * propuesta.cantidad_paneles * hsp * params.pr * dias;
   const netoBimestral = periodicidad === "bimestral"
@@ -539,6 +555,8 @@ function computeFrontendBlock({ periodicidad, tarifa, pagoActual, kwhObjetivo, p
     ? propuesta.discount_rate * propuesta.precio_lista
     : null;
 
+  const impacto = impactoAmbiental || propuesta.impacto_ambiental || null;
+
   return {
     con_solarya_pagaras: pagoConSolar,
     ahorras_cada_bimestre: ahorrasBimestre,
@@ -554,6 +572,7 @@ function computeFrontendBlock({ periodicidad, tarifa, pagoActual, kwhObjetivo, p
     subtotal: propuesta.subtotal,
     iva: propuesta.iva,
     inversion_total: propuesta.total,
-    alerta_dac: alertaDAC
+    alerta_dac: alertaDAC,
+    impacto_ambiental: impacto
   };
 }

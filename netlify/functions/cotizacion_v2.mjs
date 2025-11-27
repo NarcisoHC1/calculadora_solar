@@ -84,7 +84,8 @@ export async function handler(event) {
     const hasCFE = body.has_cfe === true;
     const tieneReciboCFE = hasCFE && body.tiene_recibo === true;
     const quiereAislado = body.plans_cfe === "aislado";
-    const yaTieneFV = body.ya_tiene_fv === true;
+    const yaTieneFV = body.ya_tiene_fv === true ? true : (body.ya_tiene_fv === false ? false : undefined);
+    const propuestaAuto = body.propuesta_auto === true ? true : (body.propuesta_auto === false ? false : undefined);
     const metrosDistancia = Math.max(30, Number(proposal.metros_distancia || body.distancia_techo_tablero || 0));
 
     // Determine casa_negocio - only set if explicitly asked
@@ -135,7 +136,7 @@ export async function handler(event) {
       pago_dac_hipotetico_cargas_extra: tarifaResidencial ? proposal.pago_dac_hipotetico_cargas_extra : null,
       quiere_aislado: quiereAislado,
       casa_negocio: casaNegocio,
-      numero_personas: Number(body.numero_personas || 0),
+      numero_personas: casaNegocio === "Negocio" ? (body.rango_personas_negocio || "") : Number(body.numero_personas || 0),
       rango_personas_negocio: body.rango_personas_negocio || "",
       ya_tiene_fv: yaTieneFV,
       tipo_inmueble: tipoInmuebleMapped,
@@ -160,7 +161,8 @@ export async function handler(event) {
       gbraid: body.utms?.gbraid || "",
       ttclid: body.utms?.ttclid || "",
       li_fat_id: body.utms?.li_fat_id || "",
-      twclid: body.utms?.twclid || ""
+      twclid: body.utms?.twclid || "",
+      propuesta_auto: propuestaAuto
     };
 
     const submissionId = await createSubmissionDetails({
@@ -195,6 +197,7 @@ export async function handler(event) {
           propuesta_actual: proposal.propuesta_actual,
           propuesta_cargas_extra: proposal.propuesta_cargas_extra,
           frontend_outputs: proposal.frontend_outputs,
+          periodicidad: proposal.periodicidad,
           pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,
           pago_dac_hipotetico_cargas_extra: proposal.pago_dac_hipotetico_cargas_extra
         }

@@ -200,7 +200,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(financial.anosRetorno, 1)} años</p>
             <div className="space-y-1 text-sm text-slate-600">
               <p>Ahorro en 25 años:</p>
-              <p className="text-xl font-bold text-slate-900">{formatCurrency(financial.ahorroBimestral * 6 * 25)}</p>
+              <p className="text-xl font-bold text-slate-900">{formatCurrency((financial.ahorroEn25 ?? (financial.ahorroBimestral * 6 * 25)))}</p>
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
               <span className="font-semibold">{formatCurrency(financial.precioLista)}</span>
             </div>
             <div className="flex justify-between font-semibold" style={{ color: '#3cd070' }}>
-              <span>Descuento (10%):</span>
+              <span>Descuento {financial.descuentoPorcentaje ? `(${Math.round(financial.descuentoPorcentaje * 100)}%)` : ''}:</span>
               <span>-{formatCurrency(financial.descuento)}</span>
             </div>
             <div className="flex justify-between text-slate-700 border-t pt-2">
@@ -233,18 +233,15 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
             <p className="text-sm font-bold text-slate-900 mb-3">Pago en 3 exhibiciones:</p>
             <div className="grid grid-cols-3 gap-3">
-              <div>
-                <p className="text-xs text-slate-600 mb-1">Anticipo 50%</p>
-                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.5)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-600 mb-1">2do pago 25%</p>
-                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.25)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-600 mb-1">3er pago 25%</p>
-                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.25)}</p>
-              </div>
+              {(financial.pagosEnExhibiciones && financial.pagosEnExhibiciones.length > 0 ? financial.pagosEnExhibiciones : [financial.total * 0.5, financial.total * 0.25, financial.total * 0.25]).map((pago, idx) => {
+                const pct = financial.secuenciaExhibiciones?.[idx] ? Math.round(financial.secuenciaExhibiciones[idx] * 100) : idx === 0 ? 50 : 25;
+                return (
+                  <div key={idx}>
+                    <p className="text-xs text-slate-600 mb-1">{idx === 0 ? 'Anticipo' : `${idx + 1}º pago`} {pct}%</p>
+                    <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(pago)}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -744,6 +741,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           .no-print {
             display: none !important;
           }
+          .proposal-overlay, .proposal-scroll {
+            position: static !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
           .calendly-inline-widget {
             display: none !important;
           }
@@ -770,7 +772,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           display: none;
         }
       `}</style>
-      <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
+      <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
         <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
           <button
             onClick={handleGenerateReferral}

@@ -46,6 +46,7 @@ type FrontendBlock = {
   iva?: number | null;
   inversion_total?: number | null;
   alerta_dac?: number | null;
+  impacto_ambiental?: { carbon?: number | null; trees?: number | null; oil?: number | null } | null;
 };
 
 type BackendProposalEnvelope = {
@@ -96,7 +97,25 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
     }
   }
 
-  if (propuesta.id_montaje) {
+  if (propuesta.id_montaje_a && propuesta.cantidad_montaje_a) {
+    components.push({
+      concepto: 'Montaje A',
+      cantidad: propuesta.cantidad_montaje_a,
+      marca: propuesta.id_montaje_a,
+      modelo: propuesta.id_montaje_a
+    });
+  }
+
+  if (propuesta.id_montaje_b && propuesta.cantidad_montaje_b) {
+    components.push({
+      concepto: 'Montaje B',
+      cantidad: propuesta.cantidad_montaje_b,
+      marca: propuesta.id_montaje_b,
+      modelo: propuesta.id_montaje_b
+    });
+  }
+
+  if (!propuesta.id_montaje_a && !propuesta.id_montaje_b && propuesta.id_montaje) {
     components.push({
       concepto: 'Montaje',
       cantidad: 1,
@@ -125,27 +144,52 @@ function blockToProposalData(
   const pagoFuturo = Number(block.con_solarya_pagaras || 0);
   const ahorroBimestral = Number(block.ahorras_cada_bimestre || 0);
   const pagoAhora = pagoFuturo + ahorroBimestral;
-  const total = Number(block.inversion_total || propuesta.total || 0);
+  const total = Number(block.inversion_total ?? propuesta.total ?? 0);
+
+  const secuencia = (propuesta.secuencia_exhibiciones || '').split(',').map(v => Number(v.trim())).filter(v => !Number.isNaN(v) && v > 0);
+  const pagosEnExhibiciones = (block.pagos_en_exhibiciones && block.pagos_en_exhibiciones.length > 0)
+    ? block.pagos_en_exhibiciones.map(Number)
+    : (secuencia.length > 0 ? secuencia.map(v => v * total) : [total * 0.5, total * 0.25, total * 0.25]);
+  const descuentoPorcentaje = propuesta.discount_rate ?? null;
+  const precioLista = Number(block.precio_de_lista ?? propuesta.precio_lista ?? 0);
+  const descuentoCalculado = block.descuento != null
+    ? Number(block.descuento)
+    : (descuentoPorcentaje != null ? precioLista * descuentoPorcentaje : 0);
 
   const financial = {
     pagoAhora,
     pagoFuturo,
     ahorroBimestral,
     anosRetorno: Number(block.retorno_de_inversion ?? 0),
-    precioLista: Number(block.precio_de_lista ?? propuesta.precio_lista ?? 0),
-    descuento: Number(block.descuento ?? 0),
+    precioLista,
+    descuento: descuentoCalculado,
     subtotal: Number(block.subtotal ?? propuesta.subtotal ?? 0),
     iva: Number(block.iva ?? propuesta.iva ?? 0),
     total,
-    anticipo: total * 0.5,
-    pagoPostInterconexion: total * 0.5
+    anticipo: pagosEnExhibiciones[0] ?? total * 0.5,
+    pagoPostInterconexion: pagosEnExhibiciones[1] ?? total * 0.5,
+    pagosEnExhibiciones,
+    secuenciaExhibiciones: secuencia,
+    descuentoPorcentaje: descuentoPorcentaje || undefined,
+    ahorroEn25: Number(block.ahorro_en_25_anos ?? 0) || undefined
   };
+  financial.ahorroEn25 = financial.ahorroEn25 ?? (financial.ahorroBimestral * 6 * 25);
 
   const porcentajeCobertura = block.generas_el_x_porcentaje_consumo != null
     ? (block.generas_el_x_porcentaje_consumo || 0) * 100
     : 0;
 
-  const environmental = {
+  const impacto = block.impacto_ambiental || propuesta.impacto_ambiental || (propuesta.carbon ? {
+    carbon: propuesta.carbon,
+    trees: propuesta.trees,
+    oil: propuesta.oil
+  } : null);
+
+  const environmental = impacto ? {
+    arboles: Math.round(impacto.trees ?? 0),
+    barrilesPetroleo: Math.round(impacto.oil ?? 0),
+    toneladasCO2: Math.round((impacto.carbon ?? 0) * 100) / 100
+  } : {
     arboles: Math.round((generacionMensualKwh * 12) / 1500),
     barrilesPetroleo: Math.round((generacionMensualKwh * 12) / 2000),
     toneladasCO2: Math.round((generacionMensualKwh * 12 * 0.0007) * 100) / 100
@@ -547,7 +591,8 @@ function App() {
       has_cfe: hasCFE !== 'no',
       tiene_recibo: hasCFE === 'si',
       plans_cfe: planCFE,
-      ya_tiene_fv: expand === 'si'
+      ya_tiene_fv: expand ? expand === 'si' : undefined,
+      propuesta_auto: flow === 'AUTO'
     };
 
     // el OCR va incrustado tal cual se recibió de Railway (si hubo éxito)
@@ -1721,7 +1766,7 @@ function App() {
 
       {/* Modals */}
       {showResultModal && generatedProposal && (
-        <div className="fixed inset-0 bg-slate-50 overflow-y-auto z-50">
+        <div className="fixed inset-0 bg-slate-50 overflow-y-auto z-50 proposal-overlay">
           <ProposalComponent proposal={generatedProposal} onClose={() => setShowResultModal(false)} userName={nombre} />
         </div>
       )}

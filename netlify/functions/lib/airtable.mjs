@@ -156,6 +156,7 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.ttclid) fields["ttclid"] = data.ttclid;
   if (data.li_fat_id) fields["li_fat_id"] = data.li_fat_id;
   if (data.twclid) fields["twclid"] = data.twclid;
+  if (data.propuesta_auto !== undefined) fields["Propuesta_Auto"] = data.propuesta_auto ? "sí" : "no";
 
   const rec = await createRecord("Submission_Details", fields);
   return rec.id;
@@ -194,6 +195,10 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
 
   // Montaje
   if (proposalData.id_montaje) fields["ID_Montaje"] = proposalData.id_montaje;
+  if (proposalData.id_montaje_a) fields["ID_Montaje_A"] = proposalData.id_montaje_a;
+  if (proposalData.cantidad_montaje_a) fields["Cantidad_Montaje_A"] = proposalData.cantidad_montaje_a;
+  if (proposalData.id_montaje_b) fields["ID_Montaje_B"] = proposalData.id_montaje_b;
+  if (proposalData.cantidad_montaje_b) fields["Cantidad_Montaje_B"] = proposalData.cantidad_montaje_b;
   if (proposalData.costo_montaje) fields["Costo_Montaje"] = Math.round(proposalData.costo_montaje);
 
   // Otros costos
@@ -217,9 +222,15 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
   if (proposalData.gross_profit) fields["Gross_profit"] = Math.round(proposalData.gross_profit);
   if (proposalData.gross_profit_post_cac) fields["Gross_profit_post_CAC"] = Math.round(proposalData.gross_profit_post_cac);
   if (proposalData.secuencia_exhibiciones) fields["Secuencia_Exhibiciones"] = proposalData.secuencia_exhibiciones;
+  if (proposalData.impacto_ambiental) {
+    if (proposalData.impacto_ambiental.carbon !== undefined) fields["Carbon"] = Math.round(proposalData.impacto_ambiental.carbon);
+    if (proposalData.impacto_ambiental.trees !== undefined) fields["Trees"] = Math.round(proposalData.impacto_ambiental.trees);
+    if (proposalData.impacto_ambiental.oil !== undefined) fields["Oil_Barrels"] = Math.round(proposalData.impacto_ambiental.oil);
+  }
 
   // === PROPUESTA CON CARGAS EXTRA (si existe) ===
   if (proposalCargasExtra) {
+    if (proposalCargasExtra.potencia_panel) fields["Potencia_Panel_Cargas_Extra"] = proposalCargasExtra.potencia_panel;
     if (proposalCargasExtra.cantidad_paneles) fields["Cantidad_Paneles_Cargas_Extra"] = proposalCargasExtra.cantidad_paneles;
     if (proposalCargasExtra.area_needed) fields["Area_needed_Cargas_Extra"] = Math.round(proposalCargasExtra.area_needed);
     if (proposalCargasExtra.costo_paneles) fields["Costo_Paneles_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_paneles);
@@ -236,6 +247,10 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
     if (proposalCargasExtra.costo_extras_microinversores) fields["Costo_Extras_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_extras_microinversores);
 
     if (proposalCargasExtra.id_montaje) fields["ID_Montaje_Cargas_Extra"] = proposalCargasExtra.id_montaje;
+    if (proposalCargasExtra.id_montaje_a) fields["ID_Montaje_A_Cargas_Extra"] = proposalCargasExtra.id_montaje_a;
+    if (proposalCargasExtra.cantidad_montaje_a) fields["Cantidad_Montaje_A_Cargas_Extra"] = proposalCargasExtra.cantidad_montaje_a;
+    if (proposalCargasExtra.id_montaje_b) fields["ID_Montaje_B_Cargas_Extra"] = proposalCargasExtra.id_montaje_b;
+    if (proposalCargasExtra.cantidad_montaje_b) fields["Cantidad_Montaje_B_Cargas_Extra"] = proposalCargasExtra.cantidad_montaje_b;
     if (proposalCargasExtra.costo_montaje) fields["Costo_Montaje_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_montaje);
     if (proposalCargasExtra.costo_bos) fields["Costo_BOS_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_bos);
 
@@ -250,6 +265,11 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
     if (proposalCargasExtra.total) fields["Total_Cargas_Extra"] = Math.round(proposalCargasExtra.total);
     if (proposalCargasExtra.gross_profit) fields["Gross_profit_Cargas_Extra"] = Math.round(proposalCargasExtra.gross_profit);
     if (proposalCargasExtra.gross_profit_post_cac) fields["Gross_profit_post_CAC_Cargas_Extra"] = Math.round(proposalCargasExtra.gross_profit_post_cac);
+    if (proposalCargasExtra.impacto_ambiental) {
+      if (proposalCargasExtra.impacto_ambiental.carbon !== undefined) fields["Carbon_Cargas_Extra"] = Math.round(proposalCargasExtra.impacto_ambiental.carbon);
+      if (proposalCargasExtra.impacto_ambiental.trees !== undefined) fields["Trees_Cargas_Extra"] = Math.round(proposalCargasExtra.impacto_ambiental.trees);
+      if (proposalCargasExtra.impacto_ambiental.oil !== undefined) fields["Oil_Barrels_Cargas_Extra"] = Math.round(proposalCargasExtra.impacto_ambiental.oil);
+    }
   }
 
   const rec = await createRecord("Proposals", fields);
