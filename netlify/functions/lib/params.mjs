@@ -219,10 +219,36 @@ export async function getParams() {
 
 export function getHSPForMunicipio(estado, params) {
   // Function name kept for backwards compatibility but now uses Estado
-  const hspRecord = params.hsp.find(h => h.Estado === estado);
-  if (!hspRecord?.HSP) {
-    throw new Error(`❌ HSP not found for estado: ${estado}. Available estados: ${params.hsp.map(h => h.Estado).join(', ')}`);
+  const normalize = value => value?.toString().trim().toLowerCase();
+
+  // Try exact match first
+  let hspRecord = params.hsp.find(h => h.Estado === estado);
+
+  // Fallback to case-insensitive/trimmed comparison if exact match is not found
+  if (!hspRecord) {
+    const target = normalize(estado);
+    hspRecord = params.hsp.find(h => normalize(h.Estado) === target);
   }
+
+  // If still not found, fallback to Ciudad de México (legacy default) or the first available record
+  if (!hspRecord?.HSP) {
+    const defaultRecord =
+      params.hsp.find(h => normalize(h.Estado) === normalize("Ciudad de México")) || params.hsp[0];
+
+    if (!defaultRecord?.HSP) {
+      throw new Error(
+        `❌ HSP not found for estado: ${estado}. Available estados: ${params.hsp
+          .map(h => h.Estado)
+          .join(', ')}`
+      );
+    }
+
+    console.warn(
+      `⚠️ HSP not found for estado: ${estado}. Falling back to ${defaultRecord.Estado} (HSP=${defaultRecord.HSP}).`
+    );
+    hspRecord = defaultRecord;
+  }
+
   return hspRecord.HSP;
 }
 
