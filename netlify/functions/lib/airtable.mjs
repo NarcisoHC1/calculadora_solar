@@ -194,7 +194,6 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
   if (proposalData.costo_extras_microinversores) fields["Costo_Extras_Microniversores"] = Math.round(proposalData.costo_extras_microinversores);
 
   // Montaje
-  if (proposalData.id_montaje) fields["ID_Montaje"] = proposalData.id_montaje;
   if (proposalData.id_montaje_a) fields["ID_Montaje_A"] = proposalData.id_montaje_a;
   if (proposalData.cantidad_montaje_a) fields["Cantidad_Montaje_A"] = proposalData.cantidad_montaje_a;
   if (proposalData.id_montaje_b) fields["ID_Montaje_B"] = proposalData.id_montaje_b;
@@ -246,7 +245,6 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
     if (proposalCargasExtra.costo_microinversores) fields["Costo_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_microinversores);
     if (proposalCargasExtra.costo_extras_microinversores) fields["Costo_Extras_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_extras_microinversores);
 
-    if (proposalCargasExtra.id_montaje) fields["ID_Montaje_Cargas_Extra"] = proposalCargasExtra.id_montaje;
     if (proposalCargasExtra.id_montaje_a) fields["ID_Montaje_A_Cargas_Extra"] = proposalCargasExtra.id_montaje_a;
     if (proposalCargasExtra.cantidad_montaje_a) fields["Cantidad_Montaje_A_Cargas_Extra"] = proposalCargasExtra.cantidad_montaje_a;
     if (proposalCargasExtra.id_montaje_b) fields["ID_Montaje_B_Cargas_Extra"] = proposalCargasExtra.id_montaje_b;
