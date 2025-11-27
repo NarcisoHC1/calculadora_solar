@@ -3,6 +3,53 @@
 
 const IVA = 1.16;
 
+function findEvSpecBySelection(selection, evSpecs) {
+  if (!selection) return null;
+  const value = selection.trim();
+
+  // Explicit "Otro" option: Brand === "Otro" and Model is empty
+  if (value === "Otro") {
+    return evSpecs.find(e => e.Brand === "Otro");
+  }
+
+  // Split the "Brand - Model" string coming from the dropdown
+  const parts = value.split(" - ");
+  if (parts.length === 2) {
+    const [brand, model] = parts.map(p => p.trim());
+    const match = evSpecs.find(e => (e.Brand || "").trim() === brand && (e.Model || "").trim() === model);
+    if (match) return match;
+  }
+
+  // Fallback: try an exact combined match without altering case
+  const combined = evSpecs.find(e => `${e.Brand} - ${e.Model}` === value);
+  if (combined) return combined;
+
+  // Final fallback: accept legacy slug values to avoid breaking older submissions
+  const legacySlug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const legacyMatch = evSpecs.find(e => {
+    const slug = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug === legacySlug;
+  });
+  if (legacyMatch) return legacyMatch;
+
+  // Extra-tolerant fallback: ignore separators like hyphens/spaces inside the model name
+  const normalizedValue = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  return evSpecs.find(e => {
+    const normalizedSpec = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    return normalizedSpec === normalizedValue;
+  }) || null;
+}
+
 // ========================================
 // CÁLCULO INVERSO (DINERO -> ENERGÍA)
 // ========================================
@@ -72,44 +119,29 @@ export function calculatePaymentFromKwhDAC(consumo, factorP, params) {
 // CÁLCULO DE CARGAS EXTRA
 // ========================================
 
-function getOtherLoadEnergy(loadType, dias, params) {
-  const record = params.otherLoads.find(l => l.Load_type === loadType);
-
-  if (!record?.Daily_Consumption_kWh) {
-    return 0;
-  }
-
-  const periodicidad = (record.Periodicidad || "diario").toLowerCase();
-
-  if (periodicidad === "semanal") {
-    return record.Daily_Consumption_kWh * (dias / 7);
-  }
-
-  if (periodicidad === "mensual") {
-    return record.Daily_Consumption_kWh * (dias / 30);
-  }
-
-  if (periodicidad === "bimestral") {
-    return record.Daily_Consumption_kWh * (dias / 60);
-  }
-
-  // Default: consumo diario
-  return record.Daily_Consumption_kWh * dias;
-}
-
 export function calculateExtraLoads(loads, periodicidad, params) {
   let suma = 0;
-  const dias = periodicidad === "bimestral" ? 60 : 30;
+  const factorP = periodicidad === "mensual" ? 1 : 2;
+  const dias = factorP * 30;
 
   // A. Auto Eléctrico (EV)
   if (loads?.ev?.modelo && loads?.ev?.km) {
-    const kwhPer100km = params.evSpecs.find(e => e.Model === loads.ev.modelo)?.["kWh/100km"] || 18;
+    const evSpecsRecord = findEvSpecBySelection(loads.ev.modelo, params.evSpecs);
+    if (!evSpecsRecord || evSpecsRecord["kWh/100km"] === undefined) {
+      throw new Error(`❌ EV consumption not found for model: ${loads.ev.modelo}`);
+    }
+
     const kmDiarios = Number(loads.ev.km) || 0;
+    const kwhPer100km = evSpecsRecord["kWh/100km"];
     suma += (kmDiarios / 100) * kwhPer100km * dias * 0.9;
   }
 
   // B. Minisplits / Aire Acondicionado
   if (loads?.minisplit?.cantidad && loads?.minisplit?.horas) {
+    if (params.acConsumption === undefined || params.acConsumption === null) {
+      throw new Error("❌ AC consumption not found in Airtable params");
+    }
+
     const cantidad = Number(loads.minisplit.cantidad) || 0;
     const horas = Number(loads.minisplit.horas) || 0;
     suma += cantidad * horas * params.acConsumption * dias;
@@ -117,6 +149,10 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 
   // C. Secadora de Ropa
   if (loads?.secadora?.horas) {
+    if (params.secadoraConsumption === undefined || params.secadoraConsumption === null) {
+      throw new Error("❌ Secadora consumption not found in Airtable params");
+    }
+
     const horasSemanales = Number(loads.secadora.horas) || 0;
     const semanas = periodicidad === "bimestral" ? 8 : 4;
     suma += horasSemanales * params.secadoraConsumption * semanas;
@@ -124,12 +160,22 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 
   // D. Bomba de Agua
   if (loads?.bomba) {
-    suma += getOtherLoadEnergy("Bomba de agua / alberca", dias, params) || getOtherLoadEnergy("Bomba de agua", dias, params);
+    const bombaRecord = params.otherLoads.find(l => l.Load_type === "Bomba de agua");
+    if (!bombaRecord?.Daily_Consumption_kWh) {
+      throw new Error("❌ Bomba consumption not found in Airtable");
+    }
+
+    suma += bombaRecord.Daily_Consumption_kWh * dias;
   }
 
   // E. Otros
   if (loads?.otro) {
-    suma += getOtherLoadEnergy("Otro", dias, params);
+    const otroRecord = params.otherLoads.find(l => l.Load_type === "Otro");
+    if (!otroRecord?.Daily_Consumption_kWh) {
+      throw new Error("❌ Otro consumption not found in Airtable");
+    }
+
+    suma += otroRecord.Daily_Consumption_kWh * dias;
   }
 
   return Math.round(suma);
@@ -183,7 +229,7 @@ export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params)
       const generacion = (panel.Capacity_W / 1000) * numPaneles * hsp * pr * dias;
       const error = Math.abs(generacion - kwhTarget) / kwhTarget;
 
-      if (error < bestError) {
+      if (!bestConfig || error < bestError) {
         bestError = error;
         bestConfig = {
           panelId: panel.ID,
@@ -193,6 +239,57 @@ export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params)
           error,
           panel
         };
+        continue;
+      }
+
+      // Tie-breakers: prefer lower price/W and better warranties when error ties
+      if (Math.abs(error - bestError) < 1e-6) {
+        const currentPrice = panel.Price_USD_W;
+        const bestPrice = bestConfig.panel.Price_USD_W;
+
+        if (currentPrice < bestPrice) {
+          bestConfig = {
+            panelId: panel.ID,
+            potenciaPanel: panel.Capacity_W,
+            cantidadPaneles: numPaneles,
+            generacion,
+            error,
+            panel
+          };
+          bestError = error;
+          continue;
+        }
+
+        if (currentPrice === bestPrice) {
+          const currentProdW = panel.Product_Warranty_Years || 0;
+          const bestProdW = bestConfig.panel.Product_Warranty_Years || 0;
+          if (currentProdW > bestProdW) {
+            bestConfig = {
+              panelId: panel.ID,
+              potenciaPanel: panel.Capacity_W,
+              cantidadPaneles: numPaneles,
+              generacion,
+              error,
+              panel
+            };
+            bestError = error;
+            continue;
+          }
+
+          const currentGenW = panel.Generation_Warranty_Years || 0;
+          const bestGenW = bestConfig.panel.Generation_Warranty_Years || 0;
+          if (currentGenW > bestGenW) {
+            bestConfig = {
+              panelId: panel.ID,
+              potenciaPanel: panel.Capacity_W,
+              cantidadPaneles: numPaneles,
+              generacion,
+              error,
+              panel
+            };
+            bestError = error;
+          }
+        }
       }
     }
   }
@@ -231,15 +328,27 @@ export function calculateMicroinverters(cantidadPaneles, params) {
   let idMicro2Panel = null;
   let idMicro4Panel = null;
 
+  const pickMicro = (predicate) => {
+    const candidates = params.microinverterSpecs
+      .filter(predicate)
+      .sort((a, b) => {
+        if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
+        const aw = a["Product Warranty_Years"] || 0;
+        const bw = b["Product Warranty_Years"] || 0;
+        return bw - aw;
+      });
+    return candidates[0] || null;
+  };
+
   if (cantidadMicro2Panel > 0) {
     // Sistema MIXTO - requiere Trunk (No_Trunk="no")
-    const micro2 = params.microinverterSpecs.find(m => m.MPPT === 2 && m.No_Trunk === "no");
-    const micro4 = params.microinverterSpecs.find(m => m.MPPT === 4 && m.No_Trunk === "no");
+    const micro2 = pickMicro(m => m.MPPT === 2 && m.No_Trunk === "no");
+    const micro4 = pickMicro(m => m.MPPT === 4 && m.No_Trunk === "no");
     idMicro2Panel = micro2?.ID || null;
     idMicro4Panel = micro4?.ID || null;
   } else {
     // Sistema PURO 4T - preferir DW (No_Trunk="si")
-    const micro4 = params.microinverterSpecs.find(m => m.MPPT === 4 && m.No_Trunk === "si");
+    const micro4 = pickMicro(m => m.MPPT === 4 && m.No_Trunk === "si");
     idMicro4Panel = micro4?.ID || null;
   }
 
@@ -324,25 +433,71 @@ export function selectCentralInverter(cantidadPaneles, potenciaPanel, params) {
 // ========================================
 
 export function selectMontaje(cantidadPaneles, params) {
-  const montaje = params.montajeSpecs.find(m => m.No_Panels === cantidadPaneles);
-  return montaje || null;
+  const candidates = params.montajeSpecs
+    .filter(m => m.No_Panels === cantidadPaneles)
+    .sort((a, b) => {
+      if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
+      const aw = a.Product_Warranty_Years || 0;
+      const bw = b.Product_Warranty_Years || 0;
+      return bw - aw;
+    });
+
+  return candidates[0] || null;
 }
 
 // ========================================
 // CÁLCULO DE PAGO DAC HIPOTÉTICO
 // ========================================
 
-export function calculateDACHypothetical(kwhConsumidos, periodicidad, params) {
+export function calculateDACHypothetical(kwhConsumidos, periodicidad, tarifaBase, params) {
+  // Sólo aplica cuando la tarifa reportada/asignada es "1"
+  if ((tarifaBase || "").toString().toUpperCase() !== "1") return null;
+
   const factorP = periodicidad === "bimestral" ? 2 : 1;
   const dac = params.tarifaDAC;
 
-  const limiteDAC = periodicidad === "bimestral"
-    ? 2 * dac.Limite_Mensual_kWh
-    : dac.Limite_Mensual_kWh;
+  const limiteDAC = dac.Limite_Mensual_kWh * factorP;
+  if (kwhConsumidos < limiteDAC) return null;
 
-  if (kwhConsumidos >= limiteDAC) {
-    return dac.Fijo_Mensual * factorP * IVA + dac.Variable * kwhConsumidos * IVA;
+  const fijo = dac.Fijo_Mensual * 2 * IVA; // siempre se usa 2 meses
+  const variableMultiplier = periodicidad === "bimestral" ? 1 : 2;
+  const variable = dac.Variable * kwhConsumidos * variableMultiplier * IVA;
+
+  return fijo + variable;
+}
+
+export function calculatePostSolarPayment(netoBimestralKwh, tarifa, params) {
+  if (netoBimestralKwh === null || netoBimestralKwh === undefined) return null;
+
+  const factorP = 2; // Siempre evaluamos en equivalente bimestral
+  const tarifaUpper = (tarifa || "").toString().toUpperCase();
+
+  if (netoBimestralKwh < 0) {
+    if (tarifaUpper === "1" || tarifaUpper.startsWith("1")) {
+      return params.tarifa1.Min_Mensual_kWh * params.tarifa1.Basico * factorP * IVA;
+    }
+    if (tarifaUpper === "PDBT") {
+      return params.tarifaPDBT.Fijo_Mensual * factorP * IVA;
+    }
+    if (tarifaUpper === "DAC") {
+      return params.tarifaDAC.Fijo_Mensual * factorP * IVA;
+    }
+    return null;
   }
 
-  return null;
+  if (tarifaUpper === "1" || tarifaUpper.startsWith("1")) {
+    const pago = calculatePaymentFromKwhTarifa1(netoBimestralKwh, factorP, params);
+    const minimo = params.tarifa1.Min_Mensual_kWh * params.tarifa1.Basico * factorP * IVA;
+    return Math.max(pago, minimo);
+  }
+
+  if (tarifaUpper === "PDBT") {
+    return calculatePaymentFromKwhPDBT(netoBimestralKwh, factorP, params);
+  }
+
+  if (tarifaUpper === "DAC") {
+    return calculatePaymentFromKwhDAC(netoBimestralKwh, factorP, params);
+  }
+
+  return calculatePaymentFromKwhTarifa1(netoBimestralKwh, factorP, params);
 }

@@ -169,12 +169,17 @@ export async function handler(event) {
     });
     console.log("✅ Submission_Details:", submissionId);
 
-    const proposalId = await createProposal({
-      projectId,
-      proposalData: { ...proposal.propuesta_actual, kwh_consumidos: proposal.kwh_consumidos, kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra },
-      proposalCargasExtra: proposal.propuesta_cargas_extra
-    });
-    console.log("✅ Proposal:", proposalId);
+    let proposalId = null;
+    if (proposal.propuesta_actual) {
+      proposalId = await createProposal({
+        projectId,
+        proposalData: { ...proposal.propuesta_actual, kwh_consumidos: proposal.kwh_consumidos, kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra },
+        proposalCargasExtra: proposal.propuesta_cargas_extra
+      });
+      console.log("✅ Proposal:", proposalId);
+    } else {
+      console.warn("⚠️ Proposal calculation skipped due to invalid location or missing data");
+    }
 
     return {
       statusCode: 200,
@@ -189,6 +194,7 @@ export async function handler(event) {
           metros_distancia: metrosDistancia,
           propuesta_actual: proposal.propuesta_actual,
           propuesta_cargas_extra: proposal.propuesta_cargas_extra,
+          frontend_outputs: proposal.frontend_outputs,
           pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,
           pago_dac_hipotetico_cargas_extra: proposal.pago_dac_hipotetico_cargas_extra
         }

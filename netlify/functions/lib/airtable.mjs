@@ -237,6 +237,7 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
 
     if (proposalCargasExtra.id_montaje) fields["ID_Montaje_Cargas_Extra"] = proposalCargasExtra.id_montaje;
     if (proposalCargasExtra.costo_montaje) fields["Costo_Montaje_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_montaje);
+    if (proposalCargasExtra.costo_bos) fields["Costo_BOS_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_bos);
 
     if (proposalCargasExtra.costo_transporte_incl_seguro) fields["Costo_Transporte_Incl_Seguro_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_transporte_incl_seguro);
     if (proposalCargasExtra.costo_mo) fields["Costo_MO_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_mo);

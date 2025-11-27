@@ -16,7 +16,8 @@ import {
   calculateMicroCosts,
   selectCentralInverter,
   selectMontaje,
-  calculateDACHypothetical
+  calculateDACHypothetical,
+  calculatePostSolarPayment
 } from './calculations.mjs';
 
 const IVA = 1.16;
@@ -24,36 +25,83 @@ const IVA = 1.16;
 export async function generateCompleteProposal(formData) {
   const params = await getParams();
 
-  const periodicidad = formData.periodicidad || "bimestral";
+  // 0. Validar ubicación
+  const allowedStates = ["Ciudad de México", "Estado de México"];
+  const normalizedEstado = (formData.estado || "").trim().toLowerCase();
+  const estadoValido = allowedStates.some(s => s.toLowerCase() === normalizedEstado);
 
-  // 1. Determinar Factor_P (default: bimestral)
-  const factorP = periodicidad === "mensual" ? 1 : 2;
+  let periodicidad = formData.periodicidad || "bimestral";
+  let factorP = periodicidad === "mensual" ? 1 : 2;
 
-  // 2. Adivinar tarifa si no se proporcionó
-  let tarifaFinal = formData.tarifa || "";
-  if (!tarifaFinal || tarifaFinal === "no conoce") {
-    tarifaFinal = guessTarifa(formData, params, factorP);
+  // 1. Determinar escenario
+  const hasContrato = formData.has_cfe === true;
+  const tieneRecibo = formData.tiene_recibo === true;
+  const tarifaKnown = formData.tarifa && formData.tarifa !== "no conoce";
+  const pagoPromedioInput = Number(formData.pago_promedio || 0);
+  const kwhInput = formData.kwh_consumidos && formData.kwh_consumidos > 0 ? Number(formData.kwh_consumidos) : null;
+  const plansCFE = formData.plans_cfe === true || formData.plans_cfe === "si" || formData.plans_cfe === "aislado";
+
+  // Si la ubicación no es válida, marcar tarifa provincia y detener cálculos pesados
+  if (!estadoValido) {
+    return {
+      tarifa: "provincia",
+      kwh_consumidos: null,
+      pago_promedio: pagoPromedioInput || null,
+      kwh_consumidos_y_cargas_extra: null,
+      metros_distancia: null,
+      pago_hipotetico_cargas_extra: null,
+      pago_dac_hipotetico_consumo_actual: null,
+      pago_dac_hipotetico_cargas_extra: null,
+      propuesta_actual: null,
+      propuesta_cargas_extra: null,
+      frontend_outputs: null
+    };
   }
 
-  // 3. Determinar kWh_consumidos y pago
-  let kwhConsumidos = 0;
-  let pagoPromedio = formData.pago_promedio || 0;
+  const deduceTarifaByUso = () => {
+    if (formData.uso === "Negocio" || formData.casa_negocio === "Negocio") return "PDBT";
+    return "1";
+  };
 
-  if (formData.kwh_consumidos && formData.kwh_consumidos > 0) {
-    // Tiene kWh conocido
-    kwhConsumidos = formData.kwh_consumidos;
-    // Calcular pago si no lo tiene
-    if (!pagoPromedio) {
-      pagoPromedio = calculatePaymentFromKwh(kwhConsumidos, tarifaFinal, factorP, params);
-    }
-  } else if (pagoPromedio && pagoPromedio > 0 && tarifaFinal && tarifaFinal !== "no conoce") {
-    // Tiene pago y tarifa - calcular kWh
+  let tarifaFinal = formData.tarifa || "";
+  let kwhConsumidos = 0;
+  let pagoPromedio = pagoPromedioInput;
+
+  // Escenario 1: Tiene contrato, tiene recibo, no conoce tarifa
+  if (hasContrato && tieneRecibo && !tarifaKnown) {
+    periodicidad = "bimestral";
+    factorP = 2;
+    tarifaFinal = deduceTarifaByUso();
     kwhConsumidos = calculateKwhFromPayment(pagoPromedio, tarifaFinal, factorP, params);
-  } else {
-    // No tiene ni kWh ni pago - estimar ambos desde guesses
+  } else if ((hasContrato && !tieneRecibo && !tarifaKnown) || (!hasContrato && plansCFE)) {
+    // Escenarios 2 y 3: sin recibo o sin contrato pero quiere uno
+    periodicidad = "bimestral";
+    factorP = 2;
+    tarifaFinal = deduceTarifaByUso();
     const estimation = estimateFromGuess(formData, tarifaFinal, factorP, params);
     kwhConsumidos = estimation.kwh;
     pagoPromedio = estimation.pago;
+  } else {
+    // Escenario 4: manual/OCR con tarifa conocida o deducida
+    periodicidad = formData.periodicidad || "bimestral";
+    factorP = periodicidad === "mensual" ? 1 : 2;
+
+    if (!tarifaFinal || tarifaFinal === "no conoce") {
+      tarifaFinal = deduceTarifaByUso();
+    }
+
+    if (kwhInput) {
+      kwhConsumidos = kwhInput;
+      if (!pagoPromedio) {
+        pagoPromedio = calculatePaymentFromKwh(kwhConsumidos, tarifaFinal, factorP, params);
+      }
+    } else if (pagoPromedio && pagoPromedio > 0) {
+      kwhConsumidos = calculateKwhFromPayment(pagoPromedio, tarifaFinal, factorP, params);
+    } else {
+      const estimation = estimateFromGuess(formData, tarifaFinal, factorP, params);
+      kwhConsumidos = estimation.kwh;
+      pagoPromedio = estimation.pago;
+    }
   }
 
   // 3. Calcular cargas extra
@@ -76,6 +124,7 @@ export async function generateCompleteProposal(formData) {
     kwhConsumidos,
     periodicidad,
     hsp,
+    metrosDistancia,
     params
   );
 
@@ -86,6 +135,7 @@ export async function generateCompleteProposal(formData) {
       kwhConCargasExtra,
       periodicidad,
       hsp,
+      metrosDistancia,
       params
     );
   }
@@ -95,22 +145,36 @@ export async function generateCompleteProposal(formData) {
     ? calculateHypotheticalPayment(kwhConCargasExtra, tarifaFinal, factorP, params)
     : null;
 
-  const pagoDACActual = calculateDACHypothetical(kwhConsumidos, periodicidad, params);
+  const pagoDACActual = calculateDACHypothetical(kwhConsumidos, periodicidad, tarifaFinal, params);
   const pagoDACCargasExtra = extraKwh > 0
-    ? calculateDACHypothetical(kwhConCargasExtra, periodicidad, params)
+    ? calculateDACHypothetical(kwhConCargasExtra, periodicidad, tarifaFinal, params)
     : null;
+
+  const frontendOutputs = buildFrontendOutputs({
+    periodicidad,
+    tarifa: tarifaFinal,
+    pagoActual: pagoPromedio,
+    pagoActualCargasExtra: pagoHipoteticoCargasExtra || pagoPromedio,
+    kwhConsumidos,
+    kwhConsumidosCargasExtra: kwhConCargasExtra,
+    propuestaActual,
+    propuestaCargasExtra,
+    hsp,
+    params
+  });
 
   return {
     tarifa: tarifaFinal,
-    kwh_consumidos: Math.round(kwhConsumidos),
-    pago_promedio: Math.round(pagoPromedio),
-    kwh_consumidos_y_cargas_extra: Math.round(kwhConCargasExtra),
+    kwh_consumidos: kwhConsumidos != null ? Math.round(kwhConsumidos) : null,
+    pago_promedio: pagoPromedio != null ? Math.round(pagoPromedio) : null,
+    kwh_consumidos_y_cargas_extra: kwhConCargasExtra != null ? Math.round(kwhConCargasExtra) : null,
     metros_distancia: metrosDistancia,
     pago_hipotetico_cargas_extra: pagoHipoteticoCargasExtra,
     pago_dac_hipotetico_consumo_actual: pagoDACActual,
     pago_dac_hipotetico_cargas_extra: pagoDACCargasExtra,
     propuesta_actual: propuestaActual,
-    propuesta_cargas_extra: propuestaCargasExtra
+    propuesta_cargas_extra: propuestaCargasExtra,
+    frontend_outputs: frontendOutputs
   };
 }
 
@@ -232,7 +296,7 @@ function findBestBusinessGuess(selectedRange, businessGuesses = []) {
   return businessGuesses[0];
 }
 
-async function generateSystemProposal(kwhTarget, periodicidad, hsp, params) {
+async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistancia, params) {
   const pr = params.pr;
   const tc = params.commercialConditions.MXN_USD;
 
@@ -294,7 +358,7 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, params) {
   const costoMontaje = montaje ? montaje.Price_USD * tc : 0;
 
   // 6. Calcular BOS
-  const costoBOS = 263 * params.metersPerFloor * 3 + 7500; // Simplificado
+  const costoBOS = 263 * (metrosDistancia || 0) + 7500;
 
   // 7. Calcular transporte
   let costoTransporte = 0;
@@ -344,6 +408,8 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, params) {
     id_panel: idPanel,
     area_needed: areaNeeded,
     kwp: (potenciaPanel * cantidadPaneles / 1000).toFixed(2),
+    annual_degradation: panel.Annual_Degradation || 0,
+    generacion: panelConfig.generacion,
 
     // Costos
     tc,
@@ -385,5 +451,109 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, params) {
     gross_profit: Math.round(grossProfit),
     gross_profit_post_cac: Math.round(grossProfitPostCAC),
     secuencia_exhibiciones: params.commercialConditions.Secuencia_Exhibiciones || "0.5,0.5"
+  };
+}
+
+function buildFrontendOutputs({
+  periodicidad,
+  tarifa,
+  pagoActual,
+  pagoActualCargasExtra,
+  kwhConsumidos,
+  kwhConsumidosCargasExtra,
+  propuestaActual,
+  propuestaCargasExtra,
+  hsp,
+  params,
+  pagoDACActual,
+  pagoDACCargasExtra
+}) {
+  const base = propuestaActual
+    ? computeFrontendBlock({
+      periodicidad,
+      tarifa,
+      pagoActual,
+      kwhObjetivo: kwhConsumidos,
+      propuesta: propuestaActual,
+      hsp,
+      params,
+      alertaDAC: pagoDACActual
+    })
+    : null;
+
+  const extra = propuestaCargasExtra
+    ? computeFrontendBlock({
+      periodicidad,
+      tarifa,
+      pagoActual: pagoActualCargasExtra,
+      kwhObjetivo: kwhConsumidosCargasExtra,
+      propuesta: propuestaCargasExtra,
+      hsp,
+      params,
+      alertaDAC: pagoDACCargasExtra
+    })
+    : null;
+
+  return { base, cargas_extra: extra };
+}
+
+function computeFrontendBlock({ periodicidad, tarifa, pagoActual, kwhObjetivo, propuesta, hsp, params, alertaDAC }) {
+  const dias = periodicidad === "bimestral" ? 60 : 30;
+  const generacion = (propuesta.potencia_panel / 1000) * propuesta.cantidad_paneles * hsp * params.pr * dias;
+  const netoBimestral = periodicidad === "bimestral"
+    ? (kwhObjetivo - generacion)
+    : 2 * (kwhObjetivo - generacion);
+
+  const pagoConSolar = calculatePostSolarPayment(netoBimestral, tarifa, params);
+  const pagoActualBimestral = periodicidad === "bimestral" ? pagoActual : (pagoActual || 0) * 2;
+  const ahorrasBimestre = pagoActualBimestral - (pagoConSolar || 0);
+
+  const kwp = (propuesta.potencia_panel * propuesta.cantidad_paneles) / 1000;
+  const porcentajeGeneracion = kwhObjetivo > 0 ? (generacion / kwhObjetivo) : null;
+
+  const inversionTotal = propuesta.total || null;
+  const roi = inversionTotal && ahorrasBimestre ? inversionTotal / (ahorrasBimestre * 6) : null;
+
+  const annualDeg = propuesta.annual_degradation || 0;
+  let ahorro25 = null;
+  if (ahorrasBimestre && annualDeg !== null && annualDeg !== undefined) {
+    if (annualDeg === 0) {
+      ahorro25 = ahorrasBimestre * 6 * 25;
+    } else {
+      const factor = 1 - annualDeg;
+      const numerador = 1 - Math.pow(factor, 25);
+      const denominador = 1 - factor;
+      ahorro25 = denominador !== 0 ? (numerador / denominador) * (ahorrasBimestre * 6) : null;
+    }
+  }
+
+  const secuencia = (params.commercialConditions.Secuencia_Exhibiciones || "")
+    .split(",")
+    .map(v => Number(v.trim()))
+    .filter(v => !Number.isNaN(v));
+  const pagosEnExhibiciones = inversionTotal
+    ? secuencia.map(v => v * inversionTotal)
+    : [];
+
+  const descuento = propuesta.discount_rate && propuesta.precio_lista
+    ? propuesta.discount_rate * propuesta.precio_lista
+    : null;
+
+  return {
+    con_solarya_pagaras: pagoConSolar,
+    ahorras_cada_bimestre: ahorrasBimestre,
+    tamano_sistema_kwp: kwp,
+    no_y_tamano_paneles: { cantidad: propuesta.cantidad_paneles, potencia_w: propuesta.potencia_panel },
+    energia_generada: generacion,
+    generas_el_x_porcentaje_consumo: porcentajeGeneracion,
+    ahorro_en_25_anos: ahorro25,
+    retorno_de_inversion: roi,
+    pagos_en_exhibiciones: pagosEnExhibiciones,
+    precio_de_lista: propuesta.precio_lista,
+    descuento,
+    subtotal: propuesta.subtotal,
+    iva: propuesta.iva,
+    inversion_total: propuesta.total,
+    alerta_dac: alertaDAC
   };
 }
