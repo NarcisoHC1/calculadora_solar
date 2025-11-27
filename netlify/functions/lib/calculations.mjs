@@ -72,44 +72,29 @@ export function calculatePaymentFromKwhDAC(consumo, factorP, params) {
 // CÁLCULO DE CARGAS EXTRA
 // ========================================
 
-function getOtherLoadEnergy(loadType, dias, params) {
-  const record = params.otherLoads.find(l => l.Load_type === loadType);
-
-  if (!record?.Daily_Consumption_kWh) {
-    return 0;
-  }
-
-  const periodicidad = (record.Periodicidad || "diario").toLowerCase();
-
-  if (periodicidad === "semanal") {
-    return record.Daily_Consumption_kWh * (dias / 7);
-  }
-
-  if (periodicidad === "mensual") {
-    return record.Daily_Consumption_kWh * (dias / 30);
-  }
-
-  if (periodicidad === "bimestral") {
-    return record.Daily_Consumption_kWh * (dias / 60);
-  }
-
-  // Default: consumo diario
-  return record.Daily_Consumption_kWh * dias;
-}
-
 export function calculateExtraLoads(loads, periodicidad, params) {
   let suma = 0;
-  const dias = periodicidad === "bimestral" ? 60 : 30;
+  const factorP = periodicidad === "mensual" ? 1 : 2;
+  const dias = factorP * 30;
 
   // A. Auto Eléctrico (EV)
   if (loads?.ev?.modelo && loads?.ev?.km) {
-    const kwhPer100km = params.evSpecs.find(e => e.Model === loads.ev.modelo)?.["kWh/100km"] || 18;
+    const evSpecsRecord = params.evSpecs.find(e => e.Model === loads.ev.modelo);
+    if (!evSpecsRecord || evSpecsRecord["kWh/100km"] === undefined) {
+      throw new Error(`❌ EV consumption not found for model: ${loads.ev.modelo}`);
+    }
+
     const kmDiarios = Number(loads.ev.km) || 0;
+    const kwhPer100km = evSpecsRecord["kWh/100km"];
     suma += (kmDiarios / 100) * kwhPer100km * dias * 0.9;
   }
 
   // B. Minisplits / Aire Acondicionado
   if (loads?.minisplit?.cantidad && loads?.minisplit?.horas) {
+    if (params.acConsumption === undefined || params.acConsumption === null) {
+      throw new Error("❌ AC consumption not found in Airtable params");
+    }
+
     const cantidad = Number(loads.minisplit.cantidad) || 0;
     const horas = Number(loads.minisplit.horas) || 0;
     suma += cantidad * horas * params.acConsumption * dias;
@@ -117,6 +102,10 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 
   // C. Secadora de Ropa
   if (loads?.secadora?.horas) {
+    if (params.secadoraConsumption === undefined || params.secadoraConsumption === null) {
+      throw new Error("❌ Secadora consumption not found in Airtable params");
+    }
+
     const horasSemanales = Number(loads.secadora.horas) || 0;
     const semanas = periodicidad === "bimestral" ? 8 : 4;
     suma += horasSemanales * params.secadoraConsumption * semanas;
@@ -124,12 +113,22 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 
   // D. Bomba de Agua
   if (loads?.bomba) {
-    suma += getOtherLoadEnergy("Bomba de agua / alberca", dias, params) || getOtherLoadEnergy("Bomba de agua", dias, params);
+    const bombaRecord = params.otherLoads.find(l => l.Load_type === "Bomba de agua");
+    if (!bombaRecord?.Daily_Consumption_kWh) {
+      throw new Error("❌ Bomba consumption not found in Airtable");
+    }
+
+    suma += bombaRecord.Daily_Consumption_kWh * dias;
   }
 
   // E. Otros
   if (loads?.otro) {
-    suma += getOtherLoadEnergy("Otro", dias, params);
+    const otroRecord = params.otherLoads.find(l => l.Load_type === "Otro");
+    if (!otroRecord?.Daily_Consumption_kWh) {
+      throw new Error("❌ Otro consumption not found in Airtable");
+    }
+
+    suma += otroRecord.Daily_Consumption_kWh * dias;
   }
 
   return Math.round(suma);
