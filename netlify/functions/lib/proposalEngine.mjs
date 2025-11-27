@@ -182,7 +182,7 @@ function estimateFromGuess(formData, tarifa, factorP, params) {
     kwhBimestral = guess?.kWh_Bimestre || 300;
   } else {
     const range = formData.rango_personas_negocio || "1-5";
-    const guess = params.businessLoadsGuess.find(b => b.Range === range);
+    const guess = findBestBusinessGuess(range, params.businessLoadsGuess);
     kwhBimestral = guess?.kWh_Bimestre || 500;
   }
 
@@ -207,6 +207,29 @@ function calculateHypotheticalPayment(kwh, tarifa, factorP, params) {
   }
 
   return calculatePaymentFromKwhTarifa1(kwh, factorP, params);
+}
+
+function findBestBusinessGuess(selectedRange, businessGuesses = []) {
+  const normalizeRange = (rangeStr = "") => {
+    const [minStr, maxStr] = rangeStr.split("-");
+    const min = Number(minStr.replace(/[^0-9]/g, "")) || 0;
+    const max = maxStr ? Number(maxStr.replace(/[^0-9]/g, "")) || Infinity : (rangeStr.includes("+") ? Infinity : min);
+    return { min, max, raw: rangeStr };
+  };
+
+  const desired = normalizeRange(selectedRange);
+  const parsedGuesses = businessGuesses.map(g => ({ ...normalizeRange(g.Range), guess: g }));
+
+  // Try exact match first
+  const exact = parsedGuesses.find(g => g.raw === selectedRange);
+  if (exact) return exact.guess;
+
+  // Then try overlap based on min boundary falling inside a guess bucket
+  const overlap = parsedGuesses.find(g => desired.min >= g.min && desired.min <= g.max);
+  if (overlap) return overlap.guess;
+
+  // Fallback to first available guess
+  return businessGuesses[0];
 }
 
 async function generateSystemProposal(kwhTarget, periodicidad, hsp, params) {

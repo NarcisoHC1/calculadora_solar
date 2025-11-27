@@ -85,6 +85,7 @@ export async function handler(event) {
     const tieneReciboCFE = hasCFE && body.tiene_recibo === true;
     const quiereAislado = body.plans_cfe === "aislado";
     const yaTieneFV = body.ya_tiene_fv === true;
+    const metrosDistancia = Math.max(30, Number(proposal.metros_distancia || body.distancia_techo_tablero || 0));
 
     // Determine casa_negocio - only set if explicitly asked
     const casaNegocio = usoNormalized ? usoNormalized : "";
@@ -138,7 +139,7 @@ export async function handler(event) {
       rango_personas_negocio: body.rango_personas_negocio || "",
       ya_tiene_fv: yaTieneFV,
       tipo_inmueble: tipoInmuebleMapped,
-      metros_distancia: proposal.metros_distancia,
+      metros_distancia: metrosDistancia,
       modelo_ev: body.loads?.ev?.modelo || "",
       km_ev: Number(body.loads?.ev?.km || 0),
       no_minisplits: Number(body.loads?.minisplit?.cantidad || 0),
@@ -185,7 +186,7 @@ export async function handler(event) {
         proposal: {
           kwh_consumidos: proposal.kwh_consumidos,
           kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
-          metros_distancia: proposal.metros_distancia,
+          metros_distancia: metrosDistancia,
           propuesta_actual: proposal.propuesta_actual,
           propuesta_cargas_extra: proposal.propuesta_cargas_extra,
           pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,

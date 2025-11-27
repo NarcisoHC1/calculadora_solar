@@ -799,9 +799,9 @@ function App() {
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                               ¿Cuántas personas habrá en el negocio?
                             </label>
-                            <select
-                              value={rangoPersonasNegocio}
-                              onChange={(e) => setRangoPersonasNegocio(e.target.value)}
+                          <select
+                            value={rangoPersonasNegocio}
+                            onChange={(e) => setRangoPersonasNegocio(e.target.value)}
                               className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
                               style={{
                                 outlineColor: '#3cd070',
@@ -810,14 +810,14 @@ function App() {
                                 backgroundRepeat: 'no-repeat',
                                 backgroundSize: '1.5em 1.5em'
                               }}
-                            >
-                              <option value="">Selecciona un rango</option>
-                              <option value="1-10">1-10</option>
-                              <option value="11-50">11-50</option>
-                              <option value="51-250">51-250</option>
-                              <option value="251+">251 o más</option>
-                            </select>
-                          </div>
+                          >
+                            <option value="">Selecciona un rango</option>
+                            <option value="1-5">1-5</option>
+                            <option value="6-15">6-15</option>
+                            <option value="16-50">16-50</option>
+                            <option value="50+">50 o más</option>
+                          </select>
+                        </div>
                         )}
 
                         {planCFE === 'aislado' && (
