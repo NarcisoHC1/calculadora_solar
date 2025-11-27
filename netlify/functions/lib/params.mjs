@@ -8,6 +8,14 @@ let paramsCache = null;
 let cacheTimestamp = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+function slugifyEV(brand, model = "") {
+  const parts = [brand, model].filter(Boolean).join(" ");
+  return parts
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 async function fetchTable(tableName) {
   const url = `https://api.airtable.com/v0/${PARAMS_BASE_ID}/${encodeURIComponent(tableName)}`;
   const response = await fetch(url, {
@@ -211,7 +219,9 @@ export function getOtroConsumption(params) {
 }
 
 export function getEVConsumption(modelo, params) {
-  const ev = params.evSpecs.find(e => e.Model === modelo);
+  const ev = params.evSpecs.find(
+    e => slugifyEV(e.Brand, e.Model) === modelo
+  );
   if (!ev?.["kWh/100km"]) {
     throw new Error(`❌ EV consumption not found for model: ${modelo}`);
   }

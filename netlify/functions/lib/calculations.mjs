@@ -3,6 +3,14 @@
 
 const IVA = 1.16;
 
+function slugifyEV(brand, model = "") {
+  const parts = [brand, model].filter(Boolean).join(" ");
+  return parts
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 // ========================================
 // CÁLCULO INVERSO (DINERO -> ENERGÍA)
 // ========================================
@@ -79,7 +87,9 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 
   // A. Auto Eléctrico (EV)
   if (loads?.ev?.modelo && loads?.ev?.km) {
-    const evSpecsRecord = params.evSpecs.find(e => e.Model === loads.ev.modelo);
+    const evSpecsRecord = params.evSpecs.find(
+      e => slugifyEV(e.Brand, e.Model) === loads.ev.modelo
+    );
     if (!evSpecsRecord || evSpecsRecord["kWh/100km"] === undefined) {
       throw new Error(`❌ EV consumption not found for model: ${loads.ev.modelo}`);
     }
