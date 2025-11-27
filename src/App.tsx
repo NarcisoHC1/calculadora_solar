@@ -5,6 +5,27 @@ import { generateProposal } from './calculationEngine';
 import type { Proposal } from './types';
 import ProposalComponent from './Proposal';
 
+const HOUSE_MEMBER_OPTIONS = [
+  '1.0',
+  '2.0',
+  '3.0',
+  '4.0',
+  '5.0',
+  '6.0',
+  '7.0',
+  '8.0',
+  '9.0',
+  '10.0',
+  '11.0',
+  '12.0',
+  '13.0',
+  '14.0',
+  '15.0',
+  'Más de 15'
+];
+
+const BUSINESS_RANGE_OPTIONS = ['1-10', '11-50', '51-250', '251 o más'];
+
 type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
@@ -202,7 +223,7 @@ function App() {
       if (!planCFE) return false;
       if (planCFE === 'si' || planCFE === 'aislado') {
         if (!usoCasaNegocio) return false;
-        if (usoCasaNegocio === 'casa' && (!numPersonasCasa || Number(numPersonasCasa) <= 0)) return false;
+        if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
         if (!estado) return false;
         if (planCFE === 'aislado' && !expand) return false;
@@ -231,7 +252,7 @@ function App() {
 
       if (justMoved === 'no') {
         if (!usoCasaNegocio) return false;
-        if (usoCasaNegocio === 'casa' && (!numPersonasCasa || Number(numPersonasCasa) <= 0)) return false;
+        if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
         if (!expand) return false;
         return true;
@@ -353,7 +374,7 @@ function App() {
       tipo_inmueble: tipoInmueble || '',
       pisos: parseInt(pisos || '0', 10) || 0,
       distancia_techo_tablero: parseInt(distanciaTechoTablero || '0', 10) || 0,
-      numero_personas: usoCasaNegocio === 'casa' ? parseInt(numPersonasCasa || '0', 10) : 0,
+      numero_personas: usoCasaNegocio === 'casa' ? numPersonasCasa : '',
       rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
       loads,
@@ -776,12 +797,9 @@ function App() {
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                               ¿Cuántas personas habrá en la casa?
                             </label>
-                            <input
-                              type="number"
+                            <select
                               value={numPersonasCasa}
                               onChange={(e) => setNumPersonasCasa(e.target.value)}
-                              placeholder="Ej. 4"
-                              min="1"
                               className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
                               style={{
                                 outlineColor: '#3cd070',
@@ -790,7 +808,14 @@ function App() {
                                 backgroundRepeat: 'no-repeat',
                                 backgroundSize: '1.5em 1.5em'
                               }}
-                            />
+                            >
+                              <option value="">Selecciona el número de personas</option>
+                              {HOUSE_MEMBER_OPTIONS.map(option => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         )}
 
@@ -812,10 +837,11 @@ function App() {
                               }}
                           >
                             <option value="">Selecciona un rango</option>
-                            <option value="1-5">1-5</option>
-                            <option value="6-15">6-15</option>
-                            <option value="16-50">16-50</option>
-                            <option value="50+">50 o más</option>
+                            {BUSINESS_RANGE_OPTIONS.map(option => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         )}
@@ -953,15 +979,25 @@ function App() {
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                                   No. miembros de familia que viven en casa
                                 </label>
-                                <input
-                                  type="number"
+                                <select
                                   value={numPersonasCasa}
                                   onChange={(e) => setNumPersonasCasa(e.target.value)}
-                                  placeholder="Ej. 4"
-                                  min="1"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 transition-all"
-                                  style={{ outlineColor: '#3cd070' }}
-                                />
+                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                  style={{
+                                    outlineColor: '#3cd070',
+                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                    backgroundPosition: 'right 0.5rem center',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundSize: '1.5em 1.5em'
+                                  }}
+                                >
+                                  <option value="">Selecciona el número de personas</option>
+                                  {HOUSE_MEMBER_OPTIONS.map(option => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                             )}
 
@@ -983,10 +1019,11 @@ function App() {
                                   }}
                                 >
                                   <option value="">Selecciona un rango</option>
-                                  <option value="1-5">1-5 personas</option>
-                                  <option value="6-10">6-10 personas</option>
-                                  <option value="11-20">11-20 personas</option>
-                                  <option value="21+">Más de 20 personas</option>
+                                  {BUSINESS_RANGE_OPTIONS.map(option => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
                                 </select>
                               </div>
                             )}
