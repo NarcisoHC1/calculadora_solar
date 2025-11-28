@@ -8,6 +8,48 @@ let paramsCache = null;
 let cacheTimestamp = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+function findEvSpecBySelection(selection, evSpecs) {
+  if (!selection) return null;
+  const value = selection.trim();
+
+  if (value === "Otro") {
+    return evSpecs.find(e => e.Brand === "Otro");
+  }
+
+  const parts = value.split(" - ");
+  if (parts.length === 2) {
+    const [brand, model] = parts.map(p => p.trim());
+    const match = evSpecs.find(e => (e.Brand || "").trim() === brand && (e.Model || "").trim() === model);
+    if (match) return match;
+  }
+
+  const combined = evSpecs.find(e => `${e.Brand} - ${e.Model}` === value);
+  if (combined) return combined;
+
+  const legacySlug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const legacyMatch = evSpecs.find(e => {
+    const slug = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug === legacySlug;
+  });
+  if (legacyMatch) return legacyMatch;
+
+  const normalizedValue = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  return evSpecs.find(e => {
+    const normalizedSpec = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    return normalizedSpec === normalizedValue;
+  }) || null;
+}
+
 async function fetchTable(tableName) {
   const url = `https://api.airtable.com/v0/${PARAMS_BASE_ID}/${encodeURIComponent(tableName)}`;
   const response = await fetch(url, {
@@ -77,7 +119,8 @@ export async function getParams() {
     montajeSpecs,
     deliveryCosts,
     businessLoadsGuess,
-    houseLoadsGuess
+    houseLoadsGuess,
+    environmentalImpact
   ] = await Promise.all([
     fetchTable("Tarifa_1_CFE"),
     fetchTable("Tarifa_PDBT_CFE"),
@@ -100,7 +143,8 @@ export async function getParams() {
     fetchTable("Montaje_Specs"),
     fetchTable("Delivery_Costs"),
     fetchTable("Business_Loads_Guess"),
-    fetchTable("House_Loads_Guess")
+    fetchTable("House_Loads_Guess"),
+    fetchTable("Environmental_Impact")
   ]);
 
   // Get latest tarifa records (most recent by year/month)
@@ -176,7 +220,8 @@ export async function getParams() {
     montajeSpecs: montajeSpecs,
     deliveryCosts: deliveryCostsRecord?.Percentage,
     businessLoadsGuess: businessLoadsGuess,
-    houseLoadsGuess: houseLoadsGuess
+    houseLoadsGuess: houseLoadsGuess,
+    environmentalImpact
   };
 
   cacheTimestamp = now;
@@ -187,10 +232,36 @@ export async function getParams() {
 
 export function getHSPForMunicipio(estado, params) {
   // Function name kept for backwards compatibility but now uses Estado
-  const hspRecord = params.hsp.find(h => h.Estado === estado);
-  if (!hspRecord?.HSP) {
-    throw new Error(`❌ HSP not found for estado: ${estado}. Available estados: ${params.hsp.map(h => h.Estado).join(', ')}`);
+  const normalize = value => value?.toString().trim().toLowerCase();
+
+  // Try exact match first
+  let hspRecord = params.hsp.find(h => h.Estado === estado);
+
+  // Fallback to case-insensitive/trimmed comparison if exact match is not found
+  if (!hspRecord) {
+    const target = normalize(estado);
+    hspRecord = params.hsp.find(h => normalize(h.Estado) === target);
   }
+
+  // If still not found, fallback to Ciudad de México (legacy default) or the first available record
+  if (!hspRecord?.HSP) {
+    const defaultRecord =
+      params.hsp.find(h => normalize(h.Estado) === normalize("Ciudad de México")) || params.hsp[0];
+
+    if (!defaultRecord?.HSP) {
+      throw new Error(
+        `❌ HSP not found for estado: ${estado}. Available estados: ${params.hsp
+          .map(h => h.Estado)
+          .join(', ')}`
+      );
+    }
+
+    console.warn(
+      `⚠️ HSP not found for estado: ${estado}. Falling back to ${defaultRecord.Estado} (HSP=${defaultRecord.HSP}).`
+    );
+    hspRecord = defaultRecord;
+  }
+
   return hspRecord.HSP;
 }
 
@@ -211,7 +282,7 @@ export function getOtroConsumption(params) {
 }
 
 export function getEVConsumption(modelo, params) {
-  const ev = params.evSpecs.find(e => e.Model === modelo);
+  const ev = findEvSpecBySelection(modelo, params.evSpecs);
   if (!ev?.["kWh/100km"]) {
     throw new Error(`❌ EV consumption not found for model: ${modelo}`);
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ProposalData, DualProposal } from './types';
+import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
 import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check } from 'lucide-react';
 
 interface ProposalProps {
@@ -200,7 +200,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(financial.anosRetorno, 1)} años</p>
             <div className="space-y-1 text-sm text-slate-600">
               <p>Ahorro en 25 años:</p>
-              <p className="text-xl font-bold text-slate-900">{formatCurrency(financial.ahorroBimestral * 6 * 25)}</p>
+              <p className="text-xl font-bold text-slate-900">{formatCurrency((financial.ahorroEn25 ?? (financial.ahorroBimestral * 6 * 25)))}</p>
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
               <span className="font-semibold">{formatCurrency(financial.precioLista)}</span>
             </div>
             <div className="flex justify-between font-semibold" style={{ color: '#3cd070' }}>
-              <span>Descuento (10%):</span>
+              <span>Descuento {financial.descuentoPorcentaje ? `(${Math.round(financial.descuentoPorcentaje * 100)}%)` : ''}:</span>
               <span>-{formatCurrency(financial.descuento)}</span>
             </div>
             <div className="flex justify-between text-slate-700 border-t pt-2">
@@ -233,18 +233,15 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
             <p className="text-sm font-bold text-slate-900 mb-3">Pago en 3 exhibiciones:</p>
             <div className="grid grid-cols-3 gap-3">
-              <div>
-                <p className="text-xs text-slate-600 mb-1">Anticipo 50%</p>
-                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.5)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-600 mb-1">2do pago 25%</p>
-                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.25)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-600 mb-1">3er pago 25%</p>
-                <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(financial.total * 0.25)}</p>
-              </div>
+              {(financial.pagosEnExhibiciones && financial.pagosEnExhibiciones.length > 0 ? financial.pagosEnExhibiciones : [financial.total * 0.5, financial.total * 0.25, financial.total * 0.25]).map((pago, idx) => {
+                const pct = financial.secuenciaExhibiciones?.[idx] ? Math.round(financial.secuenciaExhibiciones[idx] * 100) : idx === 0 ? 50 : 25;
+                return (
+                  <div key={idx}>
+                    <p className="text-xs text-slate-600 mb-1">{idx === 0 ? 'Anticipo' : `${idx + 1}º pago`} {pct}%</p>
+                    <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(pago)}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -330,7 +327,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
               <div className="text-center">
                 <div className="text-2xl mb-1">☁️</div>
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
-                <p className="text-xs text-slate-600 mt-0.5">toneladas de CO₂ reducidas</p>
+                <p className="text-xs text-slate-600 mt-0.5">kg de CO₂ reducidos</p>
               </div>
             </div>
           </div>
@@ -380,10 +377,51 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
   );
 }
 
-function SharedSections({ onClose }: { onClose: () => void }) {
+function SharedSections({
+  onClose,
+  environmentalCurrent,
+  environmentalFuture
+}: { onClose: () => void; environmentalCurrent: EnvironmentalImpact; environmentalFuture?: EnvironmentalImpact }) {
   return (
     <>
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+        <div className="bg-slate-50 border-2 rounded-xl p-4 mb-8" style={{ borderColor: '#ff9b7a' }}>
+          <h5 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2 justify-center">
+            <TreePine className="w-4 h-4" style={{ color: '#3cd070' }} />
+            Impacto ambiental anual de tu sistema
+          </h5>
+
+          <div className={`grid ${environmentalFuture ? 'md:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+            {[{ label: 'Consumo actual', data: environmentalCurrent }, environmentalFuture ? { label: 'Con cargas futuras', data: environmentalFuture } : null]
+              .filter(Boolean)
+              .map((item, idx) => {
+                const env = (item as { label: string; data: EnvironmentalImpact }).data;
+                return (
+                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-slate-700 mb-3 text-center">{(item as any).label}</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">🌳</div>
+                        <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{env.arboles}</p>
+                        <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">🛢️</div>
+                        <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{env.barrilesPetroleo}</p>
+                        <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">☁️</div>
+                        <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{env.toneladasCO2}</p>
+                        <p className="text-xs text-slate-600 mt-0.5">kg de CO₂ reducidos</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+
         <div className="border-b border-slate-200 pb-6 mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
@@ -398,7 +436,7 @@ function SharedSections({ onClose }: { onClose: () => void }) {
           <p className="text-center text-slate-700 font-semibold mb-6 text-lg">
             Selecciona la fecha y hora que mejor te convenga
           </p>
-          <CalendlyWidget />
+            <CalendlyWidget />
           <p className="text-xs text-slate-500 mt-4 text-center">Sin compromiso · Evaluación profesional · 100% gratis</p>
         </div>
       </div>
@@ -744,6 +782,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           .no-print {
             display: none !important;
           }
+          .proposal-overlay, .proposal-scroll {
+            position: static !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
           .calendly-inline-widget {
             display: none !important;
           }
@@ -770,7 +813,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           display: none;
         }
       `}</style>
-      <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
+      <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
         <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
           <button
             onClick={handleGenerateReferral}
@@ -854,7 +897,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
                 <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} />
               )}
             </div>
-            <SharedSections onClose={onClose} />
+            <SharedSections
+              onClose={onClose}
+              environmentalCurrent={proposal.current.environmental}
+              environmentalFuture={proposal.future?.environmental}
+            />
           </>
         ) : (
           <div className="mb-8">

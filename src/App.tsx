@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { getEstadosUnique, getMinStateThreshold, getMaxStateThreshold, isCDMXorMexico } from './stateThresholds';
 import { generateProposal } from './calculationEngine';
-import type { Proposal } from './types';
+import type { Proposal, ComponentBreakdown, ProposalData } from './types';
 import ProposalComponent from './Proposal';
 
 const HOUSE_MEMBER_OPTIONS = [
@@ -30,6 +30,216 @@ type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
 const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || ''; // 👈 Railway
+
+type FrontendBlock = {
+  con_solarya_pagaras?: number | null;
+  ahorras_cada_bimestre?: number | null;
+  no_y_tamano_paneles?: { cantidad?: number | null; potencia_w?: number | null } | null;
+  energia_generada?: number | null;
+  generas_el_x_porcentaje_consumo?: number | null;
+  ahorro_en_25_anos?: number | null;
+  retorno_de_inversion?: number | null;
+  pagos_en_exhibiciones?: number[] | null;
+  precio_de_lista?: number | null;
+  descuento?: number | null;
+  subtotal?: number | null;
+  iva?: number | null;
+  inversion_total?: number | null;
+  alerta_dac?: number | null;
+  impacto_ambiental?: { carbon?: number | null; trees?: number | null; oil?: number | null } | null;
+};
+
+type BackendProposalEnvelope = {
+  propuesta_actual?: any;
+  propuesta_cargas_extra?: any;
+  frontend_outputs?: { base?: FrontendBlock | null; cargas_extra?: FrontendBlock | null } | null;
+  tarifa?: string;
+  periodicidad?: string;
+};
+
+function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, cantidadPaneles: number): ComponentBreakdown[] {
+  if (!propuesta) return [];
+
+  const components: ComponentBreakdown[] = [];
+
+  if (cantidadPaneles > 0) {
+    components.push({
+      concepto: 'Paneles solares',
+      cantidad: cantidadPaneles,
+      marca: propuesta.id_panel || 'Panel',
+      modelo: `${potenciaPorPanel || propuesta.potencia_panel || ''}W`
+    });
+  }
+
+  if (propuesta.micro_central === 'central' && propuesta.id_inversor) {
+    components.push({
+      concepto: 'Inversor',
+      cantidad: 1,
+      marca: propuesta.id_inversor,
+      modelo: propuesta.id_inversor
+    });
+  } else {
+    if (propuesta.id_micro_4_panel && propuesta.cantidad_micro_4_panel) {
+      components.push({
+        concepto: 'Microinversor 4 paneles',
+        cantidad: propuesta.cantidad_micro_4_panel,
+        marca: propuesta.id_micro_4_panel,
+        modelo: propuesta.id_micro_4_panel
+      });
+    }
+    if (propuesta.id_micro_2_panel && propuesta.cantidad_micro_2_panel) {
+      components.push({
+        concepto: 'Microinversor 2 paneles',
+        cantidad: propuesta.cantidad_micro_2_panel,
+        marca: propuesta.id_micro_2_panel,
+        modelo: propuesta.id_micro_2_panel
+      });
+    }
+  }
+
+  if (propuesta.id_montaje_a && propuesta.cantidad_montaje_a) {
+    components.push({
+      concepto: 'Montaje A',
+      cantidad: propuesta.cantidad_montaje_a,
+      marca: propuesta.id_montaje_a,
+      modelo: propuesta.id_montaje_a
+    });
+  }
+
+  if (propuesta.id_montaje_b && propuesta.cantidad_montaje_b) {
+    components.push({
+      concepto: 'Montaje B',
+      cantidad: propuesta.cantidad_montaje_b,
+      marca: propuesta.id_montaje_b,
+      modelo: propuesta.id_montaje_b
+    });
+  }
+
+  if (!propuesta.id_montaje_a && !propuesta.id_montaje_b && propuesta.id_montaje) {
+    components.push({
+      concepto: 'Montaje',
+      cantidad: 1,
+      marca: propuesta.id_montaje,
+      modelo: propuesta.id_montaje
+    });
+  }
+
+  return components;
+}
+
+function blockToProposalData(
+  block: FrontendBlock | null | undefined,
+  propuesta: any,
+  periodicidad: string,
+  tarifa: string
+): ProposalData | null {
+  if (!block || !propuesta) return null;
+
+  const energiaPeriodo = Number(block.energia_generada || 0);
+  const generacionMensualKwh = periodicidad === 'bimestral' ? energiaPeriodo / 2 : energiaPeriodo;
+  const cantidadPaneles = Number(propuesta.cantidad_paneles || block.no_y_tamano_paneles?.cantidad || 0);
+  const potenciaPorPanel = Number(propuesta.potencia_panel || block.no_y_tamano_paneles?.potencia_w || 0) as any;
+  const potenciaTotal = cantidadPaneles * potenciaPorPanel;
+
+  const pagoFuturo = Number(block.con_solarya_pagaras || 0);
+  const ahorroBimestral = Number(block.ahorras_cada_bimestre || 0);
+  const pagoAhora = pagoFuturo + ahorroBimestral;
+  const total = Number(block.inversion_total ?? propuesta.total ?? 0);
+
+  const secuencia = (propuesta.secuencia_exhibiciones || '').split(',').map(v => Number(v.trim())).filter(v => !Number.isNaN(v) && v > 0);
+  const pagosEnExhibiciones = (block.pagos_en_exhibiciones && block.pagos_en_exhibiciones.length > 0)
+    ? block.pagos_en_exhibiciones.map(Number)
+    : (secuencia.length > 0 ? secuencia.map(v => v * total) : [total * 0.5, total * 0.25, total * 0.25]);
+  const descuentoPorcentaje = propuesta.discount_rate ?? null;
+  const precioLista = Number(block.precio_de_lista ?? propuesta.precio_lista ?? 0);
+  const descuentoCalculado = block.descuento != null
+    ? Number(block.descuento)
+    : (descuentoPorcentaje != null ? precioLista * descuentoPorcentaje : 0);
+
+  const financial = {
+    pagoAhora,
+    pagoFuturo,
+    ahorroBimestral,
+    anosRetorno: Number(block.retorno_de_inversion ?? 0),
+    precioLista,
+    descuento: descuentoCalculado,
+    subtotal: Number(block.subtotal ?? propuesta.subtotal ?? 0),
+    iva: Number(block.iva ?? propuesta.iva ?? 0),
+    total,
+    anticipo: pagosEnExhibiciones[0] ?? total * 0.5,
+    pagoPostInterconexion: pagosEnExhibiciones[1] ?? total * 0.5,
+    pagosEnExhibiciones,
+    secuenciaExhibiciones: secuencia,
+    descuentoPorcentaje: descuentoPorcentaje || undefined,
+    ahorroEn25: Number(block.ahorro_en_25_anos ?? 0) || undefined
+  };
+  financial.ahorroEn25 = financial.ahorroEn25 ?? (financial.ahorroBimestral * 6 * 25);
+
+  const porcentajeCobertura = block.generas_el_x_porcentaje_consumo != null
+    ? (block.generas_el_x_porcentaje_consumo || 0) * 100
+    : 0;
+
+  const impacto = block.impacto_ambiental || propuesta.impacto_ambiental || (propuesta.carbon ? {
+    carbon: propuesta.carbon,
+    trees: propuesta.trees,
+    oil: propuesta.oil
+  } : null);
+
+  const environmental = impacto ? {
+    arboles: Math.round(impacto.trees ?? 0),
+    barrilesPetroleo: Math.round(impacto.oil ?? 0),
+    toneladasCO2: Math.round((impacto.carbon ?? 0) * 100) / 100
+  } : {
+    arboles: Math.round((generacionMensualKwh * 12) / 1500),
+    barrilesPetroleo: Math.round((generacionMensualKwh * 12) / 2000),
+    toneladasCO2: Math.round((generacionMensualKwh * 12 * 0.0007) * 100) / 100
+  };
+
+  const components = buildComponentsFromBackend(propuesta, potenciaPorPanel, cantidadPaneles);
+
+  return {
+    input: {
+      hasCFE: true,
+      plansCFE: false,
+      isAislado: false,
+      tarifa,
+      periodo: periodicidad,
+      pagoActual: pagoAhora
+    },
+    system: {
+      numPaneles: cantidadPaneles,
+      potenciaPorPanel,
+      potenciaTotal,
+      generacionMensualKwh,
+      generacionAnualKwh: generacionMensualKwh * 12
+    },
+    financial,
+    environmental,
+    components,
+    porcentajeCobertura,
+    showDACWarning: !!block.alerta_dac,
+    dacBimonthlyPayment: block.alerta_dac || undefined,
+    dacFinancial: block.alerta_dac ? financial : undefined
+  };
+}
+
+function mapBackendToProposal(
+  proposal: BackendProposalEnvelope | null | undefined,
+  fallbackTarifa: string,
+  fallbackPeriodicidad: string
+): Proposal | null {
+  if (!proposal?.frontend_outputs) return null;
+
+  const periodicidad = proposal.periodicidad || fallbackPeriodicidad || 'bimestral';
+  const tarifa = proposal.tarifa || fallbackTarifa || '1';
+
+  const current = blockToProposalData(proposal.frontend_outputs.base, proposal.propuesta_actual, periodicidad, tarifa);
+  const future = blockToProposalData(proposal.frontend_outputs.cargas_extra, proposal.propuesta_cargas_extra, periodicidad, tarifa);
+
+  if (!current) return null;
+
+  return { current, future: future || undefined };
+}
 
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -359,6 +569,14 @@ function App() {
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
 
+    const expandNormalized = expand
+      ? expand
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+      : '';
+
     const formPayload: any = {
       nombre,
       email: correo,
@@ -381,7 +599,8 @@ function App() {
       has_cfe: hasCFE !== 'no',
       tiene_recibo: hasCFE === 'si',
       plans_cfe: planCFE,
-      ya_tiene_fv: expand === 'si'
+      ya_tiene_fv: expandNormalized ? expandNormalized === 'si' : undefined,
+      propuesta_auto: flow === 'AUTO'
     };
 
     // el OCR va incrustado tal cual se recibió de Railway (si hubo éxito)
@@ -423,7 +642,9 @@ function App() {
         return;
       }
 
-      const proposalInput: any = {
+      const proposalFromBackend = mapBackendToProposal(result.proposal, formPayload.tarifa || '1', formPayload.periodicidad);
+
+      const proposal = proposalFromBackend || generateProposal({
         hasCFE: hasCFE === 'si',
         plansCFE: planCFE === 'si',
         isAislado: planCFE === 'aislado',
@@ -440,9 +661,7 @@ function App() {
         } : undefined,
         tipoInmueble: tipoInmueble,
         pisos: parseInt(pisos || '0', 10)
-      };
-
-      const proposal = generateProposal(proposalInput);
+      });
 
       hideLoading();
       bridge?.gtm?.('cotizador_v2_auto', { pid: req_id });
@@ -864,8 +1083,8 @@ function App() {
                               }}
                             >
                               <option value="">Selecciona una opción</option>
-                              <option>Sí</option>
-                              <option>No</option>
+                              <option value="si">Sí</option>
+                              <option value="no">No</option>
                             </select>
                           </div>
                         )}
@@ -1136,8 +1355,8 @@ function App() {
                             }}
                           >
                             <option value="">Selecciona una opción</option>
-                            <option>Sí</option>
-                            <option>No</option>
+                            <option value="si">Sí</option>
+                            <option value="no">No</option>
                           </select>
                         </div>
                       </div>
@@ -1555,7 +1774,7 @@ function App() {
 
       {/* Modals */}
       {showResultModal && generatedProposal && (
-        <div className="fixed inset-0 bg-slate-50 overflow-y-auto z-50">
+        <div className="fixed inset-0 bg-slate-50 overflow-y-auto z-50 proposal-overlay">
           <ProposalComponent proposal={generatedProposal} onClose={() => setShowResultModal(false)} userName={nombre} />
         </div>
       )}
