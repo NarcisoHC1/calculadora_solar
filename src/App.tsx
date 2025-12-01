@@ -599,8 +599,8 @@ function App() {
       rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
       loads,
-      has_cfe: hasCFE !== 'no',
-      tiene_recibo: hasCFE === 'si',
+      has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
+      tiene_recibo: hasCFE === 'si' ? justMoved === 'si' : false,
       plans_cfe: planCFE,
       ya_tiene_fv: expandNormalized ? expandNormalized === 'si' : undefined,
       propuesta_auto: flow === 'AUTO'
