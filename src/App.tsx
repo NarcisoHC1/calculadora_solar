@@ -287,7 +287,12 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.microinverter_specs_product_warranty_years,
           propuesta?.microinverter_specs_params_product_warranty_years,
           propuesta?.product_warranty_years_microinverter_specs_params,
-          pickFromParams(microParams, 'product_warranty_years', 'Product_Warranty_Years')
+          pickFromParams(
+            microParams,
+            'product_warranty_years',
+            'Product_Warranty_Years',
+            'Product Warranty_Years'
+          )
         )
       });
     }
@@ -321,7 +326,12 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.microinverter_specs_product_warranty_years,
           propuesta?.microinverter_specs_params_product_warranty_years,
           propuesta?.product_warranty_years_microinverter_specs_params,
-          pickFromParams(microParams, 'product_warranty_years', 'Product_Warranty_Years')
+          pickFromParams(
+            microParams,
+            'product_warranty_years',
+            'Product_Warranty_Years',
+            'Product Warranty_Years'
+          )
         )
       });
     }
