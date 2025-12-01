@@ -46,19 +46,11 @@ function formatLongDate(date: Date): string {
 
 function inferProductWarrantyYears(component: ComponentBreakdown): number {
   if (component.productWarrantyYears != null) return component.productWarrantyYears;
-
-  const concepto = component.concepto.toLowerCase();
-  if (concepto.includes('panel')) return 25;
-  if (concepto.includes('micro')) return 12;
-  if (concepto.includes('inversor')) return 12;
-  if (concepto.includes('montaje')) return 25;
   return 0;
 }
 
 function inferGenerationWarrantyYears(component: ComponentBreakdown): number {
   if (component.generationWarrantyYears != null) return component.generationWarrantyYears;
-  const concepto = component.concepto.toLowerCase();
-  if (concepto.includes('panel')) return 25;
   return 0;
 }
 
@@ -232,10 +224,10 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
   const panelInfo: ComponentBreakdown = panelComponent || {
     concepto: 'Paneles solares',
     cantidad: system.numPaneles,
-    marca: 'Panel',
-    modelo: `${system.potenciaPorPanel}W`,
-    productWarrantyYears: 25,
-    generationWarrantyYears: 25,
+    marca: '',
+    modelo: '',
+    productWarrantyYears: undefined,
+    generationWarrantyYears: undefined,
     capacityWatts: system.potenciaPorPanel
   };
 
@@ -445,8 +437,14 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               <p>• Potencia: <strong>{panelComponent?.capacityWatts ?? system.potenciaPorPanel}</strong> Watts</p>
               <p>• Dimensiones: {panelComponent?.measurementsM2 ? `${panelComponent.measurementsM2} metros cuadrados` : 'Datos por confirmar'}</p>
-              <p>• Garantía de producto: <strong>{panelProductWarranty}</strong> años</p>
-              <p>• Garantía de generación: <strong>{panelGenerationWarranty}</strong> años</p>
+              <p>
+                • Garantía de producto: <strong>{panelProductWarranty || 'Por confirmar'}</strong>
+                {panelProductWarranty ? ' años' : ''}
+              </p>
+              <p>
+                • Garantía de generación: <strong>{panelGenerationWarranty || 'Por confirmar'}</strong>
+                {panelGenerationWarranty ? ' años' : ''}
+              </p>
             </div>
           </div>
 
@@ -460,7 +458,10 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
                 <p className="text-sm text-slate-600 font-semibold">×{microinverterComponent.cantidad}</p>
               </div>
               <div className="mt-3 space-y-2 text-sm text-slate-700">
-                <p>• Garantía: <strong>{microWarranty ?? 0}</strong> años</p>
+                <p>
+                  • Garantía: <strong>{microWarranty || 'Por confirmar'}</strong>
+                  {microWarranty ? ' años' : ''}
+                </p>
                 <p>• Incluye DTU para monitoreo de generación de energía</p>
               </div>
             </div>
@@ -475,7 +476,10 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
               </div>
               <div className="mt-3 space-y-2 text-sm text-slate-700">
                 <p>• Potencia: {inverterComponent.capacityKw ?? inverterComponent.modelo} kW</p>
-                <p>• Garantía: <strong>{inverterWarranty ?? 0}</strong> años</p>
+                <p>
+                  • Garantía: <strong>{inverterWarranty || 'Por confirmar'}</strong>
+                  {inverterWarranty ? ' años' : ''}
+                </p>
               </div>
             </div>
           ) : null}
@@ -492,7 +496,10 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
                 <p>• Material: aluminio de alta resistencia</p>
                 <p>• Certificación antisísmica</p>
                 <p>• Resistente a corrosión</p>
-                <p>• Garantía: <strong>{montajeWarranty}</strong> años</p>
+                <p>
+                  • Garantía: <strong>{montajeWarranty || 'Por confirmar'}</strong>
+                  {montajeWarranty ? ' años' : ''}
+                </p>
               </div>
             </div>
           )}
