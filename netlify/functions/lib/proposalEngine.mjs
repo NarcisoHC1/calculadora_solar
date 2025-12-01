@@ -172,7 +172,9 @@ export async function generateCompleteProposal(formData) {
     propuestaActual,
     propuestaCargasExtra,
     hsp,
-    params
+    params,
+    pagoDACActual,
+    pagoDACCargasExtra
   });
 
   return {
