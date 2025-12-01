@@ -1017,7 +1017,7 @@ function App() {
                         {usoCasaNegocio === 'casa' && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              ¿Cuántas personas habrá en la casa?
+                              ¿Cuántas personas habitan el inmueble?
                             </label>
                             <select
                               value={numPersonasCasa}
@@ -1044,7 +1044,7 @@ function App() {
                         {usoCasaNegocio === 'negocio' && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              ¿Cuántas personas habrá en el negocio?
+                              ¿Cuántos empleados trabajan en el inmueble?
                             </label>
                           <select
                             value={rangoPersonasNegocio}
