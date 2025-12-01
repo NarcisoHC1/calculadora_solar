@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
 import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check } from 'lucide-react';
 
@@ -34,55 +34,87 @@ function getFirstName(fullName: string): string {
   return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
 }
 
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function formatLongDate(date: Date): string {
+  return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function inferProductWarrantyYears(component: ComponentBreakdown): number {
+  if (component.productWarrantyYears != null) return component.productWarrantyYears;
+
+  const concepto = component.concepto.toLowerCase();
+  if (concepto.includes('panel')) return 25;
+  if (concepto.includes('micro')) return 12;
+  if (concepto.includes('inversor')) return 12;
+  if (concepto.includes('montaje')) return 25;
+  return 0;
+}
+
+function inferGenerationWarrantyYears(component: ComponentBreakdown): number {
+  if (component.generationWarrantyYears != null) return component.generationWarrantyYears;
+  const concepto = component.concepto.toLowerCase();
+  if (concepto.includes('panel')) return 25;
+  return 0;
+}
+
+function getMaxProductWarranty(components: ComponentBreakdown[]): number {
+  return components.reduce((max, comp) => {
+    const warranty = inferProductWarrantyYears(comp);
+    return warranty > max ? warranty : max;
+  }, 0);
+}
+
+const ALL_BRAND_LOGOS = ['Hoymiles', 'Aluminext', 'Solis', 'Growatt', 'Huawei', 'SMA', 'Sungrow', 'JA', 'Longi', 'Canadian Solar'];
+
+function createLogoPlaceholder(text: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="70" viewBox="0 0 180 70">
+    <rect width="180" height="70" rx="12" fill="%23f8fafc" stroke="%23e2e8f0" />
+    <text x="90" y="40" font-family="Arial, Helvetica, sans-serif" font-size="16" text-anchor="middle" fill="%23334">
+      ${text}
+    </text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function BrandCarousel({ brands, className }: { brands: string[]; className?: string }) {
+  const items = useMemo(() => [...brands, ...brands], [brands]);
+
+  return (
+    <div className={`overflow-hidden ${className || ''}`}>
+      <div className="flex items-center gap-6 animate-logo-marquee">
+        {items.map((brand, idx) => (
+          <div
+            key={`${brand}-${idx}`}
+            className="flex items-center justify-center w-28 h-14 rounded-lg bg-white border border-slate-200 shadow-sm flex-shrink-0"
+          >
+            <img src={createLogoPlaceholder(brand)} alt={brand} className="max-h-10 max-w-[90%] object-contain" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TopBrandsSection() {
+  return (
+    <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+      <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
+      <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
+      <BrandCarousel brands={ALL_BRAND_LOGOS} className="py-2" />
+    </div>
+  );
+}
+
 function openCalendlyPopup(e: React.MouseEvent<HTMLAnchorElement>) {
   e.preventDefault();
   if (window.Calendly) {
     window.Calendly.initPopupWidget({ url: 'https://calendly.com/narciso-solarya/30min' });
   }
-}
-
-function getComponentSpecs(concepto: string, marca: string, modelo: string): string[] {
-  const conceptoLower = concepto.toLowerCase();
-
-  if (conceptoLower.includes('panel')) {
-    const watts = modelo.match(/(\d+)w/i)?.[1] || '555';
-    return [
-      `Potencia: ${watts}W`,
-      'Tecnología: Monocristalino N-Type',
-      'Eficiencia: hasta 22.8%',
-      'Dimensiones: 2278mm × 1134mm × 35mm',
-      'Garantía: **25 años**'
-    ];
-  }
-
-  if (conceptoLower.includes('microinversor')) {
-    const mppt = modelo.match(/(\d)mppt/i)?.[1] || '2';
-    return [
-      `Entradas: ${mppt} MPPT`,
-      'Eficiencia: 97.3%',
-      'Garantía: **12 años**'
-    ];
-  }
-
-  if (conceptoLower.includes('inversor')) {
-    const kw = modelo.match(/(\d+)kw/i)?.[1] || '10';
-    return [
-      `Potencia: ${kw}kW`,
-      'Eficiencia: 98.6%',
-      'Garantía: **12 años**'
-    ];
-  }
-
-  if (conceptoLower.includes('montaje') || conceptoLower.includes('estructura')) {
-    return [
-      'Material: Aluminio grado industrial',
-      'Certificación antisísmica',
-      'Resistente a corrosión',
-      'Garantía: **25 años**'
-    ];
-  }
-
-  return [];
 }
 
 function CalendlyWidget() {
@@ -120,8 +152,29 @@ function CalendlyWidget() {
   );
 }
 
-function ProposalCard({ data, title, onClose, showSharedSections = true }: { data: ProposalData; title: string; onClose: () => void; showSharedSections?: boolean }) {
+function ProposalCard({ data, title, onClose, showSharedSections = true, validUntil }: { data: ProposalData; title: string; onClose: () => void; showSharedSections?: boolean; validUntil: Date }) {
   const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
+  const maxEquipmentWarranty = getMaxProductWarranty(components);
+
+  const panelComponent = components.find(comp => comp.concepto.toLowerCase().includes('panel'));
+  const microinverterComponent = components.find(comp => comp.concepto.toLowerCase().includes('microinversor'));
+  const inverterComponent = components.find(comp => comp.concepto.toLowerCase().includes('inversor'));
+  const montajeComponent = components.find(comp => comp.concepto.toLowerCase().includes('montaje'));
+  const panelInfo: ComponentBreakdown = panelComponent || {
+    concepto: 'Paneles solares',
+    cantidad: system.numPaneles,
+    marca: 'Panel',
+    modelo: `${system.potenciaPorPanel}W`,
+    productWarrantyYears: 25,
+    generationWarrantyYears: 25,
+    capacityWatts: system.potenciaPorPanel
+  };
+
+  const panelProductWarranty = inferProductWarrantyYears(panelInfo);
+  const panelGenerationWarranty = inferGenerationWarrantyYears(panelInfo);
+  const microWarranty = microinverterComponent ? inferProductWarrantyYears(microinverterComponent) : undefined;
+  const inverterWarranty = inverterComponent ? inferProductWarrantyYears(inverterComponent) : undefined;
+  const montajeWarranty = montajeComponent ? inferProductWarrantyYears(montajeComponent) : undefined;
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
@@ -230,9 +283,11 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             </div>
           </div>
 
+          <p className="text-xs text-slate-600 mt-3 text-right">Vigencia de propuesta: hasta {formatLongDate(validUntil)}</p>
+
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
             <p className="text-sm font-bold text-slate-900 mb-3">Pago en 3 exhibiciones:</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 text-center">
               {(financial.pagosEnExhibiciones && financial.pagosEnExhibiciones.length > 0 ? financial.pagosEnExhibiciones : [financial.total * 0.5, financial.total * 0.25, financial.total * 0.25]).map((pago, idx) => {
                 const pct = financial.secuenciaExhibiciones?.[idx] ? Math.round(financial.secuenciaExhibiciones[idx] * 100) : idx === 0 ? 50 : 25;
                 return (
@@ -242,6 +297,30 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-5">
+            <h5 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <TreePine className="w-4 h-4" style={{ color: '#3cd070' }} />
+              Impacto ambiental anual de tu sistema
+            </h5>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <div className="text-2xl mb-1">🌳</div>
+                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
+                <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl mb-1">🛢️</div>
+                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
+                <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl mb-1">☁️</div>
+                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
+                <p className="text-xs text-slate-600 mt-0.5">kilogramos de CO₂ reducidos</p>
+              </div>
             </div>
           </div>
 
@@ -272,7 +351,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
           <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
 
           <div className="bg-slate-50 border-2 rounded-xl p-6 mb-6" style={{ borderColor: '#ff9b7a' }}>
-            <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-sm text-slate-700">
+            <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-base text-slate-700 leading-relaxed">
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
                 <p>Instalación por técnicos certificados</p>
@@ -287,7 +366,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Garantía de equipos: <strong>12 años</strong></p>
+                <p>Garantía de equipos: <strong>hasta {maxEquipmentWarranty || 12} años</strong></p>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
@@ -308,29 +387,6 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             </div>
           </div>
 
-          <div className="bg-slate-50 border-2 rounded-xl p-4 max-w-2xl mx-auto" style={{ borderColor: '#ff9b7a' }}>
-            <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <TreePine className="w-4 h-4" style={{ color: '#3cd070' }} />
-              Instalar tu sistema de paneles solares equivale anualmente a:
-            </h5>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center">
-                <div className="text-2xl mb-1">🌳</div>
-                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
-                <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl mb-1">🛢️</div>
-                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
-                <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl mb-1">☁️</div>
-                <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
-                <p className="text-xs text-slate-600 mt-0.5">kg de CO₂ reducidos</p>
-              </div>
-            </div>
-          </div>
         </div>
         )}
 
@@ -339,31 +395,73 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
             <Shield className="w-5 h-5 text-slate-700" />
             Componentes del Sistema
           </h4>
-          <div className="space-y-3">
-            {components.map((comp, idx) => {
-              const specs = getComponentSpecs(comp.concepto, comp.marca, comp.modelo);
-              return (
-                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <p className="font-bold text-slate-900">{comp.concepto}</p>
-                      <p className="text-sm text-slate-600 mt-1">{comp.marca} · {comp.modelo}</p>
-                      {specs.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {specs.map((spec, specIdx) => (
-                            <p key={specIdx} className="text-xs text-slate-600" dangerouslySetInnerHTML={{ __html: `• ${spec.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}` }} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-right ml-4">
-                      <p className="text-xl font-bold" style={{ color: '#ff5c36' }}>×{comp.cantidad}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-base font-semibold text-slate-900">Paneles solares</p>
+                <p className="text-sm text-slate-600">Marcas líderes Tier 1</p>
+              </div>
+              <p className="text-sm text-slate-600 font-semibold">×{panelComponent?.cantidad ?? system.numPaneles}</p>
+            </div>
+            <div className="mt-4">
+              <BrandCarousel brands={['JA', 'Canadian', 'Longi']} />
+            </div>
+            <div className="mt-4 space-y-2 text-sm text-slate-700">
+              <p>• Potencia: <strong>{panelComponent?.capacityWatts ?? system.potenciaPorPanel}</strong> Watts</p>
+              <p>• Dimensiones: {panelComponent?.measurementsM2 ? `${panelComponent.measurementsM2} metros cuadrados` : 'Datos por confirmar'}</p>
+              <p>• Garantía de producto: <strong>{panelProductWarranty}</strong> años</p>
+              <p>• Garantía de generación: <strong>{panelGenerationWarranty}</strong> años</p>
+            </div>
           </div>
+
+          {microinverterComponent ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-base font-semibold text-slate-900">Microinversor {microinverterComponent.marca}</p>
+                  <p className="text-sm text-slate-600">Modelo {microinverterComponent.modelo}</p>
+                </div>
+                <p className="text-sm text-slate-600 font-semibold">×{microinverterComponent.cantidad}</p>
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-700">
+                <p>• Garantía: <strong>{microWarranty ?? 0}</strong> años</p>
+                <p>• Incluye DTU para monitoreo de generación de energía</p>
+              </div>
+            </div>
+          ) : inverterComponent ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-base font-semibold text-slate-900">Inversor {inverterComponent.marca}</p>
+                  <p className="text-sm text-slate-600">Modelo {inverterComponent.modelo}</p>
+                </div>
+                <p className="text-sm text-slate-600 font-semibold">×{inverterComponent.cantidad}</p>
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-700">
+                <p>• Potencia: {inverterComponent.capacityKw ?? inverterComponent.modelo} kW</p>
+                <p>• Garantía: <strong>{inverterWarranty ?? 0}</strong> años</p>
+              </div>
+            </div>
+          ) : null}
+
+          {montajeComponent && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-base font-semibold text-slate-900">Montaje {montajeComponent.marca}</p>
+                  <p className="text-sm text-slate-600">Modelo {montajeComponent.modelo}</p>
+                </div>
+                <p className="text-sm text-slate-600 font-semibold">×{montajeComponent.cantidad}</p>
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-700">
+                <p>• Material: aluminio de alta resistencia</p>
+                <p>• Certificación antisísmica</p>
+                <p>• Resistente a corrosión</p>
+                <p>• Garantía: <strong>{montajeWarranty}</strong> años</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
@@ -377,51 +475,10 @@ function ProposalCard({ data, title, onClose, showSharedSections = true }: { dat
   );
 }
 
-function SharedSections({
-  onClose,
-  environmentalCurrent,
-  environmentalFuture
-}: { onClose: () => void; environmentalCurrent: EnvironmentalImpact; environmentalFuture?: EnvironmentalImpact }) {
+function SharedSections({ onClose }: { onClose: () => void }) {
   return (
     <>
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
-        <div className="bg-slate-50 border-2 rounded-xl p-4 mb-8" style={{ borderColor: '#ff9b7a' }}>
-          <h5 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2 justify-center">
-            <TreePine className="w-4 h-4" style={{ color: '#3cd070' }} />
-            Impacto ambiental anual de tu sistema
-          </h5>
-
-          <div className={`grid ${environmentalFuture ? 'md:grid-cols-2' : 'grid-cols-1'} gap-4`}>
-            {[{ label: 'Consumo actual', data: environmentalCurrent }, environmentalFuture ? { label: 'Con cargas futuras', data: environmentalFuture } : null]
-              .filter(Boolean)
-              .map((item, idx) => {
-                const env = (item as { label: string; data: EnvironmentalImpact }).data;
-                return (
-                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-4">
-                    <p className="text-sm font-semibold text-slate-700 mb-3 text-center">{(item as any).label}</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="text-center">
-                        <div className="text-2xl mb-1">🌳</div>
-                        <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{env.arboles}</p>
-                        <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl mb-1">🛢️</div>
-                        <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{env.barrilesPetroleo}</p>
-                        <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl mb-1">☁️</div>
-                        <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{env.toneladasCO2}</p>
-                        <p className="text-xs text-slate-600 mt-0.5">kg de CO₂ reducidos</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-
         <div className="border-b border-slate-200 pb-6 mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
@@ -436,97 +493,12 @@ function SharedSections({
           <p className="text-center text-slate-700 font-semibold mb-6 text-lg">
             Selecciona la fecha y hora que mejor te convenga
           </p>
-            <CalendlyWidget />
+          <CalendlyWidget />
           <p className="text-xs text-slate-500 mt-4 text-center">Sin compromiso · Evaluación profesional · 100% gratis</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
-        <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
-        <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
-                T1
-              </div>
-              <div>
-                <h5 className="font-bold text-slate-900">Paneles Tier 1</h5>
-                <p className="text-xs text-slate-600">Paneles Solares</p>
-              </div>
-            </div>
-            <div className="space-y-1 text-sm text-slate-700">
-              <p>• Marca reconocida mundialmente</p>
-              <p>• Máxima calidad y confiabilidad</p>
-              <p>• Tecnología bifacial N-Type</p>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
-                H
-              </div>
-              <div>
-                <h5 className="font-bold text-slate-900">Hoymiles</h5>
-                <p className="text-xs text-slate-600">Microinversores</p>
-              </div>
-            </div>
-            <div className="space-y-1 text-sm text-slate-700">
-              <p>• Líder global en microinversores</p>
-              <p>• +5M unidades instaladas</p>
-              <p>• Eficiencia hasta 97.3%</p>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
-                H
-              </div>
-              <div>
-                <h5 className="font-bold text-slate-900">Huawei</h5>
-                <p className="text-xs text-slate-600">Inversores String</p>
-              </div>
-            </div>
-            <div className="space-y-1 text-sm text-slate-700">
-              <p>• Líder mundial en inversores</p>
-              <p>• Tecnología FusionSolar</p>
-              <p>• Eficiencia hasta 98.6%</p>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
-                A
-              </div>
-              <div>
-                <h5 className="font-bold text-slate-900">Aluminext</h5>
-                <p className="text-xs text-slate-600">Sistema de Montaje</p>
-              </div>
-            </div>
-            <div className="space-y-1 text-sm text-slate-700">
-              <p>• Fabricante mexicano premium</p>
-              <p>• Aluminio grado industrial</p>
-              <p>• Diseño antisísmico certificado</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 text-center">
-          <a
-            href="https://calendly.com/narciso-solarya/30min"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
-            style={{ background: '#ff5c36', color: 'white' }}
-          >
-            Agendar visita técnica gratuita
-          </a>
-        </div>
-      </div>
+      <TopBrandsSection />
 
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
         <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
@@ -691,10 +663,6 @@ function FAQAccordion() {
       answer: '✓ 2 años garantía total de instalación y mano de obra\n✓ 12 años garantía en equipos (inversores y accesorios)\n✓ 25 años garantía de generación de energía en paneles solares'
     },
     {
-      question: '¿Puedo financiar la inversión?',
-      answer: 'Sí, ofrecemos opciones de financiamiento con diferentes plazos y tasas preferenciales. Nuestro equipo puede ayudarte a encontrar la mejor opción según tu situación. También puedes aprovechar esquemas de deducción de impuestos disponibles.'
-    },
-    {
       question: '¿Qué mantenimiento requiere el sistema?',
       answer: 'Los sistemas solares requieren muy poco mantenimiento. Se recomienda limpiar los paneles 2-3 veces al año (o después de tormentas de polvo) y una revisión técnica anual. Los componentes están diseñados para operar sin problemas durante décadas.'
     }
@@ -733,6 +701,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   const [referralLink, setReferralLink] = useState('');
   const [referralLoading, setReferralLoading] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
+  const creationDate = useMemo(() => new Date(), []);
+  const validUntil = useMemo(() => addDays(creationDate, 7), [creationDate]);
 
   const handleDownloadPDF = () => {
     window.print();
@@ -852,7 +822,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
-              <p className="text-sm text-slate-600">{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p className="text-sm text-slate-600">{formatLongDate(creationDate)}</p>
             </div>
           </div>
         </div>
@@ -892,111 +862,22 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         {proposal.future ? (
           <>
             <div className={`mb-8 ${showFutureProposal ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : ''}`}>
-              <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} showSharedSections={false} />
+              <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} showSharedSections={false} validUntil={validUntil} />
               {showFutureProposal && (
-                <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} />
+                <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} validUntil={validUntil} />
               )}
             </div>
-            <SharedSections
-              onClose={onClose}
-              environmentalCurrent={proposal.current.environmental}
-              environmentalFuture={proposal.future?.environmental}
-            />
+            <SharedSections onClose={onClose} />
           </>
         ) : (
           <div className="mb-8">
-            <ProposalCard data={proposal.current} title="Tu Propuesta Personalizada de Sistema de Paneles Solares" onClose={onClose} />
+            <ProposalCard data={proposal.current} title="Tu Propuesta Personalizada de Sistema de Paneles Solares" onClose={onClose} validUntil={validUntil} />
           </div>
         )}
 
         {!proposal.future && (
           <>
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
-              <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
-              <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
-                      T1
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-slate-900">Paneles Tier 1</h5>
-                      <p className="text-xs text-slate-600">Paneles Solares</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm text-slate-700">
-                    <p>• Marca reconocida mundialmente</p>
-                    <p>• Máxima calidad y confiabilidad</p>
-                    <p>• Tecnología bifacial N-Type</p>
-                  </div>
-                </div>
-
-                <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
-                      H
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-slate-900">Hoymiles</h5>
-                      <p className="text-xs text-slate-600">Microinversores</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm text-slate-700">
-                    <p>• Líder global en microinversores</p>
-                    <p>• +5M unidades instaladas</p>
-                    <p>• Eficiencia hasta 97.3%</p>
-                  </div>
-                </div>
-
-                <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#ff5c36' }}>
-                      H
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-slate-900">Huawei</h5>
-                      <p className="text-xs text-slate-600">Inversores String</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm text-slate-700">
-                    <p>• Líder mundial en inversores</p>
-                    <p>• Tecnología FusionSolar</p>
-                    <p>• Eficiencia hasta 98.6%</p>
-                  </div>
-                </div>
-
-                <div className="bg-white border-2 rounded-xl p-5" style={{ borderColor: '#ff9b7a' }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: '#1e3a2b' }}>
-                      A
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-slate-900">Aluminext</h5>
-                      <p className="text-xs text-slate-600">Sistema de Montaje</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm text-slate-700">
-                    <p>• Fabricante mexicano premium</p>
-                    <p>• Aluminio grado industrial</p>
-                    <p>• Diseño antisísmico certificado</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 text-center">
-                <a
-                  href="https://calendly.com/narciso-solarya/30min"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg"
-                  style={{ background: '#ff5c36', color: 'white' }}
-                >
-                  Agendar visita técnica gratuita
-                </a>
-              </div>
-            </div>
+            <TopBrandsSection />
 
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
               <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>

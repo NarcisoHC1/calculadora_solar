@@ -5,3 +5,16 @@
 body {
   font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+
+.animate-logo-marquee {
+  animation: logo-marquee 18s linear infinite;
+}
+
+@keyframes logo-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
