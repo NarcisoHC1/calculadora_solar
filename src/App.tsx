@@ -67,6 +67,25 @@ function pickValue<T>(...values: (T | null | undefined | '')[]): T | undefined {
   return found === '' ? undefined : (found as T | undefined);
 }
 
+function pickFromParams<T>(params: any, ...keys: string[]): T | undefined {
+  for (const key of keys) {
+    if (params && Object.prototype.hasOwnProperty.call(params, key)) {
+      const value = params[key];
+      if (value !== undefined && value !== null && value !== '') {
+        return value as T;
+      }
+    }
+    const lowerKey = key.toLowerCase();
+    const matchedEntry = params
+      ? Object.entries(params).find(([entryKey]) => entryKey.toLowerCase() === lowerKey)
+      : undefined;
+    if (matchedEntry && matchedEntry[1] !== undefined && matchedEntry[1] !== null && matchedEntry[1] !== '') {
+      return matchedEntry[1] as T;
+    }
+  }
+  return undefined;
+}
+
 function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, cantidadPaneles: number): ComponentBreakdown[] {
   if (!propuesta) return [];
 
@@ -84,7 +103,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       propuesta?.panel_specs_params_product_warranty_years,
       propuesta?.product_warranty_years_panel_specs_params,
       propuesta?.product_warranty_years,
-      panelParams.product_warranty_years
+      pickFromParams(panelParams, 'product_warranty_years', 'Product_Warranty_Years')
     );
     const generationWarranty = pickValue(
       propuesta?.panel_generation_warranty_years,
@@ -92,7 +111,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       propuesta?.panel_specs_params_generation_warranty_years,
       propuesta?.generation_warranty_years_panel_specs_params,
       propuesta?.generation_warranty_years,
-      panelParams.generation_warranty_years
+      pickFromParams(panelParams, 'generation_warranty_years', 'Generation_Warranty_Years')
     );
     const measurementsM2 = pickValue(
       propuesta?.panel_measurements_m2,
@@ -100,7 +119,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       propuesta?.panel_specs_params_measurements_m2,
       propuesta?.measurements_m2_panel_specs_params,
       propuesta?.measurements_m2,
-      panelParams.measurements_m2
+      pickFromParams(panelParams, 'measurements_m2', 'Measurements_M2')
     );
     const capacityW = potenciaPorPanel || propuesta?.potencia_panel || 0;
     const panelBrand =
@@ -109,7 +128,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.panel_specs_brand,
         propuesta?.panel_specs_params_brand,
         propuesta?.brand_panel_specs_params,
-        panelParams.brand
+        pickFromParams(panelParams, 'brand', 'Brand')
       ) ||
       propuesta?.id_panel ||
       'Panel';
@@ -119,7 +138,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.panel_specs_model,
         propuesta?.panel_specs_params_model,
         propuesta?.model_panel_specs_params,
-        panelParams.model
+        pickFromParams(panelParams, 'model', 'Model')
       ) || `${capacityW || ''}W`;
     components.push({
       concepto: 'Paneles solares',
@@ -141,7 +160,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.inverter_specs_brand,
         propuesta?.inverter_specs_params_brand,
         propuesta?.brand_inverter_specs_params,
-        inverterParams.brand
+        pickFromParams(inverterParams, 'brand', 'Brand')
       ) || propuesta.id_inversor;
     const inverterModel =
       pickValue(
@@ -149,7 +168,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.inverter_specs_model,
         propuesta?.inverter_specs_params_model,
         propuesta?.model_inverter_specs_params,
-        inverterParams.model
+        pickFromParams(inverterParams, 'model', 'Model')
       ) || propuesta.id_inversor;
     components.push({
       concepto: 'Inversor',
@@ -161,7 +180,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.capacity_kw_inverter_specs_params,
         propuesta?.potencia_inversor_kw,
         propuesta?.capacity_kw,
-        inverterParams.capacity_kw
+        pickFromParams(inverterParams, 'capacity_kw', 'Capacity_kW')
       ),
       productWarrantyYears:
         pickValue(
@@ -169,7 +188,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.inverter_specs_product_warranty_years,
           propuesta?.inverter_specs_params_product_warranty_years,
           propuesta?.product_warranty_years_inverter_specs_params,
-          inverterParams.product_warranty_years
+          pickFromParams(inverterParams, 'product_warranty_years', 'Product_Warranty_Years')
         ) ?? 12
     });
   } else {
@@ -181,7 +200,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.microinverter_specs_brand,
           propuesta?.microinverter_specs_params_brand,
           propuesta?.brand_microinverter_specs_params,
-          microParams.brand
+          pickFromParams(microParams, 'brand', 'Brand')
         ) || propuesta.id_micro_4_panel;
       const microModel4 =
         pickValue(
@@ -190,7 +209,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.microinverter_specs_model,
           propuesta?.microinverter_specs_params_model,
           propuesta?.model_microinverter_specs_params,
-          microParams.model
+          pickFromParams(microParams, 'model', 'Model')
         ) || propuesta.id_micro_4_panel;
       components.push({
         concepto: 'Microinversor 4 paneles',
@@ -204,7 +223,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
             propuesta?.microinverter_specs_product_warranty_years,
             propuesta?.microinverter_specs_params_product_warranty_years,
             propuesta?.product_warranty_years_microinverter_specs_params,
-            microParams.product_warranty_years
+            pickFromParams(microParams, 'product_warranty_years', 'Product_Warranty_Years')
           ) ?? 12
       });
     }
@@ -216,7 +235,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.microinverter_specs_brand,
           propuesta?.microinverter_specs_params_brand,
           propuesta?.brand_microinverter_specs_params,
-          microParams.brand
+          pickFromParams(microParams, 'brand', 'Brand')
         ) || propuesta.id_micro_2_panel;
       const microModel2 =
         pickValue(
@@ -225,7 +244,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.microinverter_specs_model,
           propuesta?.microinverter_specs_params_model,
           propuesta?.model_microinverter_specs_params,
-          microParams.model
+          pickFromParams(microParams, 'model', 'Model')
         ) || propuesta.id_micro_2_panel;
       components.push({
         concepto: 'Microinversor 2 paneles',
@@ -239,7 +258,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
             propuesta?.microinverter_specs_product_warranty_years,
             propuesta?.microinverter_specs_params_product_warranty_years,
             propuesta?.product_warranty_years_microinverter_specs_params,
-            microParams.product_warranty_years
+            pickFromParams(microParams, 'product_warranty_years', 'Product_Warranty_Years')
           ) ?? 12
       });
     }
@@ -252,7 +271,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.montaje_specs_brand,
         propuesta?.montaje_specs_params_brand,
         propuesta?.brand_montaje_specs_params,
-        montajeParams.brand
+        pickFromParams(montajeParams, 'brand', 'Brand')
       ) || propuesta.id_montaje_a;
     const montajeModelA =
       pickValue(
@@ -260,7 +279,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.montaje_specs_model,
         propuesta?.montaje_specs_params_model,
         propuesta?.model_montaje_specs_params,
-        montajeParams.model
+        pickFromParams(montajeParams, 'model', 'Model')
       ) || propuesta.id_montaje_a;
     components.push({
       concepto: 'Montaje A',
@@ -273,7 +292,8 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.montaje_product_warranty_years,
           propuesta?.montaje_specs_product_warranty_years,
           propuesta?.montaje_specs_params_product_warranty_years,
-          propuesta?.product_warranty_years_montaje_specs_params
+          propuesta?.product_warranty_years_montaje_specs_params,
+          pickFromParams(montajeParams, 'product_warranty_years', 'Product_Warranty_Years')
         ) ?? 25
     });
   }
@@ -285,7 +305,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.montaje_specs_brand,
         propuesta?.montaje_specs_params_brand,
         propuesta?.brand_montaje_specs_params,
-        montajeParams.brand
+        pickFromParams(montajeParams, 'brand', 'Brand')
       ) || propuesta.id_montaje_b;
     const montajeModelB =
       pickValue(
@@ -293,7 +313,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.montaje_specs_model,
         propuesta?.montaje_specs_params_model,
         propuesta?.model_montaje_specs_params,
-        montajeParams.model
+        pickFromParams(montajeParams, 'model', 'Model')
       ) || propuesta.id_montaje_b;
     components.push({
       concepto: 'Montaje B',
@@ -306,7 +326,8 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.montaje_product_warranty_years,
           propuesta?.montaje_specs_product_warranty_years,
           propuesta?.montaje_specs_params_product_warranty_years,
-          propuesta?.product_warranty_years_montaje_specs_params
+          propuesta?.product_warranty_years_montaje_specs_params,
+          pickFromParams(montajeParams, 'product_warranty_years', 'Product_Warranty_Years')
         ) ?? 25
     });
   }
@@ -318,7 +339,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.montaje_specs_brand,
         propuesta?.montaje_specs_params_brand,
         propuesta?.brand_montaje_specs_params,
-        montajeParams.brand
+        pickFromParams(montajeParams, 'brand', 'Brand')
       ) || propuesta.id_montaje;
     const montajeModel =
       pickValue(
@@ -326,7 +347,7 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         propuesta?.montaje_specs_model,
         propuesta?.montaje_specs_params_model,
         propuesta?.model_montaje_specs_params,
-        montajeParams.model
+        pickFromParams(montajeParams, 'model', 'Model')
       ) || propuesta.id_montaje;
     components.push({
       concepto: 'Montaje',
@@ -339,7 +360,8 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
           propuesta?.montaje_product_warranty_years,
           propuesta?.montaje_specs_product_warranty_years,
           propuesta?.montaje_specs_params_product_warranty_years,
-          propuesta?.product_warranty_years_montaje_specs_params
+          propuesta?.product_warranty_years_montaje_specs_params,
+          pickFromParams(montajeParams, 'product_warranty_years', 'Product_Warranty_Years')
         ) ?? 25
     });
   }
