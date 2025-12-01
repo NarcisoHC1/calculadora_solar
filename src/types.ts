@@ -72,6 +72,12 @@ export interface ComponentBreakdown {
   cantidad: number;
   marca: string;
   modelo: string;
+  type?: 'panel' | 'microinverter' | 'inverter' | 'montaje';
+  productWarrantyYears?: number;
+  generationWarrantyYears?: number;
+  capacityWatts?: number;
+  capacityKw?: number;
+  measurementsM2?: number;
 }
 
 export interface ProposalData {

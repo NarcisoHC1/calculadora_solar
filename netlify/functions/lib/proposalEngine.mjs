@@ -25,6 +25,7 @@ const IVA = 1.16;
 
 export async function generateCompleteProposal(formData) {
   const params = await getParams();
+  const limiteDACMensual = params.tarifaDAC?.Limite_Mensual_kWh ?? null;
 
   // 0. Validar ubicación
   const allowedStates = ["Ciudad de México", "Estado de México"];
@@ -53,6 +54,7 @@ export async function generateCompleteProposal(formData) {
       pago_hipotetico_cargas_extra: null,
       pago_dac_hipotetico_consumo_actual: null,
       pago_dac_hipotetico_cargas_extra: null,
+      limite_dac_mensual_kwh: limiteDACMensual,
       propuesta_actual: null,
       propuesta_cargas_extra: null,
       frontend_outputs: null
@@ -170,11 +172,14 @@ export async function generateCompleteProposal(formData) {
     propuestaActual,
     propuestaCargasExtra,
     hsp,
-    params
+    params,
+    pagoDACActual,
+    pagoDACCargasExtra
   });
 
   return {
     tarifa: tarifaFinal,
+    limite_dac_mensual_kwh: limiteDACMensual,
     periodicidad,
     kwh_consumidos: kwhConsumidos != null ? Math.round(kwhConsumidos) : null,
     pago_promedio: pagoPromedio != null ? Math.round(pagoPromedio) : null,
