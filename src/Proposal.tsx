@@ -216,10 +216,19 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
   const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
   const maxEquipmentWarranty = getMaxProductWarranty(components);
 
-  const panelComponent = components.find(comp => comp.concepto.toLowerCase().includes('panel'));
-  const microinverterComponent = components.find(comp => comp.concepto.toLowerCase().includes('microinversor'));
-  const inverterComponent = components.find(comp => comp.concepto.toLowerCase().includes('inversor'));
-  const montajeComponent = components.find(comp => comp.concepto.toLowerCase().includes('montaje'));
+  const panelComponent = components.find(
+    comp => comp.type === 'panel' || comp.concepto.toLowerCase().includes('panel')
+  );
+  const microinverterComponent = components.find(
+    comp => comp.type === 'microinverter' || comp.concepto.toLowerCase().includes('microinversor')
+  );
+  const inverterComponent = components.find(comp => {
+    const concepto = comp.concepto.toLowerCase();
+    return comp.type === 'inverter' || (concepto.includes('inversor') && !concepto.includes('micro'));
+  });
+  const montajeComponent = components.find(
+    comp => comp.type === 'montaje' || comp.concepto.toLowerCase().includes('montaje')
+  );
   const panelInfo: ComponentBreakdown = panelComponent || {
     concepto: 'Paneles solares',
     cantidad: system.numPaneles,
