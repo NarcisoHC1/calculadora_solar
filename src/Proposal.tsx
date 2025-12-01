@@ -62,16 +62,16 @@ function getMaxProductWarranty(components: ComponentBreakdown[]): number {
 }
 
 const TOP_BRAND_LOGOS = [
-  { alt: 'Hoymiles', src: '/brand-logos/hoymiles_logo.svg' },
-  { alt: 'Aluminext', src: '/brand-logos/aluminext_logo.svg' },
-  { alt: 'Solis', src: '/brand-logos/solis_logo.svg' },
-  { alt: 'Growatt', src: '/brand-logos/growatt_square_logo.svg' },
-  { alt: 'Huawei', src: '/brand-logos/huawei_logo.svg' },
-  { alt: 'SMA', src: '/brand-logos/sma_logo.svg' },
-  { alt: 'Sungrow', src: '/brand-logos/sungrow_logo.svg' },
-  { alt: 'JA Solar', src: '/brand-logos/ja_solar_logo.svg' },
-  { alt: 'LONGi', src: '/brand-logos/longi_logo.svg' },
-  { alt: 'Canadian Solar', src: '/brand-logos/canadian_solar_logo.svg' },
+  { alt: 'Hoymiles', src: '/hoymiles_square_logo.webp' },
+  { alt: 'Aluminext', src: '/aluminext_square_logo.jpg' },
+  { alt: 'Solis', src: '/solis_square_logo.png' },
+  { alt: 'Growatt', src: '/growatt_square_logo.webp' },
+  { alt: 'Huawei', src: '/huawei_square_logo.jpg' },
+  { alt: 'SMA', src: '/sma_square_logo.jpg' },
+  { alt: 'Sungrow', src: '/sungrow_square_logo.png' },
+  { alt: 'JA Solar', src: '/ja_solar_square_logo.jpg' },
+  { alt: 'LONGi', src: '/longi_square_logo.png' },
+  { alt: 'Canadian Solar', src: '/canadian_solar_square_logo.jpg' }
 ];
 
 function StaticBrandRow({ logos }: { logos: { alt: string; src: string }[] }) {
@@ -80,9 +80,9 @@ function StaticBrandRow({ logos }: { logos: { alt: string; src: string }[] }) {
       {logos.map(logo => (
         <div
           key={logo.alt}
-          className="flex items-center justify-center w-28 h-14 rounded-lg bg-white border border-slate-200 shadow-sm"
+          className="flex items-center justify-center w-24 h-24 rounded-xl bg-white border border-slate-200 shadow-sm"
         >
-          <img src={logo.src} alt={logo.alt} className="max-h-10 max-w-[90%] object-contain" />
+          <img src={logo.src} alt={logo.alt} className="h-16 w-16 object-contain" />
         </div>
       ))}
     </div>
@@ -98,9 +98,9 @@ function BrandCarousel({ logos, className }: { logos: { alt: string; src: string
         {items.map((logo, idx) => (
           <div
             key={`${logo.alt}-${idx}`}
-            className="flex items-center justify-center w-28 h-14 rounded-lg bg-white border border-slate-200 shadow-sm flex-shrink-0"
+            className="flex items-center justify-center w-24 h-24 rounded-xl bg-white border border-slate-200 shadow-sm flex-shrink-0"
           >
-            <img src={logo.src} alt={logo.alt} className="max-h-10 max-w-[90%] object-contain" />
+            <img src={logo.src} alt={logo.alt} className="h-16 w-16 object-contain" />
           </div>
         ))}
       </div>
@@ -435,9 +435,9 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
             <div className="mt-4">
               <StaticBrandRow
                 logos={[
-                  { alt: 'JA Solar', src: '/brand-logos/ja_solar_logo.svg' },
-                  { alt: 'Canadian Solar', src: '/brand-logos/canadian_solar_logo.svg' },
-                  { alt: 'LONGi', src: '/brand-logos/longi_logo.svg' },
+                  { alt: 'JA Solar', src: '/ja_solar_square_logo.jpg' },
+                  { alt: 'Canadian Solar', src: '/canadian_solar_square_logo.jpg' },
+                  { alt: 'LONGi', src: '/longi_square_logo.png' }
                 ]}
               />
             </div>
