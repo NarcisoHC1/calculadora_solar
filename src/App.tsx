@@ -67,6 +67,42 @@ function pickValue<T>(...values: (T | null | undefined | '')[]): T | undefined {
   return found === '' ? undefined : (found as T | undefined);
 }
 
+function mergeParams(...sources: any[]): Record<string, any> {
+  const target: Record<string, any> = {};
+
+  const toObject = (value: any): Record<string, any> | undefined => {
+    if (!value) return undefined;
+    if (typeof value === 'object') return value;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return typeof parsed === 'object' && parsed !== null ? parsed : undefined;
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  };
+
+  const addEntries = (source?: any) => {
+    const obj = toObject(source);
+    if (!obj) return;
+    const candidates = [obj, obj.params, obj.Params, obj.fields?.Params, obj.fields, obj.params?.Params];
+    candidates.forEach(candidate => {
+      const candObj = toObject(candidate);
+      if (!candObj) return;
+      Object.entries(candObj).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          target[key] = value;
+        }
+      });
+    });
+  };
+
+  sources.forEach(addEntries);
+  return target;
+}
+
 function pickFromParams<T>(params: any, ...keys: string[]): T | undefined {
   for (const key of keys) {
     if (params && Object.prototype.hasOwnProperty.call(params, key)) {
@@ -91,10 +127,30 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
 
   const components: ComponentBreakdown[] = [];
 
-  const panelParams = propuesta?.panel_specs_params || propuesta?.panel_specs?.params || {};
-  const microParams = propuesta?.microinverter_specs_params || propuesta?.microinverter_specs?.params || {};
-  const inverterParams = propuesta?.inverter_specs_params || propuesta?.inverter_specs?.params || {};
-  const montajeParams = propuesta?.montaje_specs_params || propuesta?.montaje_specs?.params || {};
+  const panelParams = mergeParams(
+    propuesta?.panel_specs_params,
+    propuesta?.panel_specs?.params,
+    propuesta?.panel_specs?.Params,
+    propuesta?.panel_specs
+  );
+  const microParams = mergeParams(
+    propuesta?.microinverter_specs_params,
+    propuesta?.microinverter_specs?.params,
+    propuesta?.microinverter_specs?.Params,
+    propuesta?.microinverter_specs
+  );
+  const inverterParams = mergeParams(
+    propuesta?.inverter_specs_params,
+    propuesta?.inverter_specs?.params,
+    propuesta?.inverter_specs?.Params,
+    propuesta?.inverter_specs
+  );
+  const montajeParams = mergeParams(
+    propuesta?.montaje_specs_params,
+    propuesta?.montaje_specs?.params,
+    propuesta?.montaje_specs?.Params,
+    propuesta?.montaje_specs
+  );
 
   if (cantidadPaneles > 0) {
     const panelWarranty = pickValue(
