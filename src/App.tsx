@@ -46,6 +46,8 @@ type FrontendBlock = {
   iva?: number | null;
   inversion_total?: number | null;
   alerta_dac?: number | null;
+  pago_dac_hipotetico_consumo_actual?: number | null;
+  pago_dac_hipotetico_cargas_extra?: number | null;
   impacto_ambiental?: { carbon?: number | null; trees?: number | null; oil?: number | null } | null;
 };
 
@@ -219,9 +221,14 @@ function blockToProposalData(
 
   const components = buildComponentsFromBackend(propuesta, potenciaPorPanel, cantidadPaneles);
 
-  const dacPaymentRaw = Number(block.alerta_dac || 0);
+  const dacPaymentRaw = Number(
+    block.pago_dac_hipotetico_cargas_extra ??
+      block.pago_dac_hipotetico_consumo_actual ??
+      block.alerta_dac ??
+      0
+  );
   const dacBimonthlyPayment = periodicidad === 'mensual' ? dacPaymentRaw * 2 : dacPaymentRaw;
-  const hasDACWarning = !!dacBimonthlyPayment && dacBimonthlyPayment > 0;
+  const hasDACWarning = dacBimonthlyPayment > 0;
 
   return {
     input: {

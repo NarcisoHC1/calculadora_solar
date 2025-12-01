@@ -207,7 +207,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
           </div>
         </div>
 
-        {showDACWarning && dacBimonthlyPayment && dacFinancial && (
+        {showDACWarning && dacBimonthlyPayment !== undefined && dacFinancial && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
             <p className="text-sm font-bold text-amber-900 mb-3">⚠️ Advertencia Tarifa DAC</p>
             <ul className="space-y-2 text-sm text-amber-800">
