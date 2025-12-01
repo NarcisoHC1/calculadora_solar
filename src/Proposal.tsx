@@ -61,45 +61,46 @@ function getMaxProductWarranty(components: ComponentBreakdown[]): number {
   }, 0);
 }
 
-const ALL_BRAND_LOGOS = ['Hoymiles', 'Aluminext', 'Solis', 'Growatt', 'Huawei', 'SMA', 'Sungrow', 'JA', 'Longi', 'Canadian Solar'];
+const TOP_BRAND_LOGOS = [
+  { alt: 'Hoymiles', src: '/brand-logos/hoymiles_logo.svg' },
+  { alt: 'Aluminext', src: '/brand-logos/aluminext_logo.svg' },
+  { alt: 'Solis', src: '/brand-logos/solis_logo.svg' },
+  { alt: 'Growatt', src: '/brand-logos/growatt_square_logo.svg' },
+  { alt: 'Huawei', src: '/brand-logos/huawei_logo.svg' },
+  { alt: 'SMA', src: '/brand-logos/sma_logo.svg' },
+  { alt: 'Sungrow', src: '/brand-logos/sungrow_logo.svg' },
+  { alt: 'JA Solar', src: '/brand-logos/ja_solar_logo.svg' },
+  { alt: 'LONGi', src: '/brand-logos/longi_logo.svg' },
+  { alt: 'Canadian Solar', src: '/brand-logos/canadian_solar_logo.svg' },
+];
 
-function StaticBrandRow({ brands }: { brands: string[] }) {
+function StaticBrandRow({ logos }: { logos: { alt: string; src: string }[] }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {brands.map(brand => (
+      {logos.map(logo => (
         <div
-          key={brand}
+          key={logo.alt}
           className="flex items-center justify-center w-28 h-14 rounded-lg bg-white border border-slate-200 shadow-sm"
         >
-          <img src={createLogoPlaceholder(brand)} alt={brand} className="max-h-10 max-w-[90%] object-contain" />
+          <img src={logo.src} alt={logo.alt} className="max-h-10 max-w-[90%] object-contain" />
         </div>
       ))}
     </div>
   );
 }
 
-function createLogoPlaceholder(text: string) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="70" viewBox="0 0 180 70">
-    <rect width="180" height="70" rx="12" fill="%23f8fafc" stroke="%23e2e8f0" />
-    <text x="90" y="40" font-family="Arial, Helvetica, sans-serif" font-size="16" text-anchor="middle" fill="%23334">
-      ${text}
-    </text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
-
-function BrandCarousel({ brands, className }: { brands: string[]; className?: string }) {
-  const items = useMemo(() => [...brands, ...brands], [brands]);
+function BrandCarousel({ logos, className }: { logos: { alt: string; src: string }[]; className?: string }) {
+  const items = useMemo(() => [...logos, ...logos], [logos]);
 
   return (
     <div className={`overflow-hidden ${className || ''}`}>
       <div className="flex items-center gap-6 animate-logo-marquee">
-        {items.map((brand, idx) => (
+        {items.map((logo, idx) => (
           <div
-            key={`${brand}-${idx}`}
+            key={`${logo.alt}-${idx}`}
             className="flex items-center justify-center w-28 h-14 rounded-lg bg-white border border-slate-200 shadow-sm flex-shrink-0"
           >
-            <img src={createLogoPlaceholder(brand)} alt={brand} className="max-h-10 max-w-[90%] object-contain" />
+            <img src={logo.src} alt={logo.alt} className="max-h-10 max-w-[90%] object-contain" />
           </div>
         ))}
       </div>
@@ -112,7 +113,7 @@ function TopBrandsSection() {
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
       <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
       <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
-      <BrandCarousel brands={ALL_BRAND_LOGOS} className="py-2" />
+      <BrandCarousel logos={TOP_BRAND_LOGOS} className="py-2" />
     </div>
   );
 }
@@ -432,7 +433,13 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
               <p className="text-sm text-slate-600 font-semibold">×{panelComponent?.cantidad ?? system.numPaneles}</p>
             </div>
             <div className="mt-4">
-              <StaticBrandRow brands={['JA', 'Canadian', 'Longi']} />
+              <StaticBrandRow
+                logos={[
+                  { alt: 'JA Solar', src: '/brand-logos/ja_solar_logo.svg' },
+                  { alt: 'Canadian Solar', src: '/brand-logos/canadian_solar_logo.svg' },
+                  { alt: 'LONGi', src: '/brand-logos/longi_logo.svg' },
+                ]}
+              />
             </div>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               <p>• Potencia: <strong>{panelComponent?.capacityWatts ?? system.potenciaPorPanel}</strong> Watts</p>
