@@ -105,6 +105,15 @@ export async function generateCompleteProposal(formData) {
     }
   }
 
+  // Fallback por si el pago o consumo calculado es cero o inválido
+  if (!kwhConsumidos || kwhConsumidos <= 0) {
+    const estimation = estimateFromGuess(formData, tarifaFinal, factorP, params);
+    kwhConsumidos = estimation.kwh;
+    if (!pagoPromedio || pagoPromedio <= 0) {
+      pagoPromedio = estimation.pago;
+    }
+  }
+
   // 3. Calcular cargas extra
   const extraKwh = calculateExtraLoads(formData.loads, periodicidad, params);
   const kwhConCargasExtra = kwhConsumidos + extraKwh;
@@ -245,8 +254,14 @@ function estimateFromGuess(formData, tarifa, factorP, params) {
     : (formData.uso === "Casa" || formData.casa_negocio === "Casa" || (!formData.uso && !formData.casa_negocio));
 
   if (isCasa) {
-    const members = Number(formData.numero_personas) || 2;
-    const guess = params.houseLoadsGuess.find(h => h.Members === members);
+    const membersRaw = formData.numero_personas !== undefined && formData.numero_personas !== null
+      ? String(formData.numero_personas).trim()
+      : "";
+
+    const guess = params.houseLoadsGuess.find(h => String(h.Members).trim() === membersRaw)
+      || params.houseLoadsGuess.find(h => Number(h.Members) === Number(membersRaw));
+
+    const members = Number(membersRaw) || 2;
     kwhBimestral = guess?.kWh_Bimestre || 300;
   } else {
     const range = formData.rango_personas_negocio || "1-5";

@@ -295,6 +295,7 @@ function App() {
   // Modals / overlays
   const [showResultModal, setShowResultModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Calculando tu propuesta…');
   const [generatedProposal, setGeneratedProposal] = useState<Proposal | null>(null);
@@ -302,6 +303,7 @@ function App() {
   // Flow flags
   const isNoCFEPlanningFlow = hasCFE === 'no' && (planCFE === 'si' || planCFE === 'aislado');
   const isNoCFENoPlanning = hasCFE === 'no' && planCFE === 'no';
+  const shouldAskTariff = !(hasCFE === 'si' && justMoved === 'no');
 
   // Helpers overlay + aviso al padre (iframe)
   function showLoading(msg = 'Calculando tu propuesta…') {
@@ -472,6 +474,7 @@ function App() {
   };
 
   const canProceedStep2 = () => {
+    if (cargas.length === 0) return false;
     if (!tipoInmueble) return false;
     if (['2', '4', '5', '8', '9'].includes(tipoInmueble) && !pisos) return false;
     if (['3', '6', '7'].includes(tipoInmueble) && !distanciaTechoTablero) return false;
@@ -596,8 +599,8 @@ function App() {
       rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
       loads,
-      has_cfe: hasCFE !== 'no',
-      tiene_recibo: hasCFE === 'si',
+      has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
+      tiene_recibo: hasCFE === 'si' ? justMoved === 'si' : false,
       plans_cfe: planCFE,
       ya_tiene_fv: expandNormalized ? expandNormalized === 'si' : undefined,
       propuesta_auto: flow === 'AUTO'
@@ -978,7 +981,7 @@ function App() {
                         >
                           <option value="">Selecciona una opción</option>
                           <option value="si">Sí</option>
-                          <option value="aislado">No, quiero instalar un sistema aislado</option>
+                          <option value="aislado">No, quiero instalar un sistema independiente de la red de CFE</option>
                         </select>
                       </div>
                     )}
@@ -1014,7 +1017,7 @@ function App() {
                         {usoCasaNegocio === 'casa' && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              ¿Cuántas personas habrá en la casa?
+                              ¿Cuántas personas habitan el inmueble?
                             </label>
                             <select
                               value={numPersonasCasa}
@@ -1041,7 +1044,7 @@ function App() {
                         {usoCasaNegocio === 'negocio' && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
-                              ¿Cuántas personas habrá en el negocio?
+                              ¿Cuántos empleados trabajan en el inmueble?
                             </label>
                           <select
                             value={rangoPersonasNegocio}
@@ -1095,7 +1098,7 @@ function App() {
                       <div className="space-y-5">
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            ¿Tienes ya un recibo de CFE de este inmueble?
+                            ¿Ya has recibido por lo menos 1 recibo de CFE para este inmueble?
                           </label>
                           <select
                             value={justMoved}
@@ -1196,7 +1199,7 @@ function App() {
                             {usoCasaNegocio === 'casa' && (
                               <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                  No. miembros de familia que viven en casa
+                                  ¿Cuántos habitantes hay en la casa?
                                 </label>
                                 <select
                                   value={numPersonasCasa}
@@ -1223,7 +1226,7 @@ function App() {
                             {usoCasaNegocio === 'negocio' && (
                               <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                  No. de personas que trabajan en el negocio
+                                  ¿Cuántos empleados trabajan en el inmueble?
                                 </label>
                                 <select
                                   value={rangoPersonasNegocio}
@@ -1249,78 +1252,20 @@ function App() {
                           </>
                         )}
 
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            ¿Conoces tu tarifa de CFE?
-                          </label>
-                          <select
-                            value={knowsTariff}
-                            onChange={(e) => {
-                              setKnowsTariff(e.target.value);
-                              if (e.target.value === 'no') {
-                                setTarifa('');
-                              }
-                            }}
-                            className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                            style={{
-                              outlineColor: '#3cd070',
-                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                              backgroundPosition: 'right 0.5rem center',
-                              backgroundRepeat: 'no-repeat',
-                              backgroundSize: '1.5em 1.5em'
-                            }}
-                          >
-                            <option value="">Selecciona una opción</option>
-                            <option value="si">Sí</option>
-                            <option value="no">No</option>
-                          </select>
-                        </div>
-
-                        {knowsTariff === 'si' && (
+                        {shouldAskTariff && (
                           <>
                             <div>
                               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Tarifa
+                                ¿Conoces tu tarifa de CFE?
                               </label>
                               <select
-                                value={tarifa}
-                                onChange={(e) => setTarifa(e.target.value)}
-                                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
-                                style={{
-                                  outlineColor: '#3cd070',
-                                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                  backgroundPosition: 'right 0.5rem center',
-                                  backgroundRepeat: 'no-repeat',
-                                  backgroundSize: '1.5em 1.5em'
+                                value={knowsTariff}
+                                onChange={(e) => {
+                                  setKnowsTariff(e.target.value);
+                                  if (e.target.value === 'no') {
+                                    setTarifa('');
+                                  }
                                 }}
-                              >
-                                <option value="">Selecciona tu tarifa</option>
-                                <option>1</option>
-                                <option>1A</option>
-                                <option>1B</option>
-                                <option>1C</option>
-                                <option>1D</option>
-                                <option>1E</option>
-                                <option>1F</option>
-                                <option>DAC</option>
-                                <option>PDBT</option>
-                                <option>GDBT</option>
-                                <option>GDMTH</option>
-                                <option>GDMTO</option>
-                              </select>
-                            </div>
-                          </>
-                        )}
-
-                        {knowsTariff === 'no' && justMoved === 'si' && (
-                          <>
-                            <div>
-                              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                ¿Es para casa o negocio?
-                              </label>
-                              <select
-                                value={usoCasaNegocio}
-                                onChange={(e) => setUsoCasaNegocio(e.target.value)}
                                 className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
                                 style={{
                                   outlineColor: '#3cd070',
@@ -1331,10 +1276,72 @@ function App() {
                                 }}
                               >
                                 <option value="">Selecciona una opción</option>
-                                <option value="casa">Casa</option>
-                                <option value="negocio">Negocio</option>
+                                <option value="si">Sí</option>
+                                <option value="no">No</option>
                               </select>
                             </div>
+
+                            {knowsTariff === 'si' && (
+                              <>
+                                <div>
+                                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                    Tarifa
+                                  </label>
+                                  <select
+                                    value={tarifa}
+                                    onChange={(e) => setTarifa(e.target.value)}
+                                    className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                    style={{
+                                      outlineColor: '#3cd070',
+                                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                      backgroundPosition: 'right 0.5rem center',
+                                      backgroundRepeat: 'no-repeat',
+                                      backgroundSize: '1.5em 1.5em'
+                                    }}
+                                  >
+                                    <option value="">Selecciona tu tarifa</option>
+                                    <option>1</option>
+                                    <option>1A</option>
+                                    <option>1B</option>
+                                    <option>1C</option>
+                                    <option>1D</option>
+                                    <option>1E</option>
+                                    <option>1F</option>
+                                    <option>DAC</option>
+                                    <option>PDBT</option>
+                                    <option>GDBT</option>
+                                    <option>GDMTH</option>
+                                    <option>GDMTO</option>
+                                  </select>
+                                </div>
+                              </>
+                            )}
+
+                            {knowsTariff === 'no' && justMoved === 'si' && (
+                              <>
+                                <div>
+                                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                    ¿Es para casa o negocio?
+                                  </label>
+                                  <select
+                                    value={usoCasaNegocio}
+                                    onChange={(e) => setUsoCasaNegocio(e.target.value)}
+                                    className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                                    style={{
+                                      outlineColor: '#3cd070',
+                                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                      backgroundPosition: 'right 0.5rem center',
+                                      backgroundRepeat: 'no-repeat',
+                                      backgroundSize: '1.5em 1.5em'
+                                    }}
+                                  >
+                                    <option value="">Selecciona una opción</option>
+                                    <option value="casa">Casa</option>
+                                    <option value="negocio">Negocio</option>
+                                  </select>
+                                </div>
+                              </>
+                            )}
                           </>
                         )}
 
@@ -1391,15 +1398,14 @@ function App() {
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
                       ¿Apenas instalaste o planeas instalar dentro de los siguientes 3-6 meses alguno de estos?
                     </label>
-                    <ul className="text-xs text-slate-500 mb-3 list-disc pl-5 space-y-1">
-                      <li>Opcional - puedes elegir varias o ninguna.</li>
-                      <li>Elige los aparatos cuyo consumo no esté reflejado todavía en tu último recibo de CFE.</li>
-                    </ul>
+                    <p className="text-xs text-slate-500 mb-3">
+                      Selecciona al menos una opción. Elige los aparatos cuyo consumo no esté reflejado todavía en tu último recibo de CFE.
+                    </p>
                     <div className="space-y-3">
                       {[
                         { value: 'ninguna', label: 'Ninguna' },
                         { value: 'ev', label: 'Cargador para coche eléctrico' },
-                        { value: 'minisplit', label: 'Minisplit / A/C' },
+                        { value: 'minisplit', label: 'Minisplit / Aire Acondicionado' },
                         { value: 'secadora', label: 'Secadora de ropa' },
                         { value: 'bomba', label: 'Bomba de agua / alberca' },
                         { value: 'otro', label: 'Otro' },
@@ -1426,8 +1432,14 @@ function App() {
                                     ...cargaDetalles,
                                     ev: { ...cargaDetalles.ev, modelo: e.target.value, km: cargaDetalles.ev?.km || '' }
                                   })}
-                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
-                                  style={{ outlineColor: '#3cd070' }}
+                                  className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer text-sm"
+                                  style={{
+                                    outlineColor: '#3cd070',
+                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                    backgroundPosition: 'right 0.75rem center',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundSize: '1.25em 1.25em'
+                                  }}
                                 >
                                   <option value="">Selecciona el modelo</option>
                                   <option value="audi-etron-gt">Audi - e-tron GT</option>
@@ -1474,7 +1486,7 @@ function App() {
                           {cargas.includes(item.value) && item.value === 'minisplit' && (
                             <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                               <div>
-                                <label className="block text-xs font-semibold text-slate-700 mb-1">Cantidad</label>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Cuántos minisplits / aires acondicionados</label>
                                 <input
                                   type="number"
                                   value={cargaDetalles.minisplit?.cantidad || ''}
@@ -1489,7 +1501,7 @@ function App() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-semibold text-slate-700 mb-1">Horas diarias que estará encendido</label>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Horas diarias que estará(n) encendido(s)</label>
                                 <input
                                   type="number"
                                   value={cargaDetalles.minisplit?.horas || ''}
@@ -1510,7 +1522,7 @@ function App() {
                           {cargas.includes(item.value) && item.value === 'secadora' && (
                             <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
                               <div>
-                                <label className="block text-xs font-semibold text-slate-700 mb-1">Horas semanales que planea usarla</label>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Horas semanales que planeas usarla</label>
                                 <input
                                   type="number"
                                   value={cargaDetalles.secadora?.horas || ''}
@@ -1529,6 +1541,9 @@ function App() {
                           )}
                         </div>
                       ))}
+                    {cargas.length === 0 && (
+                      <p className="text-xs text-red-600 mt-2">Debes elegir al menos una opción.</p>
+                    )}
                     </div>
 
                     {showError && cargas.includes('ninguna') && (
@@ -1734,7 +1749,14 @@ function App() {
                         style={{ accentColor: '#3cd070' }}
                       />
                       <span className="text-sm text-slate-700 group-hover:text-slate-900">
-                        He leído y acepto el <a href="#" className="underline" style={{ color: '#3cd070' }}>aviso de privacidad</a>
+                        He leído y acepto el <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivacyModal(true); }}
+                          className="underline"
+                          style={{ color: '#3cd070' }}
+                        >
+                          aviso de privacidad
+                        </button>
                       </span>
                     </label>
                   </div>
@@ -1793,6 +1815,47 @@ function App() {
               <button
                 onClick={() => setShowContactModal(false)}
                 className="w-full py-3 px-6 text-white font-semibold rounded-xl transition-all"
+                style={{ background: '#1e3a2b' }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[60]" onClick={() => setShowPrivacyModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-xl font-bold text-slate-900">Aviso de privacidad</h3>
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="text-slate-500 hover:text-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-4 max-h-72 overflow-y-auto pr-2 text-sm text-slate-700 space-y-3">
+              <p>
+                Este es un texto provisional del aviso de privacidad. Aquí podrás colocar la redacción oficial
+                sobre cómo se recopilan, utilizan y protegen los datos personales de los usuarios.
+              </p>
+              <p>
+                La información detallará los fines del tratamiento de los datos, los mecanismos para ejercer
+                derechos ARCO y los medios de contacto para cualquier aclaración.
+              </p>
+              <p>
+                Reemplaza este texto con el contenido definitivo de tu aviso de privacidad. Mientras tanto,
+                puedes usar este espacio para revisar el flujo y la experiencia de lectura.
+              </p>
+            </div>
+            <div className="mt-6 text-right">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="px-4 py-2 rounded-lg text-white font-semibold"
                 style={{ background: '#1e3a2b' }}
               >
                 Cerrar

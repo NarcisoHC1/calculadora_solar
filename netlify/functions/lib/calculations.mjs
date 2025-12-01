@@ -227,6 +227,7 @@ export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params)
 
     for (const numPaneles of [numPanelesFloor, numPanelesCeil]) {
       if (numPaneles <= 0) continue;
+      if (panel.Capacity_W >= 700 && numPaneles < 20) continue;
 
       const generacion = (panel.Capacity_W / 1000) * numPaneles * hsp * pr * dias;
       const error = Math.abs(generacion - kwhTarget) / kwhTarget;

@@ -125,7 +125,9 @@ export async function createSubmissionDetails({ projectId, data }) {
   // Property info
   if (data.quiere_aislado !== undefined) fields["Quiere_Sistema_Aislado"] = data.quiere_aislado ? "sí" : "no";
   if (data.casa_negocio) fields["Casa_Negocio"] = data.casa_negocio;
-  if (data.numero_personas) fields["Numero_Personas_Inmueble"] = data.numero_personas;
+  if (data.numero_personas !== undefined && data.numero_personas !== null && data.numero_personas !== "") {
+    fields["Numero_Personas_Inmueble"] = String(data.numero_personas);
+  }
   if (data.ya_tiene_fv !== undefined) fields["Ya_Tiene_FV"] = data.ya_tiene_fv ? "sí" : "no";
   if (data.tipo_inmueble) fields["Tipo_Inmueble"] = data.tipo_inmueble;
   if (data.metros_distancia) fields["Metros_distancia"] = data.metros_distancia;
@@ -170,6 +172,12 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
     "Proposal_type": "prelim"
   };
 
+  const computeUsdPerW = (subtotal, tc, potencia, cantidad) => {
+    if (!subtotal || !tc || !potencia || !cantidad) return null;
+    const usdW = (subtotal / tc) / (potencia * cantidad);
+    return Number.isFinite(usdW) ? usdW : null;
+  };
+
   // Consumo base
   if (proposalData.kwh_consumidos) fields["kWh_consumidos"] = Math.round(proposalData.kwh_consumidos);
   if (proposalData.kwh_consumidos_y_cargas_extra) fields["kWh_consumidos_y_cargas_extra"] = Math.round(proposalData.kwh_consumidos_y_cargas_extra);
@@ -211,13 +219,17 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
 
   // Totales
   if (proposalData.costos_totales) fields["Costos_Totales"] = Math.round(proposalData.costos_totales);
-  if (proposalData.profit_margin !== undefined) fields["Profit_margin"] = proposalData.profit_margin;
-  if (proposalData.discount_rate !== undefined) fields["Discount_rate"] = proposalData.discount_rate;
+  const profitMargin = proposalData.profit_margin ?? proposalCargasExtra?.profit_margin;
+  const discountRate = proposalData.discount_rate ?? proposalCargasExtra?.discount_rate;
+  if (profitMargin !== undefined) fields["Profit_margin"] = profitMargin;
+  if (discountRate !== undefined) fields["Discount_rate"] = discountRate;
   if (proposalData.tc) fields["TC"] = proposalData.tc;
   if (proposalData.precio_lista) fields["Precio_lista"] = Math.round(proposalData.precio_lista);
   if (proposalData.subtotal) fields["Subtotal"] = Math.round(proposalData.subtotal);
   if (proposalData.iva) fields["IVA"] = Math.round(proposalData.iva);
   if (proposalData.total) fields["Total"] = Math.round(proposalData.total);
+  const usdPerW = computeUsdPerW(proposalData.subtotal, proposalData.tc, proposalData.potencia_panel, proposalData.cantidad_paneles);
+  if (usdPerW) fields["USD_W"] = usdPerW;
   if (proposalData.gross_profit) fields["Gross_profit"] = Math.round(proposalData.gross_profit);
   if (proposalData.gross_profit_post_cac) fields["Gross_profit_post_CAC"] = Math.round(proposalData.gross_profit_post_cac);
   if (proposalData.secuencia_exhibiciones) fields["Secuencia_Exhibiciones"] = proposalData.secuencia_exhibiciones;
@@ -261,6 +273,13 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
     if (proposalCargasExtra.subtotal) fields["Subtotal_Cargas_Extra"] = Math.round(proposalCargasExtra.subtotal);
     if (proposalCargasExtra.iva) fields["IVA_Cargas_Extra"] = Math.round(proposalCargasExtra.iva);
     if (proposalCargasExtra.total) fields["Total_Cargas_Extra"] = Math.round(proposalCargasExtra.total);
+    const usdPerWCargasExtra = computeUsdPerW(
+      proposalCargasExtra.subtotal,
+      proposalCargasExtra.tc,
+      proposalCargasExtra.potencia_panel,
+      proposalCargasExtra.cantidad_paneles
+    );
+    if (usdPerWCargasExtra) fields["USD_W_Cargas_Extra"] = usdPerWCargasExtra;
     if (proposalCargasExtra.gross_profit) fields["Gross_profit_Cargas_Extra"] = Math.round(proposalCargasExtra.gross_profit);
     if (proposalCargasExtra.gross_profit_post_cac) fields["Gross_profit_post_CAC_Cargas_Extra"] = Math.round(proposalCargasExtra.gross_profit_post_cac);
     if (proposalCargasExtra.impacto_ambiental) {
