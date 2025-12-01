@@ -355,6 +355,9 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
   let cantidadMicro4Panel = 0;
   let costoMicroinversores = 0;
   let costoExtrasMicroinversores = 0;
+  let inverterSpec = null;
+  let micro2Spec = null;
+  let micro4Spec = null;
 
   if (microCentral === "central") {
     // Sistema con inversor central
@@ -362,6 +365,7 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     if (inverter) {
       idInversor = inverter.ID;
       costoInversor = inverter.Price_USD * tc;
+      inverterSpec = inverter;
     }
   } else {
     // Sistema con microinversores
@@ -374,6 +378,13 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     const costs = calculateMicroCosts(microConfig, params);
     costoMicroinversores = costs.costoMicroinversores;
     costoExtrasMicroinversores = costs.costoExtras;
+
+    if (idMicro2Panel) {
+      micro2Spec = params.microinverterSpecs.find(m => m.ID === idMicro2Panel) || null;
+    }
+    if (idMicro4Panel) {
+      micro4Spec = params.microinverterSpecs.find(m => m.ID === idMicro4Panel) || null;
+    }
   }
 
   // 5. Seleccionar montaje (greedy)
@@ -445,6 +456,16 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     tc,
     costo_paneles: Math.round(costoPaneles),
     micro_central: microCentral,
+
+    // Specs (for frontend display)
+    panel_specs: panel,
+    panel_specs_params: panel,
+    inverter_specs: inverterSpec,
+    inverter_specs_params: inverterSpec,
+    microinverter_specs: [micro4Spec, micro2Spec].filter(Boolean),
+    microinverter_specs_params: [micro4Spec, micro2Spec].filter(Boolean),
+    montaje_specs: [montajeA, montajeB].filter(Boolean),
+    montaje_specs_params: [montajeA, montajeB].filter(Boolean),
 
     // Inversor (si aplica)
     id_inversor: idInversor,
