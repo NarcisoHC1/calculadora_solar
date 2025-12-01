@@ -219,6 +219,10 @@ function blockToProposalData(
 
   const components = buildComponentsFromBackend(propuesta, potenciaPorPanel, cantidadPaneles);
 
+  const dacPaymentRaw = Number(block.alerta_dac || 0);
+  const dacBimonthlyPayment = periodicidad === 'mensual' ? dacPaymentRaw * 2 : dacPaymentRaw;
+  const hasDACWarning = !!dacBimonthlyPayment && dacBimonthlyPayment > 0;
+
   return {
     input: {
       hasCFE: true,
@@ -239,9 +243,9 @@ function blockToProposalData(
     environmental,
     components,
     porcentajeCobertura,
-    showDACWarning: !!block.alerta_dac,
-    dacBimonthlyPayment: block.alerta_dac || undefined,
-    dacFinancial: block.alerta_dac ? financial : undefined
+    showDACWarning: hasDACWarning,
+    dacBimonthlyPayment: hasDACWarning ? dacBimonthlyPayment : undefined,
+    dacFinancial: hasDACWarning ? financial : undefined
   };
 }
 

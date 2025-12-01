@@ -217,11 +217,15 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-amber-900 font-bold mt-0.5">•</span>
-                <span>Si caes en tarifa DAC, tu pago será de <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre.</span>
+                <span>Si caes (o ya estás) en tarifa DAC, pagarías <strong>{formatCurrency(dacBimonthlyPayment)}</strong> al bimestre.</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-amber-900 font-bold mt-0.5">•</span>
-                <span>Con SolarYa evitarás caer en DAC, ahorrando <strong>{formatCurrency(dacBimonthlyPayment - financial.pagoFuturo)}</strong> al bimestre.</span>
+                <span>Con SolarYa pagarías <strong>{formatCurrency(financial.pagoFuturo)}</strong> al bimestre.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-900 font-bold mt-0.5">•</span>
+                <span>Tu ahorro bimestral en DAC sería de <strong>{formatCurrency(dacBimonthlyPayment - financial.pagoFuturo)}</strong>.</span>
               </li>
             </ul>
           </div>
