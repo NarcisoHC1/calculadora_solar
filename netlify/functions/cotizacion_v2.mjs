@@ -202,6 +202,7 @@ export async function handler(event) {
         project_id: projectId,
         proposal_id: proposalId,
         proposal: {
+          tarifa: proposal.tarifa,
           kwh_consumidos: proposal.kwh_consumidos,
           kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
           metros_distancia: metrosDistancia,
@@ -209,6 +210,7 @@ export async function handler(event) {
           propuesta_cargas_extra: proposal.propuesta_cargas_extra,
           frontend_outputs: proposal.frontend_outputs,
           periodicidad: proposal.periodicidad,
+          limite_dac_mensual_kwh: proposal.limite_dac_mensual_kwh,
           pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,
           pago_dac_hipotetico_cargas_extra: proposal.pago_dac_hipotetico_cargas_extra
         }

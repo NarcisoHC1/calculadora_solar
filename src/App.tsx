@@ -57,6 +57,9 @@ type BackendProposalEnvelope = {
   frontend_outputs?: { base?: FrontendBlock | null; cargas_extra?: FrontendBlock | null } | null;
   tarifa?: string;
   periodicidad?: string;
+  limite_dac_mensual_kwh?: number | null;
+  kwh_consumidos?: number | null;
+  kwh_consumidos_y_cargas_extra?: number | null;
 };
 
 function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, cantidadPaneles: number): ComponentBreakdown[] {
@@ -155,7 +158,9 @@ function blockToProposalData(
   block: FrontendBlock | null | undefined,
   propuesta: any,
   periodicidad: string,
-  tarifa: string
+  tarifa: string,
+  consumoKwhPeriodo?: number | null,
+  limiteDACMensual?: number | null
 ): ProposalData | null {
   if (!block || !propuesta) return null;
 
@@ -228,7 +233,12 @@ function blockToProposalData(
       0
   );
   const dacBimonthlyPayment = periodicidad === 'mensual' ? dacPaymentRaw * 2 : dacPaymentRaw;
-  const hasDACWarning = dacBimonthlyPayment > 0;
+  const consumoPeriodoKwh = Number(consumoKwhPeriodo ?? 0);
+  const consumoMensualKwh = periodicidad === 'mensual' ? consumoPeriodoKwh : consumoPeriodoKwh / 2;
+  const limiteMensual = limiteDACMensual != null ? Number(limiteDACMensual) : null;
+  const isResidentialTariff = /^1[A-F]?$/i.test(tarifa || '');
+  const meetsLimit = limiteMensual != null && limiteMensual > 0 ? consumoMensualKwh >= limiteMensual : false;
+  const hasDACWarning = isResidentialTariff && dacBimonthlyPayment > 0 && (limiteMensual == null || meetsLimit);
 
   return {
     input: {
@@ -265,9 +275,24 @@ function mapBackendToProposal(
 
   const periodicidad = proposal.periodicidad || fallbackPeriodicidad || 'bimestral';
   const tarifa = proposal.tarifa || fallbackTarifa || '1';
+  const limiteDAC = proposal.limite_dac_mensual_kwh;
 
-  const current = blockToProposalData(proposal.frontend_outputs.base, proposal.propuesta_actual, periodicidad, tarifa);
-  const future = blockToProposalData(proposal.frontend_outputs.cargas_extra, proposal.propuesta_cargas_extra, periodicidad, tarifa);
+  const current = blockToProposalData(
+    proposal.frontend_outputs.base,
+    proposal.propuesta_actual,
+    periodicidad,
+    tarifa,
+    proposal.kwh_consumidos,
+    limiteDAC
+  );
+  const future = blockToProposalData(
+    proposal.frontend_outputs.cargas_extra,
+    proposal.propuesta_cargas_extra,
+    periodicidad,
+    tarifa,
+    proposal.kwh_consumidos_y_cargas_extra,
+    limiteDAC
+  );
 
   if (!current) return null;
 
