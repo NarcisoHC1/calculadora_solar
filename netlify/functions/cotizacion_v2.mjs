@@ -48,6 +48,21 @@ export async function handler(event) {
       return undefined;
     };
 
+    const parseHouseholdSize = (value) => {
+      if (value === undefined || value === null) return 0;
+      const asNumber = Number(value);
+      if (!Number.isNaN(asNumber) && asNumber > 0) return asNumber;
+      const matchDigits = String(value).match(/\d+/);
+      if (matchDigits) {
+        const parsed = Number(matchDigits[0]);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      return 0;
+    };
+
+    const numeroPersonasRaw = body.numero_personas;
+    const numeroPersonasParsed = parseHouseholdSize(numeroPersonasRaw);
+
     // Generar propuesta completa usando el nuevo motor
     const formDataForEngine = {
       // Basic info
@@ -63,7 +78,7 @@ export async function handler(event) {
       // Property
       uso: usoNormalized || "Casa",
       casa_negocio: usoNormalized || "",
-      numero_personas: Number(body.numero_personas || 0),
+      numero_personas: numeroPersonasParsed,
       rango_personas_negocio: body.rango_personas_negocio || "",
       tipo_inmueble: body.tipo_inmueble || "",
       pisos: Number(body.pisos || 0),
@@ -142,7 +157,11 @@ export async function handler(event) {
       pago_dac_hipotetico_cargas_extra: tarifaResidencial ? proposal.pago_dac_hipotetico_cargas_extra : null,
       quiere_aislado: quiereAislado,
       casa_negocio: casaNegocio,
-      numero_personas: casaNegocio === "Negocio" ? (body.rango_personas_negocio || "") : Number(body.numero_personas || 0),
+      numero_personas: casaNegocio === "Negocio"
+        ? (body.rango_personas_negocio || "")
+        : (numeroPersonasRaw !== undefined && numeroPersonasRaw !== null && numeroPersonasRaw !== ''
+          ? String(numeroPersonasRaw)
+          : ""),
       rango_personas_negocio: body.rango_personas_negocio || "",
       ya_tiene_fv: yaTieneFV,
       tipo_inmueble: tipoInmuebleMapped,
