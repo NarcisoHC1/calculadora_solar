@@ -219,8 +219,10 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
 
   // Totales
   if (proposalData.costos_totales) fields["Costos_Totales"] = Math.round(proposalData.costos_totales);
-  if (proposalData.profit_margin !== undefined) fields["Profit_margin"] = proposalData.profit_margin;
-  if (proposalData.discount_rate !== undefined) fields["Discount_rate"] = proposalData.discount_rate;
+  const profitMargin = proposalData.profit_margin ?? proposalCargasExtra?.profit_margin;
+  const discountRate = proposalData.discount_rate ?? proposalCargasExtra?.discount_rate;
+  if (profitMargin !== undefined) fields["Profit_margin"] = profitMargin;
+  if (discountRate !== undefined) fields["Discount_rate"] = discountRate;
   if (proposalData.tc) fields["TC"] = proposalData.tc;
   if (proposalData.precio_lista) fields["Precio_lista"] = Math.round(proposalData.precio_lista);
   if (proposalData.subtotal) fields["Subtotal"] = Math.round(proposalData.subtotal);
