@@ -68,15 +68,26 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
   const components: ComponentBreakdown[] = [];
 
   if (cantidadPaneles > 0) {
-    const panelWarranty = propuesta?.panel_product_warranty_years ?? propuesta?.product_warranty_years;
-    const generationWarranty = propuesta?.panel_generation_warranty_years ?? propuesta?.generation_warranty_years;
-    const measurementsM2 = propuesta?.panel_measurements_m2 ?? propuesta?.measurements_m2;
+    const panelWarranty =
+      propuesta?.panel_product_warranty_years ??
+      propuesta?.panel_specs_product_warranty_years ??
+      propuesta?.product_warranty_years;
+    const generationWarranty =
+      propuesta?.panel_generation_warranty_years ??
+      propuesta?.panel_specs_generation_warranty_years ??
+      propuesta?.generation_warranty_years;
+    const measurementsM2 =
+      propuesta?.panel_measurements_m2 ??
+      propuesta?.panel_specs_measurements_m2 ??
+      propuesta?.measurements_m2;
     const capacityW = potenciaPorPanel || propuesta?.potencia_panel || 0;
+    const panelBrand = propuesta?.panel_brand ?? propuesta?.panel_specs_brand ?? propuesta?.id_panel ?? 'Panel';
+    const panelModel = propuesta?.panel_model ?? propuesta?.panel_specs_model ?? `${capacityW || ''}W`;
     components.push({
       concepto: 'Paneles solares',
       cantidad: cantidadPaneles,
-      marca: propuesta.id_panel || 'Panel',
-      modelo: `${capacityW || ''}W`,
+      marca: panelBrand,
+      modelo: panelModel,
       type: 'panel',
       productWarrantyYears: panelWarranty ?? 25,
       generationWarrantyYears: generationWarranty ?? 25,
@@ -86,66 +97,108 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
   }
 
   if (propuesta.micro_central === 'central' && propuesta.id_inversor) {
+    const inverterBrand =
+      propuesta?.inversor_brand ?? propuesta?.inverter_specs_brand ?? propuesta.id_inversor;
+    const inverterModel =
+      propuesta?.inversor_model ?? propuesta?.inverter_specs_model ?? propuesta.id_inversor;
     components.push({
       concepto: 'Inversor',
       cantidad: 1,
-      marca: propuesta.id_inversor,
-      modelo: propuesta.id_inversor,
+      marca: inverterBrand,
+      modelo: inverterModel,
       type: 'inverter',
-      capacityKw: propuesta?.potencia_inversor_kw ?? undefined,
-      productWarrantyYears: propuesta?.inversor_product_warranty_years ?? 12
+      capacityKw:
+        propuesta?.capacity_kw_inverter_specs_params ??
+        propuesta?.potencia_inversor_kw ??
+        undefined,
+      productWarrantyYears:
+        propuesta?.inversor_product_warranty_years ??
+        propuesta?.inverter_specs_product_warranty_years ??
+        12
     });
   } else {
     if (propuesta.id_micro_4_panel && propuesta.cantidad_micro_4_panel) {
+      const microBrand4 =
+        propuesta?.microinverter_brand_4_panel ??
+        propuesta?.micro_brand_4_panel ??
+        propuesta?.microinverter_specs_brand ??
+        propuesta.id_micro_4_panel;
+      const microModel4 =
+        propuesta?.microinverter_model_4_panel ??
+        propuesta?.micro_model_4_panel ??
+        propuesta?.microinverter_specs_model ??
+        propuesta.id_micro_4_panel;
       components.push({
         concepto: 'Microinversor 4 paneles',
         cantidad: propuesta.cantidad_micro_4_panel,
-        marca: propuesta.id_micro_4_panel,
-        modelo: propuesta.id_micro_4_panel,
+        marca: microBrand4,
+        modelo: microModel4,
         type: 'microinverter',
-        productWarrantyYears: propuesta?.micro_product_warranty_years ?? 12
+        productWarrantyYears:
+          propuesta?.micro_product_warranty_years ??
+          propuesta?.microinverter_specs_product_warranty_years ??
+          12
       });
     }
     if (propuesta.id_micro_2_panel && propuesta.cantidad_micro_2_panel) {
+      const microBrand2 =
+        propuesta?.microinverter_brand_2_panel ??
+        propuesta?.micro_brand_2_panel ??
+        propuesta?.microinverter_specs_brand ??
+        propuesta.id_micro_2_panel;
+      const microModel2 =
+        propuesta?.microinverter_model_2_panel ??
+        propuesta?.micro_model_2_panel ??
+        propuesta?.microinverter_specs_model ??
+        propuesta.id_micro_2_panel;
       components.push({
         concepto: 'Microinversor 2 paneles',
         cantidad: propuesta.cantidad_micro_2_panel,
-        marca: propuesta.id_micro_2_panel,
-        modelo: propuesta.id_micro_2_panel,
+        marca: microBrand2,
+        modelo: microModel2,
         type: 'microinverter',
-        productWarrantyYears: propuesta?.micro_product_warranty_years ?? 12
+        productWarrantyYears:
+          propuesta?.micro_product_warranty_years ??
+          propuesta?.microinverter_specs_product_warranty_years ??
+          12
       });
     }
   }
 
   if (propuesta.id_montaje_a && propuesta.cantidad_montaje_a) {
+    const montajeBrandA = propuesta?.montaje_brand_a ?? propuesta?.montaje_specs_brand ?? propuesta.id_montaje_a;
+    const montajeModelA = propuesta?.montaje_model_a ?? propuesta?.montaje_specs_model ?? propuesta.id_montaje_a;
     components.push({
       concepto: 'Montaje A',
       cantidad: propuesta.cantidad_montaje_a,
-      marca: propuesta.id_montaje_a,
-      modelo: propuesta.id_montaje_a,
+      marca: montajeBrandA,
+      modelo: montajeModelA,
       type: 'montaje',
       productWarrantyYears: propuesta?.montaje_product_warranty_years ?? 25
     });
   }
 
   if (propuesta.id_montaje_b && propuesta.cantidad_montaje_b) {
+    const montajeBrandB = propuesta?.montaje_brand_b ?? propuesta?.montaje_specs_brand ?? propuesta.id_montaje_b;
+    const montajeModelB = propuesta?.montaje_model_b ?? propuesta?.montaje_specs_model ?? propuesta.id_montaje_b;
     components.push({
       concepto: 'Montaje B',
       cantidad: propuesta.cantidad_montaje_b,
-      marca: propuesta.id_montaje_b,
-      modelo: propuesta.id_montaje_b,
+      marca: montajeBrandB,
+      modelo: montajeModelB,
       type: 'montaje',
       productWarrantyYears: propuesta?.montaje_product_warranty_years ?? 25
     });
   }
 
   if (!propuesta.id_montaje_a && !propuesta.id_montaje_b && propuesta.id_montaje) {
+    const montajeBrand = propuesta?.montaje_brand ?? propuesta?.montaje_specs_brand ?? propuesta.id_montaje;
+    const montajeModel = propuesta?.montaje_model ?? propuesta?.montaje_specs_model ?? propuesta.id_montaje;
     components.push({
       concepto: 'Montaje',
       cantidad: 1,
-      marca: propuesta.id_montaje,
-      modelo: propuesta.id_montaje,
+      marca: montajeBrand,
+      modelo: montajeModel,
       type: 'montaje',
       productWarrantyYears: propuesta?.montaje_product_warranty_years ?? 25
     });

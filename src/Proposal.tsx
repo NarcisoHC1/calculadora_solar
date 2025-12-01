@@ -71,6 +71,21 @@ function getMaxProductWarranty(components: ComponentBreakdown[]): number {
 
 const ALL_BRAND_LOGOS = ['Hoymiles', 'Aluminext', 'Solis', 'Growatt', 'Huawei', 'SMA', 'Sungrow', 'JA', 'Longi', 'Canadian Solar'];
 
+function StaticBrandRow({ brands }: { brands: string[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {brands.map(brand => (
+        <div
+          key={brand}
+          className="flex items-center justify-center w-28 h-14 rounded-lg bg-white border border-slate-200 shadow-sm"
+        >
+          <img src={createLogoPlaceholder(brand)} alt={brand} className="max-h-10 max-w-[90%] object-contain" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function createLogoPlaceholder(text: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="70" viewBox="0 0 180 70">
     <rect width="180" height="70" rx="12" fill="%23f8fafc" stroke="%23e2e8f0" />
@@ -107,6 +122,51 @@ function TopBrandsSection() {
       <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
       <BrandCarousel brands={ALL_BRAND_LOGOS} className="py-2" />
     </div>
+  );
+}
+
+function WhatYouGet({ maxEquipmentWarranty }: { maxEquipmentWarranty: number }) {
+  return (
+    <>
+      <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
+
+      <div className="bg-slate-50 border-2 rounded-xl p-6 mb-6" style={{ borderColor: '#ff9b7a' }}>
+        <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-base text-slate-700 leading-relaxed">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>Instalación por técnicos certificados</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>Garantía de instalación: <strong>2 años</strong></p>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>Todos los trámites ante CFE</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>Garantía de equipos: <strong>hasta {maxEquipmentWarranty || 12} años</strong></p>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>App de monitoreo de energía en tiempo real</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>Garantía de generación de energía: <strong>25 años</strong></p>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>Aumenta el valor de tu propiedad</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
+            <p>Protección contra subidas de precios de CFE</p>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -352,45 +412,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
 
         {showSharedSections && (
         <div className="border-t border-slate-200 pt-6 mb-6">
-          <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
-
-          <div className="bg-slate-50 border-2 rounded-xl p-6 mb-6" style={{ borderColor: '#ff9b7a' }}>
-            <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-base text-slate-700 leading-relaxed">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Instalación por técnicos certificados</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Garantía de instalación: <strong>2 años</strong></p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Todos los trámites ante CFE</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Garantía de equipos: <strong>hasta {maxEquipmentWarranty || 12} años</strong></p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>App de monitoreo de energía en tiempo real</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Garantía de generación de energía: <strong>25 años</strong></p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Aumenta el valor de tu propiedad</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-                <p>Protección contra subidas de precios de CFE</p>
-              </div>
-            </div>
-          </div>
-
+          <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
         </div>
         )}
 
@@ -409,7 +431,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
               <p className="text-sm text-slate-600 font-semibold">×{panelComponent?.cantidad ?? system.numPaneles}</p>
             </div>
             <div className="mt-4">
-              <BrandCarousel brands={['JA', 'Canadian', 'Longi']} />
+              <StaticBrandRow brands={['JA', 'Canadian', 'Longi']} />
             </div>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               <p>• Potencia: <strong>{panelComponent?.capacityWatts ?? system.potenciaPorPanel}</strong> Watts</p>
@@ -454,7 +476,6 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
                   <p className="text-base font-semibold text-slate-900">Montaje {montajeComponent.marca}</p>
-                  <p className="text-sm text-slate-600">Modelo {montajeComponent.modelo}</p>
                 </div>
                 <p className="text-sm text-slate-600 font-semibold">×{montajeComponent.cantidad}</p>
               </div>
@@ -479,7 +500,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
   );
 }
 
-function SharedSections({ onClose }: { onClose: () => void }) {
+function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void; maxEquipmentWarranty: number }) {
   return (
     <>
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
@@ -500,6 +521,10 @@ function SharedSections({ onClose }: { onClose: () => void }) {
           <CalendlyWidget />
           <p className="text-xs text-slate-500 mt-4 text-center">Sin compromiso · Evaluación profesional · 100% gratis</p>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+        <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
       </div>
 
       <TopBrandsSection />
@@ -871,7 +896,13 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
                 <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} validUntil={validUntil} />
               )}
             </div>
-            <SharedSections onClose={onClose} />
+            <SharedSections
+              onClose={onClose}
+              maxEquipmentWarranty={getMaxProductWarranty([
+                ...proposal.current.components,
+                ...(proposal.future?.components ?? [])
+              ])}
+            />
           </>
         ) : (
           <div className="mb-8">
