@@ -46,6 +46,8 @@ type FrontendBlock = {
   iva?: number | null;
   inversion_total?: number | null;
   alerta_dac?: number | null;
+  pago_dac_hipotetico_consumo_actual?: number | null;
+  pago_dac_hipotetico_cargas_extra?: number | null;
   impacto_ambiental?: { carbon?: number | null; trees?: number | null; oil?: number | null } | null;
 };
 
@@ -55,6 +57,9 @@ type BackendProposalEnvelope = {
   frontend_outputs?: { base?: FrontendBlock | null; cargas_extra?: FrontendBlock | null } | null;
   tarifa?: string;
   periodicidad?: string;
+  limite_dac_mensual_kwh?: number | null;
+  kwh_consumidos?: number | null;
+  kwh_consumidos_y_cargas_extra?: number | null;
 };
 
 function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, cantidadPaneles: number): ComponentBreakdown[] {
@@ -63,11 +68,20 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
   const components: ComponentBreakdown[] = [];
 
   if (cantidadPaneles > 0) {
+    const panelWarranty = propuesta?.panel_product_warranty_years ?? propuesta?.product_warranty_years;
+    const generationWarranty = propuesta?.panel_generation_warranty_years ?? propuesta?.generation_warranty_years;
+    const measurementsM2 = propuesta?.panel_measurements_m2 ?? propuesta?.measurements_m2;
+    const capacityW = potenciaPorPanel || propuesta?.potencia_panel || 0;
     components.push({
       concepto: 'Paneles solares',
       cantidad: cantidadPaneles,
       marca: propuesta.id_panel || 'Panel',
-      modelo: `${potenciaPorPanel || propuesta.potencia_panel || ''}W`
+      modelo: `${capacityW || ''}W`,
+      type: 'panel',
+      productWarrantyYears: panelWarranty ?? 25,
+      generationWarrantyYears: generationWarranty ?? 25,
+      capacityWatts: capacityW,
+      measurementsM2: measurementsM2 != null ? Number(measurementsM2) : undefined
     });
   }
 
@@ -76,7 +90,10 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       concepto: 'Inversor',
       cantidad: 1,
       marca: propuesta.id_inversor,
-      modelo: propuesta.id_inversor
+      modelo: propuesta.id_inversor,
+      type: 'inverter',
+      capacityKw: propuesta?.potencia_inversor_kw ?? undefined,
+      productWarrantyYears: propuesta?.inversor_product_warranty_years ?? 12
     });
   } else {
     if (propuesta.id_micro_4_panel && propuesta.cantidad_micro_4_panel) {
@@ -84,7 +101,9 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         concepto: 'Microinversor 4 paneles',
         cantidad: propuesta.cantidad_micro_4_panel,
         marca: propuesta.id_micro_4_panel,
-        modelo: propuesta.id_micro_4_panel
+        modelo: propuesta.id_micro_4_panel,
+        type: 'microinverter',
+        productWarrantyYears: propuesta?.micro_product_warranty_years ?? 12
       });
     }
     if (propuesta.id_micro_2_panel && propuesta.cantidad_micro_2_panel) {
@@ -92,7 +111,9 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         concepto: 'Microinversor 2 paneles',
         cantidad: propuesta.cantidad_micro_2_panel,
         marca: propuesta.id_micro_2_panel,
-        modelo: propuesta.id_micro_2_panel
+        modelo: propuesta.id_micro_2_panel,
+        type: 'microinverter',
+        productWarrantyYears: propuesta?.micro_product_warranty_years ?? 12
       });
     }
   }
@@ -102,7 +123,9 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       concepto: 'Montaje A',
       cantidad: propuesta.cantidad_montaje_a,
       marca: propuesta.id_montaje_a,
-      modelo: propuesta.id_montaje_a
+      modelo: propuesta.id_montaje_a,
+      type: 'montaje',
+      productWarrantyYears: propuesta?.montaje_product_warranty_years ?? 25
     });
   }
 
@@ -111,7 +134,9 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       concepto: 'Montaje B',
       cantidad: propuesta.cantidad_montaje_b,
       marca: propuesta.id_montaje_b,
-      modelo: propuesta.id_montaje_b
+      modelo: propuesta.id_montaje_b,
+      type: 'montaje',
+      productWarrantyYears: propuesta?.montaje_product_warranty_years ?? 25
     });
   }
 
@@ -120,7 +145,9 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       concepto: 'Montaje',
       cantidad: 1,
       marca: propuesta.id_montaje,
-      modelo: propuesta.id_montaje
+      modelo: propuesta.id_montaje,
+      type: 'montaje',
+      productWarrantyYears: propuesta?.montaje_product_warranty_years ?? 25
     });
   }
 
@@ -131,7 +158,9 @@ function blockToProposalData(
   block: FrontendBlock | null | undefined,
   propuesta: any,
   periodicidad: string,
-  tarifa: string
+  tarifa: string,
+  consumoKwhPeriodo?: number | null,
+  limiteDACMensual?: number | null
 ): ProposalData | null {
   if (!block || !propuesta) return null;
 
@@ -197,6 +226,20 @@ function blockToProposalData(
 
   const components = buildComponentsFromBackend(propuesta, potenciaPorPanel, cantidadPaneles);
 
+  const dacPaymentRaw = Number(
+    block.pago_dac_hipotetico_cargas_extra ??
+      block.pago_dac_hipotetico_consumo_actual ??
+      block.alerta_dac ??
+      0
+  );
+  const dacBimonthlyPayment = periodicidad === 'mensual' ? dacPaymentRaw * 2 : dacPaymentRaw;
+  const consumoPeriodoKwh = Number(consumoKwhPeriodo ?? 0);
+  const consumoMensualKwh = periodicidad === 'mensual' ? consumoPeriodoKwh : consumoPeriodoKwh / 2;
+  const limiteMensual = limiteDACMensual != null ? Number(limiteDACMensual) : null;
+  const isResidentialTariff = /^1[A-F]?$/i.test(tarifa || '');
+  const meetsLimit = limiteMensual != null && limiteMensual > 0 ? consumoMensualKwh >= limiteMensual : false;
+  const hasDACWarning = isResidentialTariff && dacBimonthlyPayment > 0 && (limiteMensual == null || meetsLimit);
+
   return {
     input: {
       hasCFE: true,
@@ -217,9 +260,9 @@ function blockToProposalData(
     environmental,
     components,
     porcentajeCobertura,
-    showDACWarning: !!block.alerta_dac,
-    dacBimonthlyPayment: block.alerta_dac || undefined,
-    dacFinancial: block.alerta_dac ? financial : undefined
+    showDACWarning: hasDACWarning,
+    dacBimonthlyPayment: hasDACWarning ? dacBimonthlyPayment : undefined,
+    dacFinancial: hasDACWarning ? financial : undefined
   };
 }
 
@@ -232,9 +275,24 @@ function mapBackendToProposal(
 
   const periodicidad = proposal.periodicidad || fallbackPeriodicidad || 'bimestral';
   const tarifa = proposal.tarifa || fallbackTarifa || '1';
+  const limiteDAC = proposal.limite_dac_mensual_kwh;
 
-  const current = blockToProposalData(proposal.frontend_outputs.base, proposal.propuesta_actual, periodicidad, tarifa);
-  const future = blockToProposalData(proposal.frontend_outputs.cargas_extra, proposal.propuesta_cargas_extra, periodicidad, tarifa);
+  const current = blockToProposalData(
+    proposal.frontend_outputs.base,
+    proposal.propuesta_actual,
+    periodicidad,
+    tarifa,
+    proposal.kwh_consumidos,
+    limiteDAC
+  );
+  const future = blockToProposalData(
+    proposal.frontend_outputs.cargas_extra,
+    proposal.propuesta_cargas_extra,
+    periodicidad,
+    tarifa,
+    proposal.kwh_consumidos_y_cargas_extra,
+    limiteDAC
+  );
 
   if (!current) return null;
 
