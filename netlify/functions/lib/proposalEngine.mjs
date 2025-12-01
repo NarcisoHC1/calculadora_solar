@@ -254,8 +254,14 @@ function estimateFromGuess(formData, tarifa, factorP, params) {
     : (formData.uso === "Casa" || formData.casa_negocio === "Casa" || (!formData.uso && !formData.casa_negocio));
 
   if (isCasa) {
-    const members = Number(formData.numero_personas) || 2;
-    const guess = params.houseLoadsGuess.find(h => h.Members === members);
+    const membersRaw = formData.numero_personas !== undefined && formData.numero_personas !== null
+      ? String(formData.numero_personas).trim()
+      : "";
+
+    const guess = params.houseLoadsGuess.find(h => String(h.Members).trim() === membersRaw)
+      || params.houseLoadsGuess.find(h => Number(h.Members) === Number(membersRaw));
+
+    const members = Number(membersRaw) || 2;
     kwhBimestral = guess?.kWh_Bimestre || 300;
   } else {
     const range = formData.rango_personas_negocio || "1-5";

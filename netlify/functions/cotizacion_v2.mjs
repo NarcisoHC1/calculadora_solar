@@ -47,21 +47,7 @@ export async function handler(event) {
       if (value === false || value === 'no') return false;
       return undefined;
     };
-
-    const parseHouseholdSize = (value) => {
-      if (value === undefined || value === null) return 0;
-      const asNumber = Number(value);
-      if (!Number.isNaN(asNumber) && asNumber > 0) return asNumber;
-      const matchDigits = String(value).match(/\d+/);
-      if (matchDigits) {
-        const parsed = Number(matchDigits[0]);
-        return Number.isNaN(parsed) ? 0 : parsed;
-      }
-      return 0;
-    };
-
     const numeroPersonasRaw = body.numero_personas;
-    const numeroPersonasParsed = parseHouseholdSize(numeroPersonasRaw);
 
     // Generar propuesta completa usando el nuevo motor
     const formDataForEngine = {
@@ -78,7 +64,7 @@ export async function handler(event) {
       // Property
       uso: usoNormalized || "Casa",
       casa_negocio: usoNormalized || "",
-      numero_personas: numeroPersonasParsed,
+      numero_personas: numeroPersonasRaw,
       rango_personas_negocio: body.rango_personas_negocio || "",
       tipo_inmueble: body.tipo_inmueble || "",
       pisos: Number(body.pisos || 0),
