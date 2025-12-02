@@ -34,7 +34,15 @@ const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || '';
 function resolveOcrEndpoint(base: string): string {
   if (!base) return '';
   const trimmed = base.replace(/\/+$/, '');
-  if (/\/v1\/ocr\/cfe$/i.test(trimmed)) return trimmed;
+  const lower = trimmed.toLowerCase();
+
+  // Si el endpoint ya apunta directo a la función (p. ej. /api/ocr_cfe o /.netlify/functions/ocr_cfe), úsalo tal cual
+  if (/\/ocr_cfe$/.test(lower)) return trimmed;
+
+  // Si ya incluye la ruta completa REST (p. ej. /v1/ocr/cfe), respétala
+  if (/\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
+
+  // Caso general: asumimos que base es sólo el host y le agregamos la ruta
   return `${trimmed}/v1/ocr/cfe`;
 }
 
