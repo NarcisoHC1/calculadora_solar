@@ -712,12 +712,30 @@ function App() {
       setOcrStatus('analyzing');
       setOcrMsg('Analizando páginas…');
 
-      const endpoint = OCR_BASE || '/api/ocr_cfe';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed })
-      });
+      const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
+      const primaryEndpoint = OCR_BASE || '/api/ocr_cfe';
+      const fallbackEndpoint = '/api/ocr_cfe';
+
+      const tryFetch = async (url: string) => {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        return resp.ok ? resp : Promise.reject(new Error('bad_status'));
+      };
+
+      let response: Response;
+      try {
+        response = await tryFetch(primaryEndpoint);
+      } catch (err) {
+        if (primaryEndpoint !== fallbackEndpoint) {
+          console.warn('OCR primary endpoint failed, retrying fallback…', err);
+          response = await tryFetch(fallbackEndpoint);
+        } else {
+          throw err;
+        }
+      }
 
       setOcrStatus('extracting');
       setOcrMsg('Recopilando información…');
