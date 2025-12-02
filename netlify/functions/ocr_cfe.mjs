@@ -2,7 +2,27 @@
 import { CORS, createRecord } from "./lib/airtable.mjs";
 
 const OCR_BASE = (process.env.OCR_BASE || process.env.OCR_SERVICE_BASE || process.env.OCR_API_BASE || "").replace(/\/+$/, "");
-const OCR_ENDPOINT = OCR_BASE ? `${OCR_BASE}/v1/ocr/cfe` : "";
+const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || "").trim();
+
+function resolveOcrEndpoint(base, override) {
+  const direct = (override || "").replace(/\/+$/, "");
+  if (direct) return direct;
+  if (!base) return "";
+
+  const trimmed = base.replace(/\/+$/, "");
+  const lower = trimmed.toLowerCase();
+
+  // Si ya viene con la ruta completa, úsala sin modificar
+  if (/\/ocr_cfe$/.test(lower) || /\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
+
+  // Si viene con /v1/ocr, sólo agrega /cfe
+  if (/\/v1\/ocr$/.test(lower)) return `${trimmed}/cfe`;
+
+  // Caso general: asumimos que es sólo el host/base
+  return `${trimmed}/v1/ocr/cfe`;
+}
+
+const OCR_ENDPOINT = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE);
 
 const respond = (statusCode, body) => ({
   statusCode,
