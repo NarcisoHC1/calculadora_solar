@@ -35,7 +35,12 @@ export async function handler(event) {
     const projectId = await createProject({ leadId });
     console.log("✅ Project:", projectId);
 
-    const periodicidad = body.has_cfe === false ? "bimestral" : (body.periodicidad || "bimestral");
+    const ocrData = body.ocr_result?.data || body.ocr_result || {};
+    const ocrPromedios = ocrData.historicals_promedios || {};
+
+    const periodicidad = body.has_cfe === false
+      ? "bimestral"
+      : (body.periodicidad || ocrData.Periodicidad || "bimestral");
     const usoNormalized = body.uso === "negocio" || body.uso === "Negocio"
       ? "Negocio"
       : body.uso === "casa" || body.uso === "Casa"
@@ -56,10 +61,10 @@ export async function handler(event) {
       municipio: body.municipio || "Ciudad de México",
       has_cfe: body.has_cfe,
       tiene_recibo: body.has_cfe === true && body.tiene_recibo === true,
-      pago_promedio: Number(body.pago_promedio_mxn || 0),
+      pago_promedio: Number(body.pago_promedio_mxn || ocrPromedios.Pago_Prom_MXN_Periodo || 0),
       periodicidad,
-      tarifa: body.tarifa || "",
-      kwh_consumidos: Number(body.kwh_consumidos || 0) || null,
+      tarifa: body.tarifa || ocrData.Tarifa || "",
+      kwh_consumidos: Number(body.kwh_consumidos || ocrPromedios.kWh_consumidos || 0) || null,
 
       // Property
       uso: usoNormalized || "Casa",
@@ -122,21 +127,31 @@ export async function handler(event) {
     const tipoInmuebleMapped = tipoInmuebleMap[body.tipo_inmueble] || body.tipo_inmueble || "";
 
     // Check if tarifa is residential (1, 1A, 1B, 1C, 1D, 1E, 1F, DAC)
-    const tarifaResidencial = /^(1[A-F]?|DAC)$/i.test(proposal.tarifa || body.tarifa || "");
+    const tarifaResidencial = /^(1[A-F]?|DAC)$/i.test(proposal.tarifa || ocrData.Tarifa || body.tarifa || "");
 
     // Preparar datos para Submission_Details
     const submissionData = {
       ocr_manual: body.ocr_result ? "OCR" : "manual",
       ocr_json: body.ocr_result ? JSON.stringify(body.ocr_result) : null,
+      OCR_JSON: body.ocr_result ? JSON.stringify(body.ocr_result) : null,
+      OCR_Manual: body.ocr_result ? "ocr" : "manual",
+      Imagen_recibo: body.ocr_image || body.ocr_result?.Imagen_recibo || null,
       estado: body.estado || "",
       tiene_contrato_cfe: hasCFE,
       tiene_recibo_cfe: tieneReciboCFE,
       no_servicio_cfe: body.ocr_result?.no_servicio || "",
       no_medidor_cfe: body.ocr_result?.no_medidor || "",
+      Numero_Servicio_CFE: ocrData.Numero_Servicio_CFE || body.ocr_result?.no_servicio || "",
+      Numero_Medidor_CFE: ocrData.Numero_Medidor_CFE || body.ocr_result?.no_medidor || "",
+      Fases: ocrData.Fases,
       pago_promedio: proposal.pago_promedio || Number(body.pago_promedio_mxn || 0),
+      Pago_Prom_MXN_Periodo: ocrPromedios.Pago_Prom_MXN_Periodo ?? proposal.pago_promedio ?? Number(body.pago_promedio_mxn || 0),
       periodicidad,
-      tarifa: proposal.tarifa || body.tarifa || "",
-      kwh_consumidos: proposal.kwh_consumidos,
+      Periodicidad: ocrData.Periodicidad || periodicidad,
+      tarifa: proposal.tarifa || ocrData.Tarifa || body.tarifa || "",
+      Tarifa: ocrData.Tarifa || proposal.tarifa || body.tarifa || "",
+      kwh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
+      kWh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
       kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
       pago_hipotetico_cargas_extra: proposal.pago_hipotetico_cargas_extra,
       pago_dac_hipotetico_consumo_actual: tarifaResidencial ? proposal.pago_dac_hipotetico_consumo_actual : null,
