@@ -29,7 +29,7 @@ const BUSINESS_RANGE_OPTIONS = ['1-10', '11-50', '51-250', '251 o más'];
 type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
-const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || ''; // 👈 Railway
+const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || '';
 
 type FrontendBlock = {
   con_solarya_pagaras?: number | null;
@@ -597,6 +597,7 @@ function App() {
   const [ocrMsg, setOcrMsg] = useState('');
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [ocrQuality, setOcrQuality] = useState<number | null>(null);
+  const [ocrImage, setOcrImage] = useState<string | null>(null);
 
   // Step 1 - manual capture toggles and fields
   const [showManual, setShowManual] = useState(false);
@@ -659,62 +660,141 @@ function App() {
     try { window.parent.postMessage({ type: 'status', status: 'done' }, '*'); } catch {}
   }
 
-  // --------- OCR Demo Mode ----------
-  async function runOCRRailway(selectedFiles: File[]) {
+  async function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function compressDataUrl(dataUrl: string, mimeType: string): Promise<string> {
+    if (!mimeType.startsWith('image/')) return dataUrl;
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 1600;
+        let { width, height } = img;
+
+        if (width > height && width > maxSize) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else if (height >= width && height > maxSize) {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.65);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  // --------- OCR ----------
+  async function runOCR(selectedFiles: File[]) {
     try {
       setOcrStatus('uploading');
       setOcrMsg('Subiendo archivos…');
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const limitedFiles = selectedFiles.slice(0, 2);
+      const dataUrls = await Promise.all(limitedFiles.map(fileToDataUrl));
+      const compressed = limitedFiles[0] ? await compressDataUrl(dataUrls[0], limitedFiles[0].type || '') : null;
 
       setOcrStatus('analyzing');
       setOcrMsg('Analizando páginas…');
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
+      const primaryEndpoint = OCR_BASE || '/api/ocr_cfe';
+      const fallbackEndpoint = '/api/ocr_cfe';
+
+      const tryFetch = async (url: string) => {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        return resp.ok ? resp : Promise.reject(new Error('bad_status'));
+      };
+
+      let response: Response;
+      try {
+        response = await tryFetch(primaryEndpoint);
+      } catch (err) {
+        if (primaryEndpoint !== fallbackEndpoint) {
+          console.warn('OCR primary endpoint failed, retrying fallback…', err);
+          response = await tryFetch(fallbackEndpoint);
+        } else {
+          throw err;
+        }
+      }
 
       setOcrStatus('extracting');
       setOcrMsg('Recopilando información…');
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      if (!response.ok) {
+        throw new Error('Respuesta no válida del servicio OCR');
+      }
 
-      const mockData = {
-        tarifa: '1',
-        consumo_kwh_bimestral: 1000,
-        pago_bimestral: 8500,
-        cp: '03100',
-        estado: 'Ciudad de México'
-      };
+      const result = await response.json();
+
+      if (!result?.ok) {
+        setOcrStatus('fail');
+        setOcrMsg('No se pudo leer tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
+        setOcrResult(null);
+        setOcrQuality(null);
+        setOcrImage(null);
+        return;
+      }
+
+      const normalized = result.data || {};
+      const prom = normalized.historicals_promedios || {};
+
+      const tarifaOCR = normalized.Tarifa || normalized.tarifa || result.form_overrides?.tarifa || '';
+      const cpOCR = result.form_overrides?.cp || '';
+      const periodicidadOCR = normalized.Periodicidad || '';
+      const pagoProm = prom.Pago_Prom_MXN_Periodo;
 
       setOcrStatus('ok');
       setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
-      setOcrResult(mockData);
-      setOcrQuality(95);
+      setOcrResult({ ...result, data: normalized });
+      setOcrQuality(typeof result.quality === 'number' ? result.quality : null);
+      setOcrImage(compressed || null);
 
-      setTarifa('1');
-      setCP('03100');
-      setEstado('Ciudad de México');
-      setPago('8500');
-      setPeriodo('bimestral');
+      if (tarifaOCR) setTarifa(tarifaOCR);
+      if (cpOCR) setCP(cpOCR);
+      if (periodicidadOCR) setPeriodo(periodicidadOCR);
+      if (pagoProm != null && !Number.isNaN(Number(pagoProm))) setPago(String(Math.round(Number(pagoProm))));
+
       setHasCFE('si');
       setPlanCFE('');
       setShowManual(false);
     } catch (e) {
       console.error('OCR error:', e);
       setOcrStatus('fail');
-      setOcrMsg('Hubo un error al analizar tu recibo. Intenta de nuevo o captura tus datos manualmente.');
+      setOcrMsg('Hubo un error al analizar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
       setOcrResult(null);
+      setOcrQuality(null);
+      setOcrImage(null);
     }
   }
 
   // --- Upload handler (máx 2) ---
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
     if (!selected.length) return;
     const next = selected.slice(0, 2);
     setFiles(next);
     setFileNames(next.map(f => f.name));
-    // corre OCR primero (Railway)
-    runOCRRailway(next);
+    await runOCR(next);
   };
 
   const removeFileAt = (idx: number) => {
@@ -726,6 +806,7 @@ function App() {
       setOcrMsg('');
       setOcrResult(null);
       setOcrQuality(null);
+      setOcrImage(null);
     }
   };
 
@@ -737,6 +818,7 @@ function App() {
     setOcrMsg('');
     setOcrResult(null);
     setOcrQuality(null);
+    setOcrImage(null);
   };
 
   const handleCargaToggle = (carga: string, checked: boolean) => {
@@ -933,8 +1015,11 @@ function App() {
       cp,
       estado: estado || '',
       municipio: estado || '',
-      tarifa: tarifa || (ocrResult?.tarifa || ''),
-      kwh_consumidos: ocrResult?.kwh_consumidos || null,
+      tarifa: tarifa || (ocrResult?.data?.Tarifa || ocrResult?.data?.tarifa || ocrResult?.form_overrides?.tarifa || ''),
+      kwh_consumidos:
+        ocrResult?.data?.historicals_promedios?.kWh_consumidos ||
+        ocrResult?.data?.kWh_consumidos ||
+        null,
       tipo_inmueble: tipoInmueble || '',
       pisos: parseInt(pisos || '0', 10) || 0,
       distancia_techo_tablero: parseInt(distanciaTechoTablero || '0', 10) || 0,
@@ -946,11 +1031,10 @@ function App() {
       tiene_recibo: hasCFE === 'si' ? justMoved === 'si' : false,
       plans_cfe: planCFE,
       ya_tiene_fv: expandNormalized ? expandNormalized === 'si' : undefined,
-      propuesta_auto: flow === 'AUTO'
+      propuesta_auto: flow === 'AUTO',
+      ocr_result: ocrResult,
+      ocr_image: ocrImage
     };
-
-    // el OCR va incrustado tal cual se recibió de Railway (si hubo éxito)
-    const ocr = ocrResult ? { ok: true, quality: ocrQuality, data: ocrResult } : null;
 
     try {
       const bridge = (window as any).SYBridge;

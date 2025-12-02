@@ -109,12 +109,19 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.tiene_recibo_cfe !== undefined) fields["Tiene_recibo_CFE"] = data.tiene_recibo_cfe ? "sí" : "no";
   if (data.no_servicio_cfe) fields["No_de_servicio_CFE"] = data.no_servicio_cfe;
   if (data.no_medidor_cfe) fields["No_de_medidor_CFE"] = data.no_medidor_cfe;
+  if (data.Numero_Servicio_CFE) fields["Numero_Servicio_CFE"] = data.Numero_Servicio_CFE;
+  if (data.Numero_Medidor_CFE) fields["Numero_Medidor_CFE"] = data.Numero_Medidor_CFE;
+  if (data.Fases !== undefined && data.Fases !== null && data.Fases !== "") fields["Fases"] = data.Fases;
 
   // Consumption & Payment
   if (data.pago_promedio) fields["Pago_Prom_MXN_Periodo"] = Math.round(data.pago_promedio);
+  if (data.Pago_Prom_MXN_Periodo) fields["Pago_Prom_MXN_Periodo"] = Math.round(data.Pago_Prom_MXN_Periodo);
   if (data.periodicidad) fields["Periodicidad"] = data.periodicidad;
+  if (data.Periodicidad) fields["Periodicidad"] = data.Periodicidad;
   if (data.tarifa) fields["Tarifa"] = data.tarifa;
+  if (data.Tarifa) fields["Tarifa"] = data.Tarifa;
   if (data.kwh_consumidos) fields["kWh_consumidos"] = Math.round(data.kwh_consumidos);
+  if (data.kWh_consumidos) fields["kWh_consumidos"] = Math.round(data.kWh_consumidos);
   if (data.kwh_consumidos_y_cargas_extra) fields["kWh_consumidos_y_cargas_extra"] = Math.round(data.kwh_consumidos_y_cargas_extra);
 
   // Hypothetical payments
@@ -159,6 +166,10 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.li_fat_id) fields["li_fat_id"] = data.li_fat_id;
   if (data.twclid) fields["twclid"] = data.twclid;
   if (data.propuesta_auto !== undefined) fields["Propuesta_Auto"] = data.propuesta_auto ? "sí" : "no";
+  if (data.OCR_JSON) fields["OCR_JSON"] = data.OCR_JSON;
+  if (data.ocr_json) fields["OCR_JSON"] = data.ocr_json;
+  if (data.OCR_Manual) fields["OCR_Manual"] = data.OCR_Manual;
+  if (data.Imagen_recibo) fields["Imagen_recibo"] = data.Imagen_recibo;
 
   const rec = await createRecord("Submission_Details", fields);
   return rec.id;

@@ -14,6 +14,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/ocr_cfe"
+  to   = "/.netlify/functions/ocr_cfe"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/referral"
   to   = "/.netlify/functions/referral"
   status = 200
