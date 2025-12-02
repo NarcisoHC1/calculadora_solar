@@ -42,6 +42,12 @@ function resolveOcrEndpoint(base: string): string {
   // Si ya incluye la ruta completa REST (p. ej. /v1/ocr/cfe), respétala
   if (/\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
 
+  // Si apunta al root de funciones (Netlify) agrega sólo la función
+  if (/\.netlify\/functions$/.test(lower)) return `${trimmed}/ocr_cfe`;
+
+  // Si apunta al root /api (por ejemplo Railway /api → /api/ocr_cfe)
+  if (/\/api$/.test(lower)) return `${trimmed}/ocr_cfe`;
+
   // Caso general: asumimos que base es sólo el host y le agregamos la ruta
   return `${trimmed}/v1/ocr/cfe`;
 }
