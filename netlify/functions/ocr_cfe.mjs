@@ -1,4 +1,5 @@
 // netlify/functions/ocr_cfe.mjs
+import { Blob, FormData } from "undici";
 import { CORS, createRecord } from "./lib/airtable.mjs";
 
 const OCR_BASE = (
@@ -7,7 +8,7 @@ const OCR_BASE = (
   process.env.OCR_API_BASE ||
   ""
 ).replace(/\/+$/, "");
-const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || process.env.VITE_OCR_ENDPOINT || "").trim();
+const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || "").trim();
 
 function resolveOcrEndpoint(base, override) {
   const direct = (override || "").replace(/\/+$/, "");
