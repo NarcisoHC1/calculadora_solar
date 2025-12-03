@@ -63,13 +63,49 @@ export async function handler(event) {
   const filename = payload.filename || "upload";
   const compressedImage = payload.compressed_image || images[0];
 
+  const parseDataUrl = (value) => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.startsWith("data:")) {
+      const parts = trimmed.split(",", 2);
+      const meta = parts[0] || "";
+      const data = parts.length === 2 ? parts[1] : null;
+      const mime = meta ? meta.slice(5).split(";")[0] || "" : "";
+      return { mime, b64: data };
+    }
+    return { mime: "", b64: trimmed };
+  };
+
+  const hasPdfData = images.some((img) => {
+    const parsed = parseDataUrl(img);
+    return parsed?.mime?.toLowerCase().includes("application/pdf");
+  }) || (typeof filename === "string" && filename.toLowerCase().endsWith(".pdf"));
+
   let ocrResult;
   try {
-    const resp = await fetch(OCR_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images, filename })
-    });
+    let requestInit;
+
+    if (hasPdfData) {
+      const form = new FormData();
+      images.forEach((img, idx) => {
+        const parsed = parseDataUrl(img);
+        if (!parsed?.b64) return;
+        const mime = parsed.mime || "application/pdf";
+        const buffer = Buffer.from(parsed.b64, "base64");
+        const blob = new Blob([buffer], { type: mime || "application/pdf" });
+        const fname = filename || `upload_${idx + 1}.pdf`;
+        form.append("files", blob, fname);
+      });
+      requestInit = { method: "POST", body: form };
+    } else {
+      requestInit = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images, filename })
+      };
+    }
+
+    const resp = await fetch(OCR_ENDPOINT, requestInit);
 
     let body;
     try {
