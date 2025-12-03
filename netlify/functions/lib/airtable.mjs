@@ -169,32 +169,8 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.OCR_JSON) fields["OCR_JSON"] = data.OCR_JSON;
   if (data.ocr_json) fields["OCR_JSON"] = data.ocr_json;
   if (data.OCR_Manual) fields["OCR_Manual"] = data.OCR_Manual;
-  if (data.Imagen_recibo) {
-    let imagenValue = null;
-
-    if (typeof data.Imagen_recibo === "string") {
-      imagenValue = data.Imagen_recibo;
-    } else if (Array.isArray(data.Imagen_recibo)) {
-      const first = data.Imagen_recibo.find(Boolean);
-      if (typeof first === "string") {
-        imagenValue = first;
-      } else if (first && typeof first === "object" && first.url) {
-        imagenValue = first.url;
-      }
-    } else if (data.Imagen_recibo && typeof data.Imagen_recibo === "object") {
-      if (data.Imagen_recibo.url) {
-        imagenValue = data.Imagen_recibo.url;
-      } else {
-        try {
-          imagenValue = JSON.stringify(data.Imagen_recibo);
-        } catch (err) {
-          imagenValue = null;
-        }
-      }
-    }
-
-    if (imagenValue) fields["Imagen_recibo"] = imagenValue;
-  }
+  // Skip Imagen_recibo upload while Airtable column is not accepting files/URLs.
+  // The rest of the Submission_Details fields should continue to be stored normally.
 
   const rec = await createRecord("Submission_Details", fields);
   return rec.id;
