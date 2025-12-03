@@ -12,13 +12,8 @@ function resolveOcrEndpoint(base, override) {
   const trimmed = base.replace(/\/+$/, "");
   const lower = trimmed.toLowerCase();
 
-  // Si ya viene con la ruta completa, úsala sin modificar
   if (/\/ocr_cfe$/.test(lower) || /\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
-
-  // Si viene con /v1/ocr, sólo agrega /cfe
   if (/\/v1\/ocr$/.test(lower)) return `${trimmed}/cfe`;
-
-  // Caso general: asumimos que es sólo el host/base
   return `${trimmed}/v1/ocr/cfe`;
 }
 
@@ -75,13 +70,26 @@ export async function handler(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images, filename })
     });
-    ocrResult = await resp.json();
-    if (!resp.ok) {
-      throw new Error(ocrResult?.error || resp.statusText);
+
+    let body;
+    try {
+      body = await resp.json();
+    } catch {
+      body = null;
     }
+
+    if (!resp.ok) {
+      console.error("OCR upstream error:", resp.status, body);
+      return respond(resp.status, {
+        ok: false,
+        error: body?.error || `ocr_upstream_${resp.status}`
+      });
+    }
+
+    ocrResult = body;
   } catch (err) {
     console.error("OCR relay error:", err);
-    return respond(502, { ok: false, error: "ocr_service_error" });
+    return respond(502, { ok: false, error: "ocr_service_unreachable" });
   }
 
   const responsePayload = {

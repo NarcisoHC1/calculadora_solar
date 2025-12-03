@@ -30,25 +30,18 @@ type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
 const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || '';
+const OCR_ENDPOINT_OVERRIDE = (import.meta as any).env?.VITE_OCR_ENDPOINT || '';
 
-function resolveOcrEndpoint(base: string): string {
+function resolveOcrEndpoint(base: string, override?: string): string {
+  const direct = (override || '').replace(/\/+$/, '');
+  if (direct) return direct;
   if (!base) return '';
+
   const trimmed = base.replace(/\/+$/, '');
   const lower = trimmed.toLowerCase();
 
-  // Si el endpoint ya apunta directo a la función (p. ej. /api/ocr_cfe o /.netlify/functions/ocr_cfe), úsalo tal cual
-  if (/\/ocr_cfe$/.test(lower)) return trimmed;
-
-  // Si ya incluye la ruta completa REST (p. ej. /v1/ocr/cfe), respétala
-  if (/\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
-
-  // Si apunta al root de funciones (Netlify) agrega sólo la función
-  if (/\.netlify\/functions$/.test(lower)) return `${trimmed}/ocr_cfe`;
-
-  // Si apunta al root /api (por ejemplo Railway /api → /api/ocr_cfe)
-  if (/\/api$/.test(lower)) return `${trimmed}/ocr_cfe`;
-
-  // Caso general: asumimos que base es sólo el host y le agregamos la ruta
+  if (/\/ocr_cfe$/.test(lower) || /\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
+  if (/\/v1\/ocr$/.test(lower)) return `${trimmed}/cfe`;
   return `${trimmed}/v1/ocr/cfe`;
 }
 
@@ -734,7 +727,7 @@ function App() {
       setOcrMsg('Analizando páginas…');
 
       const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
-      const primaryEndpoint = resolveOcrEndpoint(OCR_BASE) || '/api/ocr_cfe';
+      const primaryEndpoint = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE) || '/api/ocr_cfe';
       const fallbackEndpoint = '/api/ocr_cfe';
 
       const tryFetch = async (url: string) => {
