@@ -1,8 +1,14 @@
 // netlify/functions/ocr_cfe.mjs
 import { CORS, createRecord } from "./lib/airtable.mjs";
 
-const OCR_BASE = (process.env.OCR_BASE || process.env.OCR_SERVICE_BASE || process.env.OCR_API_BASE || "").replace(/\/+$/, "");
-const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || "").trim();
+const OCR_BASE = (
+  process.env.OCR_BASE ||
+  process.env.OCR_SERVICE_BASE ||
+  process.env.OCR_API_BASE ||
+  process.env.VITE_OCR_BASE ||
+  ""
+).replace(/\/+$/, "");
+const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || process.env.VITE_OCR_ENDPOINT || "").trim();
 
 function resolveOcrEndpoint(base, override) {
   const direct = (override || "").replace(/\/+$/, "");
