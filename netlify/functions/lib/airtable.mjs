@@ -170,18 +170,30 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.ocr_json) fields["OCR_JSON"] = data.ocr_json;
   if (data.OCR_Manual) fields["OCR_Manual"] = data.OCR_Manual;
   if (data.Imagen_recibo) {
-    if (Array.isArray(data.Imagen_recibo)) {
-      const attachments = data.Imagen_recibo.map((item) => {
-        if (item && typeof item === "object") return item;
-        if (typeof item === "string") return { url: item };
-        return null;
-      }).filter(Boolean);
-      if (attachments.length) fields["Imagen_recibo"] = attachments;
-    } else if (typeof data.Imagen_recibo === "object") {
-      fields["Imagen_recibo"] = [data.Imagen_recibo];
-    } else if (typeof data.Imagen_recibo === "string") {
-      fields["Imagen_recibo"] = [{ url: data.Imagen_recibo }];
+    let imagenValue = null;
+
+    if (typeof data.Imagen_recibo === "string") {
+      imagenValue = data.Imagen_recibo;
+    } else if (Array.isArray(data.Imagen_recibo)) {
+      const first = data.Imagen_recibo.find(Boolean);
+      if (typeof first === "string") {
+        imagenValue = first;
+      } else if (first && typeof first === "object" && first.url) {
+        imagenValue = first.url;
+      }
+    } else if (data.Imagen_recibo && typeof data.Imagen_recibo === "object") {
+      if (data.Imagen_recibo.url) {
+        imagenValue = data.Imagen_recibo.url;
+      } else {
+        try {
+          imagenValue = JSON.stringify(data.Imagen_recibo);
+        } catch (err) {
+          imagenValue = null;
+        }
+      }
     }
+
+    if (imagenValue) fields["Imagen_recibo"] = imagenValue;
   }
 
   const rec = await createRecord("Submission_Details", fields);
