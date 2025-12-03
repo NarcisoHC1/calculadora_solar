@@ -5,7 +5,6 @@ const OCR_BASE = (
   process.env.OCR_BASE ||
   process.env.OCR_SERVICE_BASE ||
   process.env.OCR_API_BASE ||
-  process.env.VITE_OCR_BASE ||
   ""
 ).replace(/\/+$/, "");
 const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || process.env.VITE_OCR_ENDPOINT || "").trim();

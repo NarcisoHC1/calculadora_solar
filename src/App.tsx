@@ -29,20 +29,12 @@ const BUSINESS_RANGE_OPTIONS = ['1-10', '11-50', '51-250', '251 o más'];
 type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
-const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || '';
 const OCR_ENDPOINT_OVERRIDE = (import.meta as any).env?.VITE_OCR_ENDPOINT || '';
 
-function resolveOcrEndpoint(base: string, override?: string): string {
+function resolveOcrEndpoint(override?: string): string {
   const direct = (override || '').replace(/\/+$/, '');
   if (direct) return direct;
-  if (!base) return '';
-
-  const trimmed = base.replace(/\/+$/, '');
-  const lower = trimmed.toLowerCase();
-
-  if (/\/ocr_cfe$/.test(lower) || /\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
-  if (/\/v1\/ocr$/.test(lower)) return `${trimmed}/cfe`;
-  return `${trimmed}/v1/ocr/cfe`;
+  return '/api/ocr_cfe';
 }
 
 type FrontendBlock = {
@@ -727,10 +719,11 @@ function App() {
       setOcrMsg('Analizando páginas…');
 
       const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
+      const primaryEndpoint = resolveOcrEndpoint(OCR_ENDPOINT_OVERRIDE);
       const fallbackEndpoint = '/api/ocr_cfe';
-      const resolvedEndpoint = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE);
-      const primaryEndpoint = fallbackEndpoint;
-      const secondaryEndpoint = resolvedEndpoint && resolvedEndpoint !== primaryEndpoint ? resolvedEndpoint : null;
+      const secondaryEndpoint = OCR_ENDPOINT_OVERRIDE && OCR_ENDPOINT_OVERRIDE !== primaryEndpoint ? OCR_ENDPOINT_OVERRIDE : null;
+
+      console.log('🛰️ OCR endpoint frontend:', primaryEndpoint);
 
       const callEndpoint = async (url: string) => {
         const resp = await fetch(url, {
