@@ -1,5 +1,4 @@
 // netlify/functions/ocr_cfe.mjs
-import { Blob, FormData } from "undici";
 import { CORS, createRecord } from "./lib/airtable.mjs";
 
 const OCR_BASE = (
