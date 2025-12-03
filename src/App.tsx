@@ -30,11 +30,18 @@ type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
 const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || '';
+const OCR_ENDPOINT_OVERRIDE = (import.meta as any).env?.VITE_OCR_ENDPOINT || '';
 
-function resolveOcrEndpoint(base: string): string {
+function resolveOcrEndpoint(base: string, override?: string): string {
+  const direct = (override || '').replace(/\/+$/, '');
+  if (direct) return direct;
   if (!base) return '';
+
   const trimmed = base.replace(/\/+$/, '');
-  if (/\/v1\/ocr\/cfe$/i.test(trimmed)) return trimmed;
+  const lower = trimmed.toLowerCase();
+
+  if (/\/ocr_cfe$/.test(lower) || /\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
+  if (/\/v1\/ocr$/.test(lower)) return `${trimmed}/cfe`;
   return `${trimmed}/v1/ocr/cfe`;
 }
 
@@ -720,25 +727,44 @@ function App() {
       setOcrMsg('Analizando páginas…');
 
       const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
-      const primaryEndpoint = resolveOcrEndpoint(OCR_BASE) || '/api/ocr_cfe';
+      const primaryEndpoint = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE) || '/api/ocr_cfe';
       const fallbackEndpoint = '/api/ocr_cfe';
 
-      const tryFetch = async (url: string) => {
+      const callEndpoint = async (url: string) => {
         const resp = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        return resp.ok ? resp : Promise.reject(new Error('bad_status'));
+        let data: any = null;
+        try {
+          data = await resp.json();
+        } catch (err) {
+          data = null;
+        }
+        return { resp, data };
       };
 
       let response: Response;
+      let resultBody: any = null;
+
       try {
-        response = await tryFetch(primaryEndpoint);
+        const primaryResult = await callEndpoint(primaryEndpoint);
+        response = primaryResult.resp;
+        resultBody = primaryResult.data;
+
+        if (!response.ok && primaryEndpoint !== fallbackEndpoint) {
+          console.warn('OCR primary endpoint failed, retrying fallback…', response.status, resultBody);
+          const fallbackResult = await callEndpoint(fallbackEndpoint);
+          response = fallbackResult.resp;
+          resultBody = fallbackResult.data;
+        }
       } catch (err) {
         if (primaryEndpoint !== fallbackEndpoint) {
           console.warn('OCR primary endpoint failed, retrying fallback…', err);
-          response = await tryFetch(fallbackEndpoint);
+          const fallbackResult = await callEndpoint(fallbackEndpoint);
+          response = fallbackResult.resp;
+          resultBody = fallbackResult.data;
         } else {
           throw err;
         }
@@ -747,16 +773,17 @@ function App() {
       setOcrStatus('extracting');
       setOcrMsg('Recopilando información…');
 
-      if (!response.ok) {
-        throw new Error('Respuesta no válida del servicio OCR');
-      }
+      const result = resultBody ?? (await response.json().catch(() => null));
 
-      const result = await response.json();
+      if (!response.ok || !result?.ok) {
+        const errCode = result?.error || (!response.ok ? `ocr_http_${response.status}` : 'ocr_failed');
+        const friendlyMsg = errCode === 'no_images' || errCode === 'no_images_provided' || errCode === 'no_images_converted'
+          ? 'No pudimos procesar el archivo. Sube tu recibo como imagen nítida o PDF original.'
+          : 'Hubo un error al analizar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.';
 
-      if (!result?.ok) {
         setOcrStatus('fail');
-        setOcrMsg('No se pudo leer tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
-        setOcrResult(null);
+        setOcrMsg(friendlyMsg);
+        setOcrResult(result || null);
         setOcrQuality(null);
         setOcrImage(null);
         return;

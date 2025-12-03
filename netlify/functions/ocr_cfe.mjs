@@ -2,7 +2,22 @@
 import { CORS, createRecord } from "./lib/airtable.mjs";
 
 const OCR_BASE = (process.env.OCR_BASE || process.env.OCR_SERVICE_BASE || process.env.OCR_API_BASE || "").replace(/\/+$/, "");
-const OCR_ENDPOINT = OCR_BASE ? `${OCR_BASE}/v1/ocr/cfe` : "";
+const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || "").trim();
+
+function resolveOcrEndpoint(base, override) {
+  const direct = (override || "").replace(/\/+$/, "");
+  if (direct) return direct;
+  if (!base) return "";
+
+  const trimmed = base.replace(/\/+$/, "");
+  const lower = trimmed.toLowerCase();
+
+  if (/\/ocr_cfe$/.test(lower) || /\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
+  if (/\/v1\/ocr$/.test(lower)) return `${trimmed}/cfe`;
+  return `${trimmed}/v1/ocr/cfe`;
+}
+
+const OCR_ENDPOINT = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE);
 
 const respond = (statusCode, body) => ({
   statusCode,
@@ -30,28 +45,86 @@ export async function handler(event) {
     return respond(400, { ok: false, error: "JSON inválido" });
   }
 
-  const images = Array.isArray(payload.images) ? payload.images.filter(Boolean) : [];
+  // Acepta distintas formas de recibir la imagen desde el front (images, image o compressed_image)
+  let images = [];
+
+  if (Array.isArray(payload.images)) {
+    images = payload.images.filter(Boolean);
+  } else if (payload.image) {
+    images = [payload.image];
+  } else if (payload.compressed_image) {
+    images = [payload.compressed_image];
+  }
+
   if (!images.length) {
     return respond(400, { ok: false, error: "no_images" });
   }
 
   const filename = payload.filename || "upload";
-  const compressedImage = payload.compressed_image;
+
+  const parseDataUrl = (value) => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.startsWith("data:")) {
+      const parts = trimmed.split(",", 2);
+      const meta = parts[0] || "";
+      const data = parts.length === 2 ? parts[1] : null;
+      const mime = meta ? meta.slice(5).split(";")[0] || "" : "";
+      return { mime, b64: data };
+    }
+    return { mime: "", b64: trimmed };
+  };
+
+  const hasPdfData = images.some((img) => {
+    const parsed = parseDataUrl(img);
+    return parsed?.mime?.toLowerCase().includes("application/pdf");
+  }) || (typeof filename === "string" && filename.toLowerCase().endsWith(".pdf"));
 
   let ocrResult;
   try {
-    const resp = await fetch(OCR_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images, filename })
-    });
-    ocrResult = await resp.json();
-    if (!resp.ok) {
-      throw new Error(ocrResult?.error || resp.statusText);
+    let requestInit;
+
+    if (hasPdfData) {
+      const form = new FormData();
+      images.forEach((img, idx) => {
+        const parsed = parseDataUrl(img);
+        if (!parsed?.b64) return;
+        const mime = parsed.mime || "application/pdf";
+        const buffer = Buffer.from(parsed.b64, "base64");
+        const blob = new Blob([buffer], { type: mime || "application/pdf" });
+        const fname = filename || `upload_${idx + 1}.pdf`;
+        form.append("files", blob, fname);
+      });
+      requestInit = { method: "POST", body: form };
+    } else {
+      requestInit = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images, filename })
+      };
     }
+
+    const resp = await fetch(OCR_ENDPOINT, requestInit);
+
+    let body;
+    try {
+      body = await resp.json();
+    } catch {
+      body = null;
+    }
+
+    if (!resp.ok) {
+      console.error("OCR upstream error:", resp.status, body);
+      return respond(resp.status, {
+        ok: false,
+        error: body?.error || `ocr_upstream_${resp.status}`
+      });
+    }
+
+    ocrResult = body;
   } catch (err) {
     console.error("OCR relay error:", err);
-    return respond(502, { ok: false, error: "ocr_service_error" });
+    return respond(502, { ok: false, error: "ocr_service_unreachable" });
   }
 
   const responsePayload = {
@@ -82,8 +155,6 @@ export async function handler(event) {
       setField("Tarifa", data.Tarifa || data.tarifa);
       setField("OCR_JSON", JSON.stringify(ocrResult));
       setField("OCR_Manual", "ocr");
-      if (compressedImage) setField("Imagen_recibo", compressedImage);
-
       if (Object.keys(fields).length) {
         await createRecord("Submission_Details", fields);
       }
