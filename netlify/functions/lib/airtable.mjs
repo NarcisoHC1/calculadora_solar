@@ -169,7 +169,20 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.OCR_JSON) fields["OCR_JSON"] = data.OCR_JSON;
   if (data.ocr_json) fields["OCR_JSON"] = data.ocr_json;
   if (data.OCR_Manual) fields["OCR_Manual"] = data.OCR_Manual;
-  if (data.Imagen_recibo) fields["Imagen_recibo"] = data.Imagen_recibo;
+  if (data.Imagen_recibo) {
+    if (Array.isArray(data.Imagen_recibo)) {
+      const attachments = data.Imagen_recibo.map((item) => {
+        if (item && typeof item === "object") return item;
+        if (typeof item === "string") return { url: item };
+        return null;
+      }).filter(Boolean);
+      if (attachments.length) fields["Imagen_recibo"] = attachments;
+    } else if (typeof data.Imagen_recibo === "object") {
+      fields["Imagen_recibo"] = [data.Imagen_recibo];
+    } else if (typeof data.Imagen_recibo === "string") {
+      fields["Imagen_recibo"] = [{ url: data.Imagen_recibo }];
+    }
+  }
 
   const rec = await createRecord("Submission_Details", fields);
   return rec.id;
