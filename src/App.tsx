@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { getEstadosUnique, getMinStateThreshold, getMaxStateThreshold, isCDMXorMexico } from './stateThresholds';
 import { generateProposal } from './calculationEngine';
@@ -605,6 +605,7 @@ function App() {
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [ocrQuality, setOcrQuality] = useState<number | null>(null);
   const [ocrImage, setOcrImage] = useState<string | null>(null);
+  const ocrMsgIntervalRef = useRef<number | null>(null);
 
   // Step 1 - manual capture toggles and fields
   const [showManual, setShowManual] = useState(false);
@@ -707,10 +708,37 @@ function App() {
   }
 
   // --------- OCR ----------
+  const stopOcrMessageLoop = () => {
+    if (ocrMsgIntervalRef.current != null) {
+      clearInterval(ocrMsgIntervalRef.current);
+      ocrMsgIntervalRef.current = null;
+    }
+  };
+
+  const startOcrMessageLoop = (messages: string[], delay = 1600) => {
+    stopOcrMessageLoop();
+    if (!messages.length) return;
+
+    let idx = 0;
+    setOcrMsg(messages[idx]);
+
+    if (messages.length === 1) return;
+
+    ocrMsgIntervalRef.current = window.setInterval(() => {
+      idx = (idx + 1) % messages.length;
+      setOcrMsg(messages[idx]);
+    }, delay);
+  };
+
+  useEffect(() => {
+    return () => stopOcrMessageLoop();
+  }, []);
+
   async function runOCR(selectedFiles: File[]) {
     try {
+      stopOcrMessageLoop();
       setOcrStatus('uploading');
-      setOcrMsg('Subiendo archivos…');
+      startOcrMessageLoop(['Subiendo archivos…', 'Preparando imágenes…']);
 
       const limitedFiles = selectedFiles.slice(0, 2);
       const firstDataUrl = limitedFiles[0] ? await fileToDataUrl(limitedFiles[0]) : null;
@@ -719,7 +747,11 @@ function App() {
         : null;
 
       setOcrStatus('analyzing');
-      setOcrMsg('Analizando páginas…');
+      startOcrMessageLoop([
+        'Analizando páginas…',
+        'Extrayendo datos de tu recibo…',
+        'Interpretando cifras y periodos…'
+      ]);
 
       const primaryEndpoint = resolveOcrEndpoint(OCR_ENDPOINT_OVERRIDE);
 
@@ -747,7 +779,11 @@ function App() {
       let resultBody: any = primaryResult.data;
 
       setOcrStatus('extracting');
-      setOcrMsg('Recopilando información…');
+      startOcrMessageLoop([
+        'Recopilando información…',
+        'Afinando detalles…',
+        'Preparando tu propuesta…'
+      ]);
 
       const result = resultBody ?? (await response.json().catch(() => null));
 
@@ -758,6 +794,7 @@ function App() {
           : 'Hubo un error al analizar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.';
 
         setOcrStatus('fail');
+        stopOcrMessageLoop();
         setOcrMsg(friendlyMsg);
         setOcrResult(result || null);
         setOcrQuality(null);
@@ -774,6 +811,7 @@ function App() {
       const pagoProm = prom.Pago_Prom_MXN_Periodo;
 
       setOcrStatus('ok');
+      stopOcrMessageLoop();
       setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
       setOcrResult({ ...result, data: normalized });
       setOcrQuality(typeof result.quality === 'number' ? result.quality : null);
@@ -790,6 +828,7 @@ function App() {
     } catch (e) {
       console.error('OCR error:', e);
       setOcrStatus('fail');
+      stopOcrMessageLoop();
       setOcrMsg('Hubo un error al analizar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
       setOcrResult(null);
       setOcrQuality(null);
@@ -812,6 +851,7 @@ function App() {
     setFiles(next);
     setFileNames(next.map(f => f.name));
     if (next.length === 0) {
+      stopOcrMessageLoop();
       setOcrStatus('idle');
       setOcrMsg('');
       setOcrResult(null);
@@ -824,6 +864,7 @@ function App() {
     setShowManual(true);
     setFiles([]);
     setFileNames([]);
+    stopOcrMessageLoop();
     setOcrStatus('idle');
     setOcrMsg('');
     setOcrResult(null);
