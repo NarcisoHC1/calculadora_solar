@@ -727,8 +727,10 @@ function App() {
       setOcrMsg('Analizando páginas…');
 
       const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
-      const primaryEndpoint = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE) || '/api/ocr_cfe';
       const fallbackEndpoint = '/api/ocr_cfe';
+      const resolvedEndpoint = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE);
+      const primaryEndpoint = fallbackEndpoint;
+      const secondaryEndpoint = resolvedEndpoint && resolvedEndpoint !== primaryEndpoint ? resolvedEndpoint : null;
 
       const callEndpoint = async (url: string) => {
         const resp = await fetch(url, {
@@ -753,11 +755,11 @@ function App() {
         response = primaryResult.resp;
         resultBody = primaryResult.data;
 
-        if (!response.ok && primaryEndpoint !== fallbackEndpoint) {
-          console.warn('OCR primary endpoint failed, retrying fallback…', response.status, resultBody);
-          const fallbackResult = await callEndpoint(fallbackEndpoint);
-          response = fallbackResult.resp;
-          resultBody = fallbackResult.data;
+        if (!response.ok && secondaryEndpoint) {
+          console.warn('OCR primary endpoint failed, retrying secondary…', response.status, resultBody);
+          const secondaryResult = await callEndpoint(secondaryEndpoint);
+          response = secondaryResult.resp;
+          resultBody = secondaryResult.data;
         }
       } catch (err) {
         if (primaryEndpoint !== fallbackEndpoint) {
