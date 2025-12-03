@@ -30,11 +30,12 @@ type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
 const OCR_ENDPOINT_OVERRIDE = (import.meta as any).env?.VITE_OCR_ENDPOINT || '';
+const DEFAULT_OCR_ENDPOINT = 'https://solarya-ocr-service-production.up.railway.app/v1/ocr/cfe';
 
 function resolveOcrEndpoint(override?: string): string {
   const direct = (override || '').replace(/\/+$/, '');
   if (direct) return direct;
-  return '/api/ocr_cfe';
+  return DEFAULT_OCR_ENDPOINT;
 }
 
 type FrontendBlock = {
@@ -712,24 +713,25 @@ function App() {
       setOcrMsg('Subiendo archivos…');
 
       const limitedFiles = selectedFiles.slice(0, 2);
-      const dataUrls = await Promise.all(limitedFiles.map(fileToDataUrl));
-      const compressed = limitedFiles[0] ? await compressDataUrl(dataUrls[0], limitedFiles[0].type || '') : null;
+      const firstDataUrl = limitedFiles[0] ? await fileToDataUrl(limitedFiles[0]) : null;
+      const compressed = limitedFiles[0] && firstDataUrl
+        ? await compressDataUrl(firstDataUrl, limitedFiles[0].type || '')
+        : null;
 
       setOcrStatus('analyzing');
       setOcrMsg('Analizando páginas…');
 
-      const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
       const primaryEndpoint = resolveOcrEndpoint(OCR_ENDPOINT_OVERRIDE);
-      const fallbackEndpoint = '/api/ocr_cfe';
-      const secondaryEndpoint = OCR_ENDPOINT_OVERRIDE && OCR_ENDPOINT_OVERRIDE !== primaryEndpoint ? OCR_ENDPOINT_OVERRIDE : null;
 
       console.log('🛰️ OCR endpoint frontend:', primaryEndpoint);
+
+      const formData = new FormData();
+      limitedFiles.forEach(file => formData.append('files', file));
 
       const callEndpoint = async (url: string) => {
         const resp = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: formData
         });
         let data: any = null;
         try {
@@ -740,30 +742,9 @@ function App() {
         return { resp, data };
       };
 
-      let response: Response;
-      let resultBody: any = null;
-
-      try {
-        const primaryResult = await callEndpoint(primaryEndpoint);
-        response = primaryResult.resp;
-        resultBody = primaryResult.data;
-
-        if (!response.ok && secondaryEndpoint) {
-          console.warn('OCR primary endpoint failed, retrying secondary…', response.status, resultBody);
-          const secondaryResult = await callEndpoint(secondaryEndpoint);
-          response = secondaryResult.resp;
-          resultBody = secondaryResult.data;
-        }
-      } catch (err) {
-        if (primaryEndpoint !== fallbackEndpoint) {
-          console.warn('OCR primary endpoint failed, retrying fallback…', err);
-          const fallbackResult = await callEndpoint(fallbackEndpoint);
-          response = fallbackResult.resp;
-          resultBody = fallbackResult.data;
-        } else {
-          throw err;
-        }
-      }
+      const primaryResult = await callEndpoint(primaryEndpoint);
+      let response: Response = primaryResult.resp;
+      let resultBody: any = primaryResult.data;
 
       setOcrStatus('extracting');
       setOcrMsg('Recopilando información…');
@@ -1070,10 +1051,12 @@ function App() {
 
       console.log('📤 Enviando datos al backend...');
 
+      const submissionPayload = { form: formPayload, ocr: ocrResult || null };
+
       const response = await fetch('/api/cotizacion_v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formPayload)
+        body: JSON.stringify(submissionPayload)
       });
 
       console.log('📥 Respuesta recibida:', response.status);

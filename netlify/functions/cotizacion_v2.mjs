@@ -1,5 +1,5 @@
 // netlify/functions/cotizacion_v2.mjs
-import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal } from "./lib/airtable.mjs";
+import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal, createRecord } from "./lib/airtable.mjs";
 import { generateCompleteProposal } from "./lib/proposalEngine.mjs";
 
 export async function handler(event) {
@@ -12,7 +12,9 @@ export async function handler(event) {
   }
 
   try {
-    const body = JSON.parse(event.body || "{}");
+    const rawBody = JSON.parse(event.body || "{}");
+    const body = rawBody.form || rawBody;
+    const ocrResult = rawBody.ocr || rawBody.ocr_result || body.ocr_result;
 
     if (!body.nombre || !body.email || !body.telefono) {
       return {
@@ -35,7 +37,7 @@ export async function handler(event) {
     const projectId = await createProject({ leadId });
     console.log("✅ Project:", projectId);
 
-    const ocrData = body.ocr_result?.data || body.ocr_result || {};
+    const ocrData = (ocrResult && (ocrResult.data || ocrResult)) || {};
     const ocrPromedios = ocrData.historicals_promedios || {};
 
     const periodicidad = body.has_cfe === false
@@ -131,18 +133,18 @@ export async function handler(event) {
 
     // Preparar datos para Submission_Details
     const submissionData = {
-      ocr_manual: body.ocr_result ? "OCR" : "manual",
-      ocr_json: body.ocr_result ? JSON.stringify(body.ocr_result) : null,
-      OCR_JSON: body.ocr_result ? JSON.stringify(body.ocr_result) : null,
-      OCR_Manual: body.ocr_result ? "ocr" : "manual",
-      Imagen_recibo: body.ocr_image || body.ocr_result?.Imagen_recibo || null,
+      ocr_manual: ocrResult ? "OCR" : "manual",
+      ocr_json: ocrResult ? JSON.stringify(ocrResult) : null,
+      OCR_JSON: ocrResult ? JSON.stringify(ocrResult) : null,
+      OCR_Manual: ocrResult ? "ocr" : "manual",
+      Imagen_recibo: body.ocr_image || ocrResult?.Imagen_recibo || null,
       estado: body.estado || "",
       tiene_contrato_cfe: hasCFE,
       tiene_recibo_cfe: tieneReciboCFE,
-      no_servicio_cfe: body.ocr_result?.no_servicio || "",
-      no_medidor_cfe: body.ocr_result?.no_medidor || "",
-      Numero_Servicio_CFE: ocrData.Numero_Servicio_CFE || body.ocr_result?.no_servicio || "",
-      Numero_Medidor_CFE: ocrData.Numero_Medidor_CFE || body.ocr_result?.no_medidor || "",
+      no_servicio_cfe: ocrResult?.no_servicio || "",
+      no_medidor_cfe: ocrResult?.no_medidor || "",
+      Numero_Servicio_CFE: ocrData.Numero_Servicio_CFE || ocrResult?.no_servicio || "",
+      Numero_Medidor_CFE: ocrData.Numero_Medidor_CFE || ocrResult?.no_medidor || "",
       Fases: ocrData.Fases,
       pago_promedio: proposal.pago_promedio || Number(body.pago_promedio_mxn || 0),
       Pago_Prom_MXN_Periodo: ocrPromedios.Pago_Prom_MXN_Periodo ?? proposal.pago_promedio ?? Number(body.pago_promedio_mxn || 0),
@@ -196,6 +198,34 @@ export async function handler(event) {
       data: submissionData
     });
     console.log("✅ Submission_Details:", submissionId);
+
+    if (ocrResult?.ok) {
+      try {
+        const data = ocrResult.data || {};
+        const prom = data.historicals_promedios || {};
+        const fields = {};
+        const setField = (key, value) => {
+          if (value !== undefined && value !== null && value !== "") {
+            fields[key] = value;
+          }
+        };
+
+        setField("Periodicidad", data.Periodicidad);
+        setField("Numero_Servicio_CFE", data.Numero_Servicio_CFE);
+        setField("Numero_Medidor_CFE", data.Numero_Medidor_CFE);
+        setField("Fases", data.Fases);
+        setField("Pago_Prom_MXN_Periodo", prom.Pago_Prom_MXN_Periodo ?? data.Pago_Prom_MXN_Periodo);
+        setField("kWh_consumidos", prom.kWh_consumidos ?? data.kWh_consumidos);
+        setField("Tarifa", data.Tarifa || data.tarifa);
+        setField("OCR_JSON", JSON.stringify(ocrResult));
+        setField("OCR_Manual", "ocr");
+        if (Object.keys(fields).length) {
+          await createRecord("Submission_Details", fields);
+        }
+      } catch (err) {
+        console.error("Airtable OCR save error:", err);
+      }
+    }
 
     let proposalId = null;
     if (proposal.propuesta_actual) {
