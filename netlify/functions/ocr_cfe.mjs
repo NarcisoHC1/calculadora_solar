@@ -61,7 +61,6 @@ export async function handler(event) {
   }
 
   const filename = payload.filename || "upload";
-  const compressedImage = payload.compressed_image || images[0];
 
   const parseDataUrl = (value) => {
     if (typeof value !== "string") return null;
@@ -156,8 +155,6 @@ export async function handler(event) {
       setField("Tarifa", data.Tarifa || data.tarifa);
       setField("OCR_JSON", JSON.stringify(ocrResult));
       setField("OCR_Manual", "ocr");
-      if (compressedImage) setField("Imagen_recibo", compressedImage);
-
       if (Object.keys(fields).length) {
         await createRecord("Submission_Details", fields);
       }
