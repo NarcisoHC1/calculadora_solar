@@ -50,13 +50,23 @@ export async function handler(event) {
     return respond(400, { ok: false, error: "JSON inválido" });
   }
 
-  const images = Array.isArray(payload.images) ? payload.images.filter(Boolean) : [];
+  // Acepta distintas formas de recibir la imagen desde el front (images, image o compressed_image)
+  let images = [];
+
+  if (Array.isArray(payload.images)) {
+    images = payload.images.filter(Boolean);
+  } else if (payload.image) {
+    images = [payload.image];
+  } else if (payload.compressed_image) {
+    images = [payload.compressed_image];
+  }
+
   if (!images.length) {
     return respond(400, { ok: false, error: "no_images" });
   }
 
   const filename = payload.filename || "upload";
-  const compressedImage = payload.compressed_image;
+  const compressedImage = payload.compressed_image || images[0];
 
   let ocrResult;
   try {
