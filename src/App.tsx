@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { getEstadosUnique, getMinStateThreshold, getMaxStateThreshold, isCDMXorMexico } from './stateThresholds';
-import { generateProposal } from './calculationEngine';
+import { computeFuturePayment, generateProposal, getDefaultTarifaParams } from './calculationEngine';
 import type { Proposal, ComponentBreakdown, ProposalData } from './types';
 import ProposalComponent from './Proposal';
 
@@ -462,10 +462,26 @@ function blockToProposalData(
   const potenciaPorPanel = Number(propuesta.potencia_panel || block.no_y_tamano_paneles?.potencia_w || 0) as any;
   const potenciaTotal = cantidadPaneles * potenciaPorPanel;
 
-  const pagoFuturo = Number(block.con_solarya_pagaras || 0);
-  const ahorroBimestral = Number(block.ahorras_cada_bimestre || 0);
+  let pagoFuturo = Number(block.con_solarya_pagaras || 0);
+  let ahorroBimestral = Number(block.ahorras_cada_bimestre || 0);
   const pagoAhora = pagoFuturo + ahorroBimestral;
   const total = Number(block.inversion_total ?? propuesta.total ?? 0);
+
+  const consumoBimestralKwh = consumoKwhPeriodo
+    ? (periodicidad === 'bimestral' ? Number(consumoKwhPeriodo) : Number(consumoKwhPeriodo) * 2)
+    : null;
+
+  if (consumoBimestralKwh && consumoBimestralKwh > 0) {
+    const tarifas = getDefaultTarifaParams();
+    const recomputedPagoFuturo = computeFuturePayment(
+      consumoBimestralKwh,
+      generacionMensualKwh * 2,
+      tarifa,
+      tarifas
+    );
+    pagoFuturo = recomputedPagoFuturo;
+    ahorroBimestral = Math.max(0, pagoAhora - pagoFuturo);
+  }
 
   const secuencia = (propuesta.secuencia_exhibiciones || '').split(',').map(v => Number(v.trim())).filter(v => !Number.isNaN(v) && v > 0);
   const pagosEnExhibiciones = (block.pagos_en_exhibiciones && block.pagos_en_exhibiciones.length > 0)

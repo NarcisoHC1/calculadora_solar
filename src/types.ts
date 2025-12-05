@@ -19,6 +19,32 @@ export interface ProposalInput {
   pisos?: number;
   hasDAP?: boolean;
   dapAmount?: number;
+  tarifaParams?: Partial<TarifaParams>;
+}
+
+export interface Tarifa1Params {
+  buckets: { limit: number; price: number }[];
+  minimo_mensual: number;
+  minimo_mensual_kwh: number;
+  basico: number;
+}
+
+export interface TarifaDACParams {
+  fijo_mensual: number;
+  precio_kwh: number;
+  minimo_mensual: number;
+}
+
+export interface TarifaPDBTParams {
+  fijo_mensual: number;
+  precio_kwh: number;
+  minimo_mensual: number;
+}
+
+export interface TarifaParams {
+  tarifa1: Tarifa1Params;
+  tarifaDAC: TarifaDACParams;
+  tarifaPDBT: TarifaPDBTParams;
 }
 
 export interface SystemSpec {

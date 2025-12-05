@@ -1,4 +1,16 @@
-import { ProposalInput, ProposalData, SystemSpec, FinancialBreakdown, EnvironmentalImpact, ComponentBreakdown, DualProposal } from './types';
+import {
+  ProposalInput,
+  ProposalData,
+  SystemSpec,
+  FinancialBreakdown,
+  EnvironmentalImpact,
+  ComponentBreakdown,
+  DualProposal,
+  TarifaParams,
+  Tarifa1Params,
+  TarifaDACParams,
+  TarifaPDBTParams
+} from './types';
 
 const HSP = 5.5;
 const PR = 0.835;
@@ -7,22 +19,26 @@ const DISCOUNT_RATE = 0.10;
 const IVA_RATE = 0.16;
 const ANTICIPO_PERCENT = 0.50;
 
-const TARIFA_1 = {
+// Default values mirror the latest params used in the backend.
+// They act as fallbacks for local calculations when we do not receive Airtable params.
+const DEFAULT_TARIFA_1: Tarifa1Params = {
   buckets: [
     { limit: 75, price: 1.087 },
     { limit: 65, price: 1.320 },
     { limit: Infinity, price: 3.861 }
   ],
-  minimo_mensual: 25
+  minimo_mensual: 25,
+  minimo_mensual_kwh: 25,
+  basico: 1.087
 };
 
-const TARIFA_DAC = {
+const DEFAULT_TARIFA_DAC: TarifaDACParams = {
   fijo_mensual: 142.50,
   precio_kwh: 6.711,
   minimo_mensual: 142.50
 };
 
-const TARIFA_PDBT = {
+const DEFAULT_TARIFA_PDBT: TarifaPDBTParams = {
   fijo_mensual: 44.88,
   precio_kwh: 3.975,
   minimo_mensual: 44.88
@@ -32,11 +48,27 @@ const DAC_THRESHOLD_BIMONTHLY = 500;
 
 const PANEL_OPTIONS = [555, 600, 620, 650] as const;
 
-function calculateTarifa1Payment(kwhBimonthly: number): number {
+function resolveTarifaParams(input: ProposalInput): TarifaParams {
+  return {
+    tarifa1: { ...DEFAULT_TARIFA_1, ...(input.tarifaParams?.tarifa1 || {}) },
+    tarifaDAC: { ...DEFAULT_TARIFA_DAC, ...(input.tarifaParams?.tarifaDAC || {}) },
+    tarifaPDBT: { ...DEFAULT_TARIFA_PDBT, ...(input.tarifaParams?.tarifaPDBT || {}) }
+  };
+}
+
+export function getDefaultTarifaParams(): TarifaParams {
+  return {
+    tarifa1: { ...DEFAULT_TARIFA_1 },
+    tarifaDAC: { ...DEFAULT_TARIFA_DAC },
+    tarifaPDBT: { ...DEFAULT_TARIFA_PDBT }
+  };
+}
+
+function calculateTarifa1Payment(kwhBimonthly: number, tarifa: Tarifa1Params): number {
   let remaining = kwhBimonthly;
   let total = 0;
 
-  for (const bucket of TARIFA_1.buckets) {
+  for (const bucket of tarifa.buckets) {
     const bucketBimonthly = bucket.limit * 2;
     if (remaining <= 0) break;
 
@@ -49,36 +81,36 @@ function calculateTarifa1Payment(kwhBimonthly: number): number {
     }
   }
 
-  const minBimonthly = TARIFA_1.minimo_mensual * 2;
+  const minBimonthly = tarifa.minimo_mensual * 2;
   return Math.max(total, minBimonthly) * (1 + IVA_RATE);
 }
 
-function calculateDACPayment(kwhBimonthly: number): number {
-  const total = TARIFA_DAC.fijo_mensual * 2 + kwhBimonthly * TARIFA_DAC.precio_kwh;
-  const minBimonthly = TARIFA_DAC.minimo_mensual * 2;
+function calculateDACPayment(kwhBimonthly: number, tarifa: TarifaDACParams): number {
+  const total = tarifa.fijo_mensual * 2 + kwhBimonthly * tarifa.precio_kwh;
+  const minBimonthly = tarifa.minimo_mensual * 2;
   return Math.max(total, minBimonthly) * (1 + IVA_RATE);
 }
 
-function calculatePDBTPayment(kwhBimonthly: number): number {
-  const total = TARIFA_PDBT.fijo_mensual * 2 + kwhBimonthly * TARIFA_PDBT.precio_kwh;
-  const minBimonthly = TARIFA_PDBT.minimo_mensual * 2;
+function calculatePDBTPayment(kwhBimonthly: number, tarifa: TarifaPDBTParams): number {
+  const total = tarifa.fijo_mensual * 2 + kwhBimonthly * tarifa.precio_kwh;
+  const minBimonthly = tarifa.minimo_mensual * 2;
   return Math.max(total, minBimonthly) * (1 + IVA_RATE);
 }
 
-function estimateConsumptionKwh(input: ProposalInput): number {
+function estimateConsumptionKwh(input: ProposalInput, tarifas: TarifaParams): number {
   if (input.consumoKwh && input.consumoKwh > 0) return input.consumoKwh;
 
   const paymentBimonthly = input.periodo === 'bimestral' ? input.pagoActual : input.pagoActual * 2;
 
   if (input.tarifa === 'DAC') {
     const withoutIVA = paymentBimonthly / (1 + IVA_RATE);
-    const kwh = (withoutIVA - TARIFA_DAC.fijo_mensual * 2) / TARIFA_DAC.precio_kwh;
+    const kwh = (withoutIVA - tarifas.tarifaDAC.fijo_mensual * 2) / tarifas.tarifaDAC.precio_kwh;
     return Math.max(100, kwh);
   }
 
   if (input.tarifa === 'PDBT') {
     const withoutIVA = paymentBimonthly / (1 + IVA_RATE);
-    const kwh = (withoutIVA - TARIFA_PDBT.fijo_mensual * 2) / TARIFA_PDBT.precio_kwh;
+    const kwh = (withoutIVA - tarifas.tarifaPDBT.fijo_mensual * 2) / tarifas.tarifaPDBT.precio_kwh;
     return Math.max(100, kwh);
   }
 
@@ -86,7 +118,7 @@ function estimateConsumptionKwh(input: ProposalInput): number {
   let remaining = withoutIVA;
   let kwh = 0;
 
-  for (const bucket of TARIFA_1.buckets) {
+  for (const bucket of tarifas.tarifa1.buckets) {
     const bucketCost = bucket.limit * 2 * bucket.price;
     if (remaining <= 0) break;
 
@@ -219,42 +251,69 @@ function calculateSystemSize(consumoBimestralKwh: number): SystemSpec {
   return bestConfig;
 }
 
-function calculateFinancials(
-  pagoActual: number,
+export function computeFuturePayment(
   consumoBimestralKwh: number,
   generacionBimestralKwh: number,
   tarifa: string,
-  system: SystemSpec,
+  tarifas: TarifaParams,
   hasDAP: boolean = false,
   dapAmount: number = 0
-): FinancialBreakdown {
+): number {
   const consumoResidual = Math.max(0, consumoBimestralKwh - generacionBimestralKwh);
+
+  const isTarifa1 = ['1', '1A', '1B', '1C', '1D', '1E', '1F'].includes(tarifa);
+  const minTarifa1KwhBimonthly = tarifas.tarifa1.minimo_mensual_kwh * 2;
+  const minTarifa1PaymentBimonthly = minTarifa1KwhBimonthly * tarifas.tarifa1.basico * (1 + IVA_RATE);
 
   let pagoFuturo = 0;
 
-  if (tarifa === 'DAC') {
+  if ((isTarifa1 || tarifa === 'DAC') && consumoResidual <= minTarifa1KwhBimonthly) {
+    pagoFuturo = minTarifa1PaymentBimonthly;
+  } else if (tarifa === 'DAC') {
     if (consumoResidual === 0) {
-      pagoFuturo = TARIFA_DAC.minimo_mensual * 2 * (1 + IVA_RATE);
+      pagoFuturo = tarifas.tarifaDAC.minimo_mensual * 2 * (1 + IVA_RATE);
     } else {
-      pagoFuturo = calculateDACPayment(consumoResidual);
+      pagoFuturo = calculateDACPayment(consumoResidual, tarifas.tarifaDAC);
     }
   } else if (tarifa === 'PDBT') {
-    if (consumoResidual === 0) {
-      pagoFuturo = TARIFA_PDBT.minimo_mensual * 2 * (1 + IVA_RATE);
+    if (consumoResidual <= 0) {
+      pagoFuturo = tarifas.tarifaPDBT.fijo_mensual * 2 * (1 + IVA_RATE);
     } else {
-      pagoFuturo = calculatePDBTPayment(consumoResidual);
+      pagoFuturo = calculatePDBTPayment(consumoResidual, tarifas.tarifaPDBT);
     }
   } else {
     if (consumoResidual === 0) {
-      pagoFuturo = TARIFA_1.minimo_mensual * 2 * (1 + IVA_RATE);
+      pagoFuturo = tarifas.tarifa1.minimo_mensual * 2 * (1 + IVA_RATE);
     } else {
-      pagoFuturo = calculateTarifa1Payment(consumoResidual);
+      pagoFuturo = calculateTarifa1Payment(consumoResidual, tarifas.tarifa1);
     }
   }
 
   if (hasDAP && dapAmount > 0) {
     pagoFuturo += dapAmount;
   }
+
+  return pagoFuturo;
+}
+
+function calculateFinancials(
+  pagoActual: number,
+  consumoBimestralKwh: number,
+  generacionBimestralKwh: number,
+  tarifa: string,
+  system: SystemSpec,
+  tarifas: TarifaParams,
+  hasDAP: boolean = false,
+  dapAmount: number = 0
+): FinancialBreakdown {
+  const pagoFuturo = computeFuturePayment(
+    consumoBimestralKwh,
+    generacionBimestralKwh,
+    tarifa,
+    tarifas,
+    hasDAP,
+    dapAmount
+  );
 
   const ahorroBimestral = Math.max(0, pagoActual - pagoFuturo);
   const precioLista = system.potenciaTotal * PRICE_PER_WATT;
@@ -346,7 +405,8 @@ function generateComponents(system: SystemSpec): ComponentBreakdown[] {
 }
 
 export function generateProposal(input: ProposalInput): DualProposal {
-  const consumoBimestralKwh = Math.max(100, estimateConsumptionKwh(input));
+  const tarifas = resolveTarifaParams(input);
+  const consumoBimestralKwh = Math.max(100, estimateConsumptionKwh(input, tarifas));
   const pagoActualBimonthly = Math.max(100, input.periodo === 'bimestral' ? input.pagoActual : input.pagoActual * 2);
 
   const system = calculateSystemSize(consumoBimestralKwh);
@@ -359,6 +419,7 @@ export function generateProposal(input: ProposalInput): DualProposal {
     generacionBimestralKwh,
     input.tarifa,
     system,
+    tarifas,
     input.hasDAP,
     input.dapAmount
   );
@@ -372,13 +433,14 @@ export function generateProposal(input: ProposalInput): DualProposal {
   let dacBimonthlyPayment: number | undefined;
 
   if (showDACWarning) {
-    dacBimonthlyPayment = calculateDACPayment(consumoBimestralKwh);
+    dacBimonthlyPayment = calculateDACPayment(consumoBimestralKwh, tarifas.tarifaDAC);
     dacFinancial = calculateFinancials(
       dacBimonthlyPayment,
       consumoBimestralKwh,
       generacionBimestralKwh,
       'DAC',
       system,
+      tarifas,
       input.hasDAP,
       input.dapAmount
     );
@@ -408,11 +470,11 @@ export function generateProposal(input: ProposalInput): DualProposal {
 
     let futurePagoActual = pagoActualBimonthly;
     if (input.tarifa === 'DAC') {
-      futurePagoActual = calculateDACPayment(futureConsumoBimestralKwh);
+      futurePagoActual = calculateDACPayment(futureConsumoBimestralKwh, tarifas.tarifaDAC);
     } else if (input.tarifa === 'PDBT') {
-      futurePagoActual = calculatePDBTPayment(futureConsumoBimestralKwh);
+      futurePagoActual = calculatePDBTPayment(futureConsumoBimestralKwh, tarifas.tarifaPDBT);
     } else {
-      futurePagoActual = calculateTarifa1Payment(futureConsumoBimestralKwh);
+      futurePagoActual = calculateTarifa1Payment(futureConsumoBimestralKwh, tarifas.tarifa1);
       if (input.hasDAP && input.dapAmount) {
         futurePagoActual += input.dapAmount;
       }
@@ -424,6 +486,7 @@ export function generateProposal(input: ProposalInput): DualProposal {
       futureGeneracionBimestralKwh,
       input.tarifa,
       futureSystem,
+      tarifas,
       input.hasDAP,
       input.dapAmount
     );
@@ -436,13 +499,14 @@ export function generateProposal(input: ProposalInput): DualProposal {
     let futureDacBimonthlyPayment: number | undefined;
 
     if (futureShowDACWarning) {
-      futureDacBimonthlyPayment = calculateDACPayment(futureConsumoBimestralKwh);
+      futureDacBimonthlyPayment = calculateDACPayment(futureConsumoBimestralKwh, tarifas.tarifaDAC);
       futureDacFinancial = calculateFinancials(
         futureDacBimonthlyPayment,
         futureConsumoBimestralKwh,
         futureGeneracionBimestralKwh,
         'DAC',
         futureSystem,
+        tarifas,
         input.hasDAP,
         input.dapAmount
       );
