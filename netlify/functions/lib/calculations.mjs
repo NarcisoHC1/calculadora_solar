@@ -596,18 +596,20 @@ export function selectMontaje(cantidadPaneles, params) {
 // ========================================
 
 export function calculateDACHypothetical(kwhConsumidos, periodicidad, tarifaBase, params) {
-  // Sólo aplica cuando la tarifa reportada/asignada es "1"
-  if ((tarifaBase || "").toString().toUpperCase() !== "1") return null;
+  const kwh = Number(kwhConsumidos);
+  if (!Number.isFinite(kwh) || kwh <= 0) return null;
 
-  const factorP = periodicidad === "bimestral" ? 2 : 1;
   const dac = params.tarifaDAC;
+  if (!dac) return null;
+
+  const period = (periodicidad || "").toLowerCase() === "mensual" ? "mensual" : "bimestral";
+  const factorP = period === "bimestral" ? 2 : 1;
 
   const limiteDAC = dac.Limite_Mensual_kWh * factorP;
-  if (kwhConsumidos < limiteDAC) return null;
+  if (kwh <= limiteDAC) return null;
 
-  const fijo = dac.Fijo_Mensual * 2 * IVA; // siempre se usa 2 meses
-  const variableMultiplier = periodicidad === "bimestral" ? 1 : 2;
-  const variable = dac.Variable * kwhConsumidos * variableMultiplier * IVA;
+  const fijo = dac.Fijo_Mensual * factorP * IVA;
+  const variable = dac.Variable * kwh * IVA;
 
   return fijo + variable;
 }
