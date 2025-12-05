@@ -57,6 +57,8 @@ export async function handler(event) {
     const numeroPersonasRaw = body.numero_personas;
 
     // Generar propuesta completa usando el nuevo motor
+    const kwhFromOCR = Number(body.kwh_consumidos || ocrPromedios.kWh_consumidos || ocrData.kwh_consumidos || ocrData.energia_periodo_kwh || 0) || null;
+
     const formDataForEngine = {
       // Basic info
       estado: body.estado || "",
@@ -66,7 +68,7 @@ export async function handler(event) {
       pago_promedio: Number(body.pago_promedio_mxn || ocrPromedios.Pago_Prom_MXN_Periodo || 0),
       periodicidad,
       tarifa: body.tarifa || ocrData.Tarifa || "",
-      kwh_consumidos: Number(body.kwh_consumidos || ocrPromedios.kWh_consumidos || 0) || null,
+      kwh_consumidos: kwhFromOCR,
 
       // Property
       uso: usoNormalized || "Casa",

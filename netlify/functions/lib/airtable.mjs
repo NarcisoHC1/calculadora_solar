@@ -98,6 +98,7 @@ export async function createSubmissionDetails({ projectId, data }) {
   const fields = { "Project_Id": [projectId] };
 
   const asNumber = (value) => {
+    if (value === undefined || value === null || value === "") return null;
     const n = Number(value);
     return Number.isFinite(n) ? n : null;
   };
