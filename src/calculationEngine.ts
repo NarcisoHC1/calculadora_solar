@@ -56,6 +56,14 @@ function resolveTarifaParams(input: ProposalInput): TarifaParams {
   };
 }
 
+export function getDefaultTarifaParams(): TarifaParams {
+  return {
+    tarifa1: { ...DEFAULT_TARIFA_1 },
+    tarifaDAC: { ...DEFAULT_TARIFA_DAC },
+    tarifaPDBT: { ...DEFAULT_TARIFA_PDBT }
+  };
+}
+
 function calculateTarifa1Payment(kwhBimonthly: number, tarifa: Tarifa1Params): number {
   let remaining = kwhBimonthly;
   let total = 0;
@@ -243,16 +251,14 @@ function calculateSystemSize(consumoBimestralKwh: number): SystemSpec {
   return bestConfig;
 }
 
-function calculateFinancials(
-  pagoActual: number,
+export function computeFuturePayment(
   consumoBimestralKwh: number,
   generacionBimestralKwh: number,
   tarifa: string,
-  system: SystemSpec,
   tarifas: TarifaParams,
   hasDAP: boolean = false,
   dapAmount: number = 0
-): FinancialBreakdown {
+): number {
   const consumoResidual = Math.max(0, consumoBimestralKwh - generacionBimestralKwh);
 
   const isTarifa1 = ['1', '1A', '1B', '1C', '1D', '1E', '1F'].includes(tarifa);
@@ -286,6 +292,28 @@ function calculateFinancials(
   if (hasDAP && dapAmount > 0) {
     pagoFuturo += dapAmount;
   }
+
+  return pagoFuturo;
+}
+
+function calculateFinancials(
+  pagoActual: number,
+  consumoBimestralKwh: number,
+  generacionBimestralKwh: number,
+  tarifa: string,
+  system: SystemSpec,
+  tarifas: TarifaParams,
+  hasDAP: boolean = false,
+  dapAmount: number = 0
+): FinancialBreakdown {
+  const pagoFuturo = computeFuturePayment(
+    consumoBimestralKwh,
+    generacionBimestralKwh,
+    tarifa,
+    tarifas,
+    hasDAP,
+    dapAmount
+  );
 
   const ahorroBimestral = Math.max(0, pagoActual - pagoFuturo);
   const precioLista = system.potenciaTotal * PRICE_PER_WATT;
