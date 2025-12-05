@@ -885,11 +885,19 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     <>
       <style>{`
         @media print {
+          body * {
+            visibility: hidden;
+          }
+          .proposal-print,
+          .proposal-print * {
+            visibility: visible;
+          }
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
             background: white !important;
             margin: 0;
+            height: auto !important;
           }
           @page {
             margin: 0.5cm;
@@ -903,8 +911,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           }
           .proposal-print {
             display: block !important;
-            position: relative !important;
+            position: static !important;
+            inset: 0 !important;
             width: 100% !important;
+            overflow: visible !important;
           }
           .calendly-inline-widget {
             display: none !important;
@@ -913,14 +923,15 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             display: block !important;
           }
           .print-page {
-            break-after: page;
-            page-break-after: always;
-            break-inside: avoid;
-            page-break-inside: avoid;
+            break-after: page !important;
+            page-break-after: always !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            overflow: visible !important;
           }
           .print-last-page {
-            break-after: avoid;
-            page-break-after: auto;
+            break-after: avoid !important;
+            page-break-after: auto !important;
           }
           .faq-answer {
             display: block !important;
