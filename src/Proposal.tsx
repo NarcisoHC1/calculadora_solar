@@ -897,10 +897,18 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             height: auto !important;
             overflow: visible !important;
           }
-          #root > *:not(.proposal-print) {
+          body * {
+            visibility: hidden !important;
+          }
+          .proposal-print,
+          .proposal-print * {
+            visibility: visible !important;
+          }
+          #root > * {
             display: none !important;
-            height: auto !important;
-            overflow: visible !important;
+          }
+          #root > .proposal-print {
+            display: block !important;
           }
           @page {
             margin: 0.5cm;
@@ -914,7 +922,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           }
           .proposal-print {
             display: block !important;
-            position: relative !important;
+            position: static !important;
             inset: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
