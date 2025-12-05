@@ -885,11 +885,20 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     <>
       <style>{`
         @media print {
-          body {
+          html,
+          body,
+          #root {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
             background: white !important;
             margin: 0;
+            width: 100% !important;
+            min-height: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          #root > *:not(.proposal-print) {
+            display: none !important;
             height: auto !important;
             overflow: visible !important;
           }
@@ -905,9 +914,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           }
           .proposal-print {
             display: block !important;
-            position: static !important;
+            position: relative !important;
             inset: 0 !important;
             width: 100% !important;
+            max-width: 100% !important;
             overflow: visible !important;
             padding: 0 !important;
             margin: 0 auto !important;
