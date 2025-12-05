@@ -100,9 +100,13 @@ export async function handler(event) {
     const quiereAislado = body.plans_cfe === "aislado";
     const yaTieneFV = parseYesNo(body.ya_tiene_fv);
     const propuestaAuto = body.propuesta_auto === true ? true : (body.propuesta_auto === false ? false : undefined);
-    const metrosDistancia = Number(
-      body.distancia_techo_tablero ?? body.distancia ?? proposal.metros_distancia ?? 0
-    );
+    const distanciaInput = body.distancia_techo_tablero ?? body.distancia;
+    const distanciaNumerica = Number(distanciaInput);
+    const metrosDistancia = Number.isFinite(distanciaNumerica) && distanciaNumerica > 0
+      ? distanciaNumerica
+      : (Number.isFinite(proposal.metros_distancia) && proposal.metros_distancia > 0
+        ? proposal.metros_distancia
+        : null);
 
     // Determine casa_negocio - only set if explicitly asked
     const casaNegocio = usoNormalized ? usoNormalized : "";

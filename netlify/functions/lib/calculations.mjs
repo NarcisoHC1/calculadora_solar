@@ -216,6 +216,11 @@ function normalizeTipoInmueble(tipoInmueble) {
 export function calculateMetrosDistancia(tipoInmueble, pisos, distanciaReportada, params) {
   const tipo = normalizeTipoInmueble(tipoInmueble);
 
+  const metersPerFloorRaw = params?.metersPerFloor;
+  const metersPerFloor = Number.isFinite(Number(metersPerFloorRaw)) && Number(metersPerFloorRaw) > 0
+    ? Number(metersPerFloorRaw)
+    : 3;
+
   // Tipo 1: Casa o negocio independiente de 1-2 pisos
   if (tipo === "1") {
     return 30;
@@ -224,7 +229,7 @@ export function calculateMetrosDistancia(tipoInmueble, pisos, distanciaReportada
   // Tipos que usan pisos: 2, 4, 5, 8, 9
   if (["2", "4", "5", "8", "9"].includes(tipo)) {
     const numPisos = Number(pisos) || 0;
-    return 30 + numPisos * params.metersPerFloor;
+    return 30 + numPisos * metersPerFloor;
   }
 
   // Tipos que usan metros: 3, 6, 7
