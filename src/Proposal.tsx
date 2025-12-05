@@ -885,16 +885,25 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     <>
       <style>{`
         @media print {
+          html,
+          body {
+            visibility: hidden;
+          }
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
             background: white !important;
             margin: 0;
             height: auto !important;
+            overflow: visible !important;
           }
           @page {
             margin: 0.5cm;
             size: letter;
+          }
+          .proposal-print,
+          .proposal-print * {
+            visibility: visible !important;
           }
           .no-print {
             display: none !important;
@@ -908,8 +917,13 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             inset: 0 !important;
             width: 100% !important;
             overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 auto !important;
           }
           .calendly-inline-widget {
+            display: none !important;
+          }
+          .print-hidden {
             display: none !important;
           }
           .print-cta {
