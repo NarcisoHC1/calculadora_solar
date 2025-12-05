@@ -42,11 +42,20 @@ function findEvSpecBySelection(selection, evSpecs) {
 
   const normalizedValue = value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
+  // Accept matches that ignore parenthetical aliases, e.g. "Dolphin Mini (Seagull)"
+  const normalizedCandidates = [normalizedValue];
+  const valueNoParens = value.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  if (valueNoParens && valueNoParens !== value) {
+    normalizedCandidates.push(valueNoParens.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  }
+
   return evSpecs.find(e => {
-    const normalizedSpec = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-    return normalizedSpec === normalizedValue;
+    const specBase = `${(e.Brand || "").trim()} ${(e.Model || "").trim()}`;
+    const specNormalized = specBase.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const specNoParens = specBase.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim()
+      .toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    return normalizedCandidates.includes(specNormalized) || normalizedCandidates.includes(specNoParens);
   }) || null;
 }
 
