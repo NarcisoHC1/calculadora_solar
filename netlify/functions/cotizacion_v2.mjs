@@ -18,6 +18,19 @@ const parseNumberInput = (value) => {
   return null;
 };
 
+const normalizeTarifa = (value) => {
+  const raw = (value || "").toString().trim();
+  if (!raw) return "";
+
+  const match = raw.toUpperCase().match(/(DAC|1[A-F]?)/);
+  if (match) {
+    return match[1].replace(/^0+/, "");
+  }
+
+  const cleaned = raw.replace(/[^A-Za-z0-9]/g, "");
+  return cleaned.replace(/^0+/, "") || raw;
+};
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: CORS };
@@ -119,10 +132,11 @@ export async function handler(event) {
     console.log("🧮 Propuesta completa calculada");
 
     const periodicidadFinal = proposal.periodicidad || periodicidad;
+    const tarifaParaCalculos = normalizeTarifa(proposal.tarifa || ocrData.Tarifa || body.tarifa || "");
     const pagoDACActual = proposal.pago_dac_hipotetico_consumo_actual ?? calculateDACHypothetical(
       proposal.kwh_consumidos,
       periodicidadFinal,
-      proposal.tarifa,
+      tarifaParaCalculos,
       params
     );
     const pagoDACCargasExtra = proposal.pago_dac_hipotetico_cargas_extra ?? (
@@ -130,7 +144,7 @@ export async function handler(event) {
         ? calculateDACHypothetical(
             proposal.kwh_consumidos_y_cargas_extra,
             periodicidadFinal,
-            proposal.tarifa,
+            tarifaParaCalculos,
             params
           )
         : null
@@ -177,7 +191,7 @@ export async function handler(event) {
     const tipoInmuebleMapped = tipoInmuebleMap[body.tipo_inmueble] || body.tipo_inmueble || "";
 
     // Check if tarifa is residential (1, 1A, 1B, 1C, 1D, 1E, 1F, DAC)
-    const tarifaResidencial = /^(1[A-F]?|DAC)$/i.test(proposal.tarifa || ocrData.Tarifa || body.tarifa || "");
+    const tarifaResidencial = /^(1[A-F]?|DAC)$/i.test(tarifaParaCalculos);
 
     // Preparar datos para Submission_Details
     const submissionData = {
@@ -198,8 +212,8 @@ export async function handler(event) {
       Pago_Prom_MXN_Periodo: ocrPromedios.Pago_Prom_MXN_Periodo ?? proposal.pago_promedio ?? Number(body.pago_promedio_mxn || 0),
       periodicidad,
       Periodicidad: ocrData.Periodicidad || periodicidad,
-      tarifa: proposal.tarifa || ocrData.Tarifa || body.tarifa || "",
-      Tarifa: ocrData.Tarifa || proposal.tarifa || body.tarifa || "",
+      tarifa: tarifaParaCalculos || proposal.tarifa || ocrData.Tarifa || body.tarifa || "",
+      Tarifa: tarifaParaCalculos || ocrData.Tarifa || proposal.tarifa || body.tarifa || "",
       kwh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
       kWh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
       kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
@@ -267,7 +281,7 @@ export async function handler(event) {
         project_id: projectId,
         proposal_id: proposalId,
         proposal: {
-          tarifa: proposal.tarifa,
+          tarifa: tarifaParaCalculos || proposal.tarifa,
           kwh_consumidos: proposal.kwh_consumidos,
           kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
           metros_distancia: metrosDistancia,
