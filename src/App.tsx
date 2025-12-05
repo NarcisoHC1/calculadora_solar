@@ -602,6 +602,7 @@ function App() {
   // OCR state
   const [ocrStatus, setOcrStatus] = useState<'idle' | 'uploading' | 'analyzing' | 'extracting' | 'ok' | 'fail'>('idle');
   const [ocrMsg, setOcrMsg] = useState('');
+  const [ocrMsgIndex, setOcrMsgIndex] = useState(0);
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [ocrQuality, setOcrQuality] = useState<number | null>(null);
   const [ocrImage, setOcrImage] = useState<string | null>(null);
@@ -713,6 +714,7 @@ function App() {
       clearInterval(ocrMsgIntervalRef.current);
       ocrMsgIntervalRef.current = null;
     }
+    setOcrMsgIndex(0);
   };
 
   const startOcrMessageLoop = (messages: string[], delay = 1600) => {
@@ -720,13 +722,17 @@ function App() {
     if (!messages.length) return;
 
     let idx = 0;
+    let dotIdx = 0;
     setOcrMsg(messages[idx]);
+    setOcrMsgIndex(dotIdx);
 
     if (messages.length === 1) return;
 
     ocrMsgIntervalRef.current = window.setInterval(() => {
       idx = (idx + 1) % messages.length;
+      dotIdx = (dotIdx + 1) % 3;
       setOcrMsg(messages[idx]);
+      setOcrMsgIndex(dotIdx);
     }, delay);
   };
 
@@ -905,7 +911,7 @@ function App() {
 
   const canProceedStep1 = () => {
     if (fileUploaded) {
-      return ocrStatus === 'ok';
+      return ocrStatus === 'ok' && !!expand;
     }
     if (!showManual) return false;
     if (!hasCFE) return false;
@@ -917,7 +923,7 @@ function App() {
         if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
         if (!estado) return false;
-        if (planCFE === 'aislado' && !expand) return false;
+        if (!expand) return false;
         return true;
       }
       return false;
@@ -957,6 +963,7 @@ function App() {
     if (!tipoInmueble) return false;
     if (['2', '4', '5', '8', '9'].includes(tipoInmueble) && !pisos) return false;
     if (['3', '6', '7'].includes(tipoInmueble) && !distanciaTechoTablero) return false;
+    if (showError && cargas.includes('ninguna')) return false;
 
     // Validate carga details
     if (cargas.includes('ev')) {
@@ -1161,7 +1168,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (!showManual || hasCFE !== 'si' || !pago) {
+    if (hasCFE !== 'si' || !pago) {
       setShowError(false);
       setErrorMessage('');
       return;
@@ -1274,9 +1281,9 @@ function App() {
                         <div className="w-12 h-12 rounded-full border-4 border-slate-200 animate-spin" style={{ borderTopColor: '#1e3a2b' }} />
                         <p className="text-slate-700 font-semibold">{ocrMsg}</p>
                         <div className="flex gap-2 items-center">
-                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'uploading' ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'analyzing' ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'extracting' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 1 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 2 ? 'bg-green-500' : 'bg-slate-300'}`} />
                         </div>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mt-2">
                           <p className="text-xs text-amber-800 font-semibold">⚠️ No cierres el navegador</p>
@@ -1574,7 +1581,7 @@ function App() {
                         </div>
                         )}
 
-                        {planCFE === 'aislado' && (
+                        {(planCFE === 'si' || planCFE === 'aislado') && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                               ¿Ya tienes un sistema de paneles solares y planeas expandirlo?
@@ -2287,7 +2294,7 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!phoneValid}
+                  disabled={!phoneValid || !privacidad}
                   className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all disabled:opacity-60"
                   style={{ background: '#ff5c36' }}
                 >
