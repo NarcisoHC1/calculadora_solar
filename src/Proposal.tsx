@@ -885,20 +885,26 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     <>
       <style>{`
         @media print {
+          body {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+            background: white !important;
+            margin: 0;
+          }
+          @page {
+            margin: 0.5cm;
+            size: letter;
+          }
           .no-print {
             display: none !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          .proposal-print, .proposal-print * {
-            visibility: visible;
           }
           .proposal-screen {
             display: none !important;
           }
           .proposal-print {
             display: block !important;
+            position: relative !important;
+            width: 100% !important;
           }
           .calendly-inline-widget {
             display: none !important;
@@ -918,15 +924,6 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           }
           .faq-answer {
             display: block !important;
-          }
-          @page {
-            margin: 0.5cm;
-            size: letter;
-          }
-          body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-            background: white !important;
           }
         }
         .print-cta {
