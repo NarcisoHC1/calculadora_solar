@@ -74,6 +74,29 @@ const TOP_BRAND_LOGOS = [
   { alt: 'Canadian Solar', src: '/canadian_solar_square_logo.jpg' }
 ];
 
+const FAQ_ITEMS = [
+  {
+    question: '¿Qué incluye exactamente el sistema?',
+    answer:
+      'TODO INCLUIDO: Paneles de última generación, inversores/microinversores, estructura de montaje profesional, cableado especializado, protecciones eléctricas, instalación por técnicos certificados, trámites completos ante CFE, app de monitoreo en tiempo real, y todas las garantías respaldadas.'
+  },
+  {
+    question: '¿Cuánto tiempo dura la instalación?',
+    answer:
+      'Instalación física: 5 días laborales (1 semana). Trámites CFE: 2-4 semanas adicionales. Tiempo total: 4-6 semanas desde la visita técnica hasta que empiezas a generar energía.'
+  },
+  {
+    question: '¿Qué garantías tengo?',
+    answer:
+      '✓ 2 años garantía total de instalación y mano de obra\n✓ 12 años garantía en equipos (inversores y accesorios)\n✓ 25 años garantía de generación de energía en paneles solares'
+  },
+  {
+    question: '¿Qué mantenimiento requiere el sistema?',
+    answer:
+      'Los sistemas solares requieren muy poco mantenimiento. Se recomienda limpiar los paneles 2-3 veces al año (o después de tormentas de polvo) y una revisión técnica anual. Los componentes están diseñados para operar sin problemas durante décadas.'
+  }
+];
+
 function StaticBrandRow({ logos }: { logos: { alt: string; src: string }[] }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -727,35 +750,16 @@ function FAQAccordion() {
     };
   }, []);
 
-  const faqs = [
-    {
-      question: '¿Qué incluye exactamente el sistema?',
-      answer: 'TODO INCLUIDO: Paneles de última generación, inversores/microinversores, estructura de montaje profesional, cableado especializado, protecciones eléctricas, instalación por técnicos certificados, trámites completos ante CFE, app de monitoreo en tiempo real, y todas las garantías respaldadas.'
-    },
-    {
-      question: '¿Cuánto tiempo dura la instalación?',
-      answer: 'Instalación física: 5 días laborales (1 semana). Trámites CFE: 2-4 semanas adicionales. Tiempo total: 4-6 semanas desde la visita técnica hasta que empiezas a generar energía.'
-    },
-    {
-      question: '¿Qué garantías tengo?',
-      answer: '✓ 2 años garantía total de instalación y mano de obra\n✓ 12 años garantía en equipos (inversores y accesorios)\n✓ 25 años garantía de generación de energía en paneles solares'
-    },
-    {
-      question: '¿Qué mantenimiento requiere el sistema?',
-      answer: 'Los sistemas solares requieren muy poco mantenimiento. Se recomienda limpiar los paneles 2-3 veces al año (o después de tormentas de polvo) y una revisión técnica anual. Los componentes están diseñados para operar sin problemas durante décadas.'
-    }
-  ];
-
   return (
     <div className="space-y-3">
-      {faqs.map((faq, index) => (
+      {FAQ_ITEMS.map((faq, index) => (
         <div key={index} className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
             className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-100 transition-colors"
           >
             <span className="font-bold text-slate-900 pr-4">{faq.question}</span>
-            {openIndex === index ? (
+            {isPrintMode || openIndex === index ? (
               <Minus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
             ) : (
               <Plus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
@@ -766,6 +770,23 @@ function FAQAccordion() {
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{faq.answer}</p>
             </div>
           )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FAQSection() {
+  return (
+    <div className="space-y-4">
+      {FAQ_ITEMS.map((faq, index) => (
+        <div key={index} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <h5 className="font-bold text-slate-900 mb-2">{faq.question}</h5>
+          {faq.answer.split('\n').map((paragraph, idx) => (
+            <p key={idx} className="text-sm text-slate-700 leading-relaxed">
+              {paragraph}
+            </p>
+          ))}
         </div>
       ))}
     </div>
