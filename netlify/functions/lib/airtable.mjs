@@ -97,6 +97,11 @@ export async function createProject({ leadId }) {
 export async function createSubmissionDetails({ projectId, data }) {
   const fields = { "Project_Id": [projectId] };
 
+  const asNumber = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+
   // OCR or Manual
   if (data.ocr_manual) fields["OCR_Manual"] = data.ocr_manual;
   if (data.ocr_json) fields["OCR_JSON"] = data.ocr_json;
@@ -114,20 +119,24 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.Fases !== undefined && data.Fases !== null && data.Fases !== "") fields["Fases"] = data.Fases;
 
   // Consumption & Payment
-  if (data.pago_promedio) fields["Pago_Prom_MXN_Periodo"] = Math.round(data.pago_promedio);
-  if (data.Pago_Prom_MXN_Periodo) fields["Pago_Prom_MXN_Periodo"] = Math.round(data.Pago_Prom_MXN_Periodo);
+  const pagoProm = asNumber(data.pago_promedio ?? data.Pago_Prom_MXN_Periodo);
+  if (pagoProm !== null) fields["Pago_Prom_MXN_Periodo"] = Math.round(pagoProm);
   if (data.periodicidad) fields["Periodicidad"] = data.periodicidad;
   if (data.Periodicidad) fields["Periodicidad"] = data.Periodicidad;
   if (data.tarifa) fields["Tarifa"] = data.tarifa;
   if (data.Tarifa) fields["Tarifa"] = data.Tarifa;
-  if (data.kwh_consumidos) fields["kWh_consumidos"] = Math.round(data.kwh_consumidos);
-  if (data.kWh_consumidos) fields["kWh_consumidos"] = Math.round(data.kWh_consumidos);
-  if (data.kwh_consumidos_y_cargas_extra) fields["kWh_consumidos_y_cargas_extra"] = Math.round(data.kwh_consumidos_y_cargas_extra);
+  const kwhBase = asNumber(data.kwh_consumidos ?? data.kWh_consumidos);
+  if (kwhBase !== null) fields["kWh_consumidos"] = Math.round(kwhBase);
+  const kwhCargas = asNumber(data.kwh_consumidos_y_cargas_extra);
+  if (kwhCargas !== null) fields["kWh_consumidos_y_cargas_extra"] = Math.round(kwhCargas);
 
   // Hypothetical payments
-  if (data.pago_hipotetico_cargas_extra) fields["Pago_Prom_MXN_Hipotetico_Cargas_Extra"] = Math.round(data.pago_hipotetico_cargas_extra);
-  if (data.pago_dac_hipotetico_consumo_actual) fields["Pago_DAC_Hipotetico_Consumo_Actual"] = Math.round(data.pago_dac_hipotetico_consumo_actual);
-  if (data.pago_dac_hipotetico_cargas_extra) fields["Pago_DAC_Hipotetico_Cargas_Extra"] = Math.round(data.pago_dac_hipotetico_cargas_extra);
+  const pagoHipoteticoExtra = asNumber(data.pago_hipotetico_cargas_extra);
+  if (pagoHipoteticoExtra !== null) fields["Pago_Prom_MXN_Hipotetico_Cargas_Extra"] = Math.round(pagoHipoteticoExtra);
+  const pagoDacActual = asNumber(data.pago_dac_hipotetico_consumo_actual);
+  if (pagoDacActual !== null) fields["Pago_DAC_Hipotetico_Consumo_Actual"] = Math.round(pagoDacActual);
+  const pagoDacExtra = asNumber(data.pago_dac_hipotetico_cargas_extra);
+  if (pagoDacExtra !== null) fields["Pago_DAC_Hipotetico_Cargas_Extra"] = Math.round(pagoDacExtra);
 
   // Property info
   if (data.quiere_aislado !== undefined) fields["Quiere_Sistema_Aislado"] = data.quiere_aislado ? "sí" : "no";
@@ -137,7 +146,8 @@ export async function createSubmissionDetails({ projectId, data }) {
   }
   if (data.ya_tiene_fv !== undefined) fields["Ya_Tiene_FV"] = data.ya_tiene_fv ? "sí" : "no";
   if (data.tipo_inmueble) fields["Tipo_Inmueble"] = data.tipo_inmueble;
-  if (data.metros_distancia) fields["Metros_distancia"] = data.metros_distancia;
+  const metrosDistancia = asNumber(data.metros_distancia);
+  if (metrosDistancia !== null) fields["Metros_distancia"] = metrosDistancia;
 
   // Loads
   if (data.modelo_ev) fields["Modelo_EV"] = data.modelo_ev;

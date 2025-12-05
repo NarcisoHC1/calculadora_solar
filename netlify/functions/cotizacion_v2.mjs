@@ -1,5 +1,5 @@
 // netlify/functions/cotizacion_v2.mjs
-import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal, createRecord } from "./lib/airtable.mjs";
+import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal } from "./lib/airtable.mjs";
 import { generateCompleteProposal } from "./lib/proposalEngine.mjs";
 
 export async function handler(event) {
@@ -96,11 +96,13 @@ export async function handler(event) {
 
     // Determine field values with proper logic
     const hasCFE = body.has_cfe === true;
-    const tieneReciboCFE = hasCFE && body.tiene_recibo === true;
+    const tieneReciboCFE = hasCFE && (body.tiene_recibo === true || ocrResult?.ok === true);
     const quiereAislado = body.plans_cfe === "aislado";
     const yaTieneFV = parseYesNo(body.ya_tiene_fv);
     const propuestaAuto = body.propuesta_auto === true ? true : (body.propuesta_auto === false ? false : undefined);
-    const metrosDistancia = Math.max(30, Number(proposal.metros_distancia || body.distancia_techo_tablero || 0));
+    const metrosDistancia = Number(
+      body.distancia_techo_tablero ?? body.distancia ?? proposal.metros_distancia ?? 0
+    );
 
     // Determine casa_negocio - only set if explicitly asked
     const casaNegocio = usoNormalized ? usoNormalized : "";
@@ -138,7 +140,7 @@ export async function handler(event) {
       OCR_JSON: ocrResult ? JSON.stringify(ocrResult) : null,
       OCR_Manual: ocrResult ? "ocr" : "manual",
       Imagen_recibo: body.ocr_image || ocrResult?.Imagen_recibo || null,
-      estado: body.estado || "",
+      estado: body.estado || ocrData.Estado || "",
       tiene_contrato_cfe: hasCFE,
       tiene_recibo_cfe: tieneReciboCFE,
       no_servicio_cfe: ocrResult?.no_servicio || "",
@@ -198,34 +200,6 @@ export async function handler(event) {
       data: submissionData
     });
     console.log("✅ Submission_Details:", submissionId);
-
-    if (ocrResult?.ok) {
-      try {
-        const data = ocrResult.data || {};
-        const prom = data.historicals_promedios || {};
-        const fields = {};
-        const setField = (key, value) => {
-          if (value !== undefined && value !== null && value !== "") {
-            fields[key] = value;
-          }
-        };
-
-        setField("Periodicidad", data.Periodicidad);
-        setField("Numero_Servicio_CFE", data.Numero_Servicio_CFE);
-        setField("Numero_Medidor_CFE", data.Numero_Medidor_CFE);
-        setField("Fases", data.Fases);
-        setField("Pago_Prom_MXN_Periodo", prom.Pago_Prom_MXN_Periodo ?? data.Pago_Prom_MXN_Periodo);
-        setField("kWh_consumidos", prom.kWh_consumidos ?? data.kWh_consumidos);
-        setField("Tarifa", data.Tarifa || data.tarifa);
-        setField("OCR_JSON", JSON.stringify(ocrResult));
-        setField("OCR_Manual", "ocr");
-        if (Object.keys(fields).length) {
-          await createRecord("Submission_Details", fields);
-        }
-      } catch (err) {
-        console.error("Airtable OCR save error:", err);
-      }
-    }
 
     let proposalId = null;
     if (proposal.propuesta_actual) {

@@ -809,6 +809,7 @@ function App() {
       const cpOCR = result.form_overrides?.cp || '';
       const periodicidadOCR = normalized.Periodicidad || '';
       const pagoProm = prom.Pago_Prom_MXN_Periodo;
+      const estadoOCR = normalized.Estado || '';
 
       setOcrStatus('ok');
       stopOcrMessageLoop();
@@ -820,9 +821,11 @@ function App() {
       if (tarifaOCR) setTarifa(tarifaOCR);
       if (cpOCR) setCP(cpOCR);
       if (periodicidadOCR) setPeriodo(periodicidadOCR);
+      if (estadoOCR) setEstado(estadoOCR);
       if (pagoProm != null && !Number.isNaN(Number(pagoProm))) setPago(String(Math.round(Number(pagoProm))));
 
       setHasCFE('si');
+      setJustMoved('si');
       setPlanCFE('');
       setShowManual(false);
     } catch (e) {
@@ -1064,8 +1067,8 @@ function App() {
       periodicidad: periodo || 'bimestral',
       pago_promedio_mxn: parseFloat(pago || '0') || 0,
       cp,
-      estado: estado || '',
-      municipio: estado || '',
+      estado: estado || ocrResult?.data?.Estado || '',
+      municipio: estado || ocrResult?.data?.Estado || '',
       tarifa: tarifa || (ocrResult?.data?.Tarifa || ocrResult?.data?.tarifa || ocrResult?.form_overrides?.tarifa || ''),
       kwh_consumidos:
         ocrResult?.data?.historicals_promedios?.kWh_consumidos ||
@@ -1079,7 +1082,7 @@ function App() {
       notes: notas || '',
       loads,
       has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
-      tiene_recibo: hasCFE === 'si' ? justMoved === 'si' : false,
+      tiene_recibo: hasCFE === 'si' ? (justMoved === 'si' || ocrResult?.ok === true) : false,
       plans_cfe: planCFE,
       ya_tiene_fv: expandNormalized ? expandNormalized === 'si' : undefined,
       propuesta_auto: flow === 'AUTO',
@@ -1307,6 +1310,29 @@ function App() {
                         <p className="text-sm text-green-800 font-semibold">Datos extraídos correctamente</p>
                         {ocrQuality != null && ocrQuality < 1 && <p className="text-xs text-green-700">Calidad OCR: {(ocrQuality * 100).toFixed(0)}%</p>}
                       </div>
+                    </div>
+                  )}
+                  {ocrStatus === 'ok' && (
+                    <div className="mt-6 text-left">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        ¿Ya tienes un sistema de paneles solares y planeas expandirlo?
+                      </label>
+                      <select
+                        value={expand}
+                        onChange={(e) => setExpand(e.target.value)}
+                        className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                        style={{
+                          outlineColor: '#3cd070',
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
+                      >
+                        <option value="">Selecciona una opción</option>
+                        <option value="si">Sí</option>
+                        <option value="no">No</option>
+                      </select>
                     </div>
                   )}
                   {ocrStatus === 'fail' && (
