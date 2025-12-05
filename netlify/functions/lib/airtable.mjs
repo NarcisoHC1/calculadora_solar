@@ -99,8 +99,14 @@ export async function createSubmissionDetails({ projectId, data }) {
 
   const asNumber = (value) => {
     if (value === undefined || value === null || value === "") return null;
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    const direct = Number(value);
+    if (Number.isFinite(direct)) return direct;
+    if (typeof value === "string") {
+      const cleaned = Number(value.replace(/[^0-9.+-]/g, ""));
+      return Number.isFinite(cleaned) ? cleaned : null;
+    }
+    return null;
   };
 
   // OCR or Manual

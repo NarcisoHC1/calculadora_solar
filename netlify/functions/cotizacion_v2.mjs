@@ -1,6 +1,22 @@
 // netlify/functions/cotizacion_v2.mjs
 import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal } from "./lib/airtable.mjs";
 import { generateCompleteProposal } from "./lib/proposalEngine.mjs";
+import { calculateDACHypothetical } from "./lib/calculations.mjs";
+import { getParams } from "./lib/params.mjs";
+
+const parseNumberInput = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const direct = Number(trimmed);
+    if (Number.isFinite(direct)) return direct;
+    const cleaned = Number(trimmed.replace(/[^0-9.+-]/g, ""));
+    return Number.isFinite(cleaned) ? cleaned : null;
+  }
+  return null;
+};
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -57,7 +73,12 @@ export async function handler(event) {
     const numeroPersonasRaw = body.numero_personas;
 
     // Generar propuesta completa usando el nuevo motor
-    const kwhFromOCR = Number(body.kwh_consumidos || ocrPromedios.kWh_consumidos || ocrData.kwh_consumidos || ocrData.energia_periodo_kwh || 0) || null;
+    const kwhFromOCR = parseNumberInput(
+      body.kwh_consumidos ??
+      ocrPromedios.kWh_consumidos ??
+      ocrData.kwh_consumidos ??
+      ocrData.energia_periodo_kwh
+    );
 
     const formDataForEngine = {
       // Basic info
@@ -65,7 +86,7 @@ export async function handler(event) {
       municipio: body.municipio || "Ciudad de México",
       has_cfe: body.has_cfe,
       tiene_recibo: body.has_cfe === true && body.tiene_recibo === true,
-      pago_promedio: Number(body.pago_promedio_mxn || ocrPromedios.Pago_Prom_MXN_Periodo || 0),
+      pago_promedio: parseNumberInput(body.pago_promedio_mxn ?? ocrPromedios.Pago_Prom_MXN_Periodo ?? null) ?? 0,
       periodicidad,
       tarifa: body.tarifa || ocrData.Tarifa || "",
       kwh_consumidos: kwhFromOCR,
@@ -93,8 +114,27 @@ export async function handler(event) {
       ya_tiene_fv: parseYesNo(body.ya_tiene_fv)
     };
 
+    const params = await getParams();
     const proposal = await generateCompleteProposal(formDataForEngine);
     console.log("🧮 Propuesta completa calculada");
+
+    const periodicidadFinal = proposal.periodicidad || periodicidad;
+    const pagoDACActual = proposal.pago_dac_hipotetico_consumo_actual ?? calculateDACHypothetical(
+      proposal.kwh_consumidos,
+      periodicidadFinal,
+      proposal.tarifa,
+      params
+    );
+    const pagoDACCargasExtra = proposal.pago_dac_hipotetico_cargas_extra ?? (
+      proposal.kwh_consumidos_y_cargas_extra != null
+        ? calculateDACHypothetical(
+            proposal.kwh_consumidos_y_cargas_extra,
+            periodicidadFinal,
+            proposal.tarifa,
+            params
+          )
+        : null
+    );
 
     // Determine field values with proper logic
     const hasCFE = body.has_cfe === true;
@@ -164,8 +204,8 @@ export async function handler(event) {
       kWh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
       kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
       pago_hipotetico_cargas_extra: proposal.pago_hipotetico_cargas_extra,
-      pago_dac_hipotetico_consumo_actual: tarifaResidencial ? proposal.pago_dac_hipotetico_consumo_actual : null,
-      pago_dac_hipotetico_cargas_extra: tarifaResidencial ? proposal.pago_dac_hipotetico_cargas_extra : null,
+      pago_dac_hipotetico_consumo_actual: tarifaResidencial ? pagoDACActual : null,
+      pago_dac_hipotetico_cargas_extra: tarifaResidencial ? pagoDACCargasExtra : null,
       quiere_aislado: quiereAislado,
       casa_negocio: casaNegocio,
       numero_personas: casaNegocio === "Negocio"
@@ -236,8 +276,8 @@ export async function handler(event) {
           frontend_outputs: proposal.frontend_outputs,
           periodicidad: proposal.periodicidad,
           limite_dac_mensual_kwh: proposal.limite_dac_mensual_kwh,
-          pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,
-          pago_dac_hipotetico_cargas_extra: proposal.pago_dac_hipotetico_cargas_extra
+          pago_dac_hipotetico_consumo_actual: pagoDACActual,
+          pago_dac_hipotetico_cargas_extra: pagoDACCargasExtra
         }
       })
     };
