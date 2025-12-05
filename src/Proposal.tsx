@@ -324,7 +324,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-6 mb-6">
+        <div className="border-t border-slate-200 pt-6 mb-6 print-break-before print-break-after print-avoid-break">
           <h4 className="text-lg font-bold text-slate-900 mb-4">Tu Inversión</h4>
           <div className="bg-slate-50 rounded-xl p-5 space-y-2 border border-slate-200">
             <div className="flex justify-between text-slate-700">
@@ -393,7 +393,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
         </div>
 
         {showSharedSections && (
-          <div className="mt-6 border-t border-slate-200 pt-8">
+          <div className="mt-6 border-t border-slate-200 pt-8 print-break-before print-avoid-break print-hidden">
             <div className="flex items-center justify-center gap-3 mb-4">
               <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
               <h4 className="text-2xl md:text-3xl font-bold text-center" style={{ color: '#1e3a2b' }}>
@@ -413,12 +413,12 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
         )}
 
         {showSharedSections && (
-        <div className="border-t border-slate-200 pt-6 mb-6">
-          <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
-        </div>
+          <div className="border-t border-slate-200 pt-6 mb-6 print-break-before print-avoid-break">
+            <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
+          </div>
         )}
 
-        <div className="border-t border-slate-200 pt-6">
+        <div className="border-t border-slate-200 pt-6 print-break-before print-avoid-break">
           <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
             <Shield className="w-5 h-5 text-slate-700" />
             Componentes del Sistema
@@ -512,7 +512,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
           )}
         </div>
 
-        <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+        <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4 print-avoid-break print-break-after">
           <p className="text-xs text-slate-700 leading-relaxed">
             <strong className="text-slate-900">Nota:</strong> Esta es una cotización preliminar basada en la información proporcionada.
             El precio final se ajustará tras la visita técnica gratuita donde validaremos las condiciones específicas de tu instalación.
@@ -526,7 +526,7 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
 function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void; maxEquipmentWarranty: number }) {
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-hidden">
         <div className="border-b border-slate-200 pb-6 mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Zap className="w-8 h-8" style={{ color: '#ff5c36' }} />
@@ -546,13 +546,15 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break">
         <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
       </div>
 
-      <TopBrandsSection />
+      <div className="print-hidden">
+        <TopBrandsSection />
+      </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after">
         <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
         <div className="relative">
@@ -700,6 +702,24 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
 
 function FAQAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [isPrintMode, setIsPrintMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+
+    const mediaQuery = window.matchMedia('print');
+
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsPrintMode(event.matches);
+    };
+
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener('change', handleChange as (event: MediaQueryListEvent) => void);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange as (event: MediaQueryListEvent) => void);
+    };
+  }, []);
 
   const faqs = [
     {
@@ -735,8 +755,8 @@ function FAQAccordion() {
               <Plus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
             )}
           </button>
-          {openIndex === index && (
-            <div className="px-5 pb-5 pt-0">
+          {(isPrintMode || openIndex === index) && (
+            <div className="px-5 pb-5 pt-0 faq-answer">
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{faq.answer}</p>
             </div>
           )}
@@ -812,7 +832,35 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           .calendly-inline-widget {
             display: none !important;
           }
+          .print-hidden {
+            display: none !important;
+          }
           .print-cta {
+            display: block !important;
+          }
+          .print-break-before {
+            break-before: page;
+            page-break-before: always;
+          }
+          .print-break-after {
+            break-after: page;
+            page-break-after: always;
+          }
+          .print-avoid-break {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .print-page {
+            break-after: page;
+            page-break-after: always;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .print-last-page {
+            break-after: avoid;
+            page-break-after: auto;
+          }
+          .faq-answer {
             display: block !important;
           }
           @page {
@@ -833,6 +881,9 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         }
         .print-cta {
           display: none;
+        }
+        .print-hidden {
+          display: block;
         }
       `}</style>
       <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
@@ -880,7 +931,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         </div>
 
         {proposal.future && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 print-hidden">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <p className="text-sm text-blue-900 mb-3">
@@ -935,9 +986,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
         {!proposal.future && (
           <>
-            <TopBrandsSection />
+            <div className="print-hidden">
+              <TopBrandsSection />
+            </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after">
               <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
               <div className="relative">
@@ -1029,7 +1082,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break">
               <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
               <FAQAccordion />
 
@@ -1046,7 +1099,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff9b7a' }}>
+            <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center print-last-page print-avoid-break" style={{ borderColor: '#ff9b7a' }}>
           <div className="text-6xl mb-4">🚀</div>
           <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
             Da el Primer Paso Hacia Tu Independencia Energética
