@@ -885,10 +885,6 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     <>
       <style>{`
         @media print {
-          html,
-          body {
-            visibility: hidden;
-          }
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
@@ -900,10 +896,6 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           @page {
             margin: 0.5cm;
             size: letter;
-          }
-          .proposal-print,
-          .proposal-print * {
-            visibility: visible !important;
           }
           .no-print {
             display: none !important;
