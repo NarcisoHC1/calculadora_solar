@@ -1,6 +1,22 @@
 // netlify/functions/cotizacion_v2.mjs
 import { CORS, upsertLead, createProject, createSubmissionDetails, createProposal } from "./lib/airtable.mjs";
 import { generateCompleteProposal } from "./lib/proposalEngine.mjs";
+import { calculateDACHypothetical } from "./lib/calculations.mjs";
+import { getParams } from "./lib/params.mjs";
+
+const parseNumberInput = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const direct = Number(trimmed);
+    if (Number.isFinite(direct)) return direct;
+    const cleaned = Number(trimmed.replace(/[^0-9.+-]/g, ""));
+    return Number.isFinite(cleaned) ? cleaned : null;
+  }
+  return null;
+};
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -12,7 +28,9 @@ export async function handler(event) {
   }
 
   try {
-    const body = JSON.parse(event.body || "{}");
+    const rawBody = JSON.parse(event.body || "{}");
+    const body = rawBody.form || rawBody;
+    const ocrResult = rawBody.ocr || rawBody.ocr_result || body.ocr_result;
 
     if (!body.nombre || !body.email || !body.telefono) {
       return {
@@ -35,7 +53,7 @@ export async function handler(event) {
     const projectId = await createProject({ leadId });
     console.log("✅ Project:", projectId);
 
-    const ocrData = body.ocr_result?.data || body.ocr_result || {};
+    const ocrData = (ocrResult && (ocrResult.data || ocrResult)) || {};
     const ocrPromedios = ocrData.historicals_promedios || {};
 
     const periodicidad = body.has_cfe === false
@@ -55,16 +73,23 @@ export async function handler(event) {
     const numeroPersonasRaw = body.numero_personas;
 
     // Generar propuesta completa usando el nuevo motor
+    const kwhFromOCR = parseNumberInput(
+      body.kwh_consumidos ??
+      ocrPromedios.kWh_consumidos ??
+      ocrData.kwh_consumidos ??
+      ocrData.energia_periodo_kwh
+    );
+
     const formDataForEngine = {
       // Basic info
       estado: body.estado || "",
       municipio: body.municipio || "Ciudad de México",
       has_cfe: body.has_cfe,
       tiene_recibo: body.has_cfe === true && body.tiene_recibo === true,
-      pago_promedio: Number(body.pago_promedio_mxn || ocrPromedios.Pago_Prom_MXN_Periodo || 0),
+      pago_promedio: parseNumberInput(body.pago_promedio_mxn ?? ocrPromedios.Pago_Prom_MXN_Periodo ?? null) ?? 0,
       periodicidad,
       tarifa: body.tarifa || ocrData.Tarifa || "",
-      kwh_consumidos: Number(body.kwh_consumidos || ocrPromedios.kWh_consumidos || 0) || null,
+      kwh_consumidos: kwhFromOCR,
 
       // Property
       uso: usoNormalized || "Casa",
@@ -89,16 +114,41 @@ export async function handler(event) {
       ya_tiene_fv: parseYesNo(body.ya_tiene_fv)
     };
 
+    const params = await getParams();
     const proposal = await generateCompleteProposal(formDataForEngine);
     console.log("🧮 Propuesta completa calculada");
 
+    const periodicidadFinal = proposal.periodicidad || periodicidad;
+    const pagoDACActual = proposal.pago_dac_hipotetico_consumo_actual ?? calculateDACHypothetical(
+      proposal.kwh_consumidos,
+      periodicidadFinal,
+      proposal.tarifa,
+      params
+    );
+    const pagoDACCargasExtra = proposal.pago_dac_hipotetico_cargas_extra ?? (
+      proposal.kwh_consumidos_y_cargas_extra != null
+        ? calculateDACHypothetical(
+            proposal.kwh_consumidos_y_cargas_extra,
+            periodicidadFinal,
+            proposal.tarifa,
+            params
+          )
+        : null
+    );
+
     // Determine field values with proper logic
     const hasCFE = body.has_cfe === true;
-    const tieneReciboCFE = hasCFE && body.tiene_recibo === true;
+    const tieneReciboCFE = hasCFE && (body.tiene_recibo === true || ocrResult?.ok === true);
     const quiereAislado = body.plans_cfe === "aislado";
     const yaTieneFV = parseYesNo(body.ya_tiene_fv);
     const propuestaAuto = body.propuesta_auto === true ? true : (body.propuesta_auto === false ? false : undefined);
-    const metrosDistancia = Math.max(30, Number(proposal.metros_distancia || body.distancia_techo_tablero || 0));
+    const distanciaInput = body.distancia_techo_tablero ?? body.distancia;
+    const distanciaNumerica = Number(distanciaInput);
+    const metrosDistancia = Number.isFinite(distanciaNumerica) && distanciaNumerica > 0
+      ? distanciaNumerica
+      : (Number.isFinite(proposal.metros_distancia) && proposal.metros_distancia > 0
+        ? proposal.metros_distancia
+        : null);
 
     // Determine casa_negocio - only set if explicitly asked
     const casaNegocio = usoNormalized ? usoNormalized : "";
@@ -131,18 +181,18 @@ export async function handler(event) {
 
     // Preparar datos para Submission_Details
     const submissionData = {
-      ocr_manual: body.ocr_result ? "OCR" : "manual",
-      ocr_json: body.ocr_result ? JSON.stringify(body.ocr_result) : null,
-      OCR_JSON: body.ocr_result ? JSON.stringify(body.ocr_result) : null,
-      OCR_Manual: body.ocr_result ? "ocr" : "manual",
-      Imagen_recibo: body.ocr_image || body.ocr_result?.Imagen_recibo || null,
-      estado: body.estado || "",
+      ocr_manual: ocrResult ? "OCR" : "manual",
+      ocr_json: ocrResult ? JSON.stringify(ocrResult) : null,
+      OCR_JSON: ocrResult ? JSON.stringify(ocrResult) : null,
+      OCR_Manual: ocrResult ? "ocr" : "manual",
+      Imagen_recibo: body.ocr_image || ocrResult?.Imagen_recibo || null,
+      estado: body.estado || ocrData.Estado || "",
       tiene_contrato_cfe: hasCFE,
       tiene_recibo_cfe: tieneReciboCFE,
-      no_servicio_cfe: body.ocr_result?.no_servicio || "",
-      no_medidor_cfe: body.ocr_result?.no_medidor || "",
-      Numero_Servicio_CFE: ocrData.Numero_Servicio_CFE || body.ocr_result?.no_servicio || "",
-      Numero_Medidor_CFE: ocrData.Numero_Medidor_CFE || body.ocr_result?.no_medidor || "",
+      no_servicio_cfe: ocrResult?.no_servicio || "",
+      no_medidor_cfe: ocrResult?.no_medidor || "",
+      Numero_Servicio_CFE: ocrData.Numero_Servicio_CFE || ocrResult?.no_servicio || "",
+      Numero_Medidor_CFE: ocrData.Numero_Medidor_CFE || ocrResult?.no_medidor || "",
       Fases: ocrData.Fases,
       pago_promedio: proposal.pago_promedio || Number(body.pago_promedio_mxn || 0),
       Pago_Prom_MXN_Periodo: ocrPromedios.Pago_Prom_MXN_Periodo ?? proposal.pago_promedio ?? Number(body.pago_promedio_mxn || 0),
@@ -154,8 +204,8 @@ export async function handler(event) {
       kWh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
       kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
       pago_hipotetico_cargas_extra: proposal.pago_hipotetico_cargas_extra,
-      pago_dac_hipotetico_consumo_actual: tarifaResidencial ? proposal.pago_dac_hipotetico_consumo_actual : null,
-      pago_dac_hipotetico_cargas_extra: tarifaResidencial ? proposal.pago_dac_hipotetico_cargas_extra : null,
+      pago_dac_hipotetico_consumo_actual: tarifaResidencial ? pagoDACActual : null,
+      pago_dac_hipotetico_cargas_extra: tarifaResidencial ? pagoDACCargasExtra : null,
       quiere_aislado: quiereAislado,
       casa_negocio: casaNegocio,
       numero_personas: casaNegocio === "Negocio"
@@ -226,8 +276,8 @@ export async function handler(event) {
           frontend_outputs: proposal.frontend_outputs,
           periodicidad: proposal.periodicidad,
           limite_dac_mensual_kwh: proposal.limite_dac_mensual_kwh,
-          pago_dac_hipotetico_consumo_actual: proposal.pago_dac_hipotetico_consumo_actual,
-          pago_dac_hipotetico_cargas_extra: proposal.pago_dac_hipotetico_cargas_extra
+          pago_dac_hipotetico_consumo_actual: pagoDACActual,
+          pago_dac_hipotetico_cargas_extra: pagoDACCargasExtra
         }
       })
     };

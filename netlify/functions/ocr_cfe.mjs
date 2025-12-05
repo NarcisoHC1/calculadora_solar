@@ -1,7 +1,12 @@
 // netlify/functions/ocr_cfe.mjs
-import { CORS, createRecord } from "./lib/airtable.mjs";
+import { CORS } from "./lib/airtable.mjs";
 
-const OCR_BASE = (process.env.OCR_BASE || process.env.OCR_SERVICE_BASE || process.env.OCR_API_BASE || "").replace(/\/+$/, "");
+const OCR_BASE = (
+  process.env.OCR_BASE ||
+  process.env.OCR_SERVICE_BASE ||
+  process.env.OCR_API_BASE ||
+  ""
+).replace(/\/+$/, "");
 const OCR_ENDPOINT_OVERRIDE = (process.env.OCR_ENDPOINT || "").trim();
 
 function resolveOcrEndpoint(base, override) {
@@ -134,34 +139,6 @@ export async function handler(event) {
     data: ocrResult?.data || {},
     form_overrides: ocrResult?.form_overrides || {}
   };
-
-  if (ocrResult?.ok) {
-    try {
-      const data = ocrResult.data || {};
-      const prom = data.historicals_promedios || {};
-      const fields = {};
-      const setField = (key, value) => {
-        if (value !== undefined && value !== null && value !== "") {
-          fields[key] = value;
-        }
-      };
-
-      setField("Periodicidad", data.Periodicidad);
-      setField("Numero_Servicio_CFE", data.Numero_Servicio_CFE);
-      setField("Numero_Medidor_CFE", data.Numero_Medidor_CFE);
-      setField("Fases", data.Fases);
-      setField("Pago_Prom_MXN_Periodo", prom.Pago_Prom_MXN_Periodo ?? data.Pago_Prom_MXN_Periodo);
-      setField("kWh_consumidos", prom.kWh_consumidos ?? data.kWh_consumidos);
-      setField("Tarifa", data.Tarifa || data.tarifa);
-      setField("OCR_JSON", JSON.stringify(ocrResult));
-      setField("OCR_Manual", "ocr");
-      if (Object.keys(fields).length) {
-        await createRecord("Submission_Details", fields);
-      }
-    } catch (err) {
-      console.error("Airtable OCR save error:", err);
-    }
-  }
 
   return respond(200, responsePayload);
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { getEstadosUnique, getMinStateThreshold, getMaxStateThreshold, isCDMXorMexico } from './stateThresholds';
 import { generateProposal } from './calculationEngine';
@@ -29,20 +29,13 @@ const BUSINESS_RANGE_OPTIONS = ['1-10', '11-50', '51-250', '251 o más'];
 type Step = 1 | 2 | 3;
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
-const OCR_BASE = (import.meta as any).env?.VITE_OCR_BASE || '';
 const OCR_ENDPOINT_OVERRIDE = (import.meta as any).env?.VITE_OCR_ENDPOINT || '';
+const DEFAULT_OCR_ENDPOINT = 'https://solarya-ocr-service-production.up.railway.app/v1/ocr/cfe';
 
-function resolveOcrEndpoint(base: string, override?: string): string {
+function resolveOcrEndpoint(override?: string): string {
   const direct = (override || '').replace(/\/+$/, '');
   if (direct) return direct;
-  if (!base) return '';
-
-  const trimmed = base.replace(/\/+$/, '');
-  const lower = trimmed.toLowerCase();
-
-  if (/\/ocr_cfe$/.test(lower) || /\/v1\/ocr\/cfe$/.test(lower)) return trimmed;
-  if (/\/v1\/ocr$/.test(lower)) return `${trimmed}/cfe`;
-  return `${trimmed}/v1/ocr/cfe`;
+  return DEFAULT_OCR_ENDPOINT;
 }
 
 type FrontendBlock = {
@@ -609,9 +602,11 @@ function App() {
   // OCR state
   const [ocrStatus, setOcrStatus] = useState<'idle' | 'uploading' | 'analyzing' | 'extracting' | 'ok' | 'fail'>('idle');
   const [ocrMsg, setOcrMsg] = useState('');
+  const [ocrMsgIndex, setOcrMsgIndex] = useState(0);
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [ocrQuality, setOcrQuality] = useState<number | null>(null);
   const [ocrImage, setOcrImage] = useState<string | null>(null);
+  const ocrMsgIntervalRef = useRef<number | null>(null);
 
   // Step 1 - manual capture toggles and fields
   const [showManual, setShowManual] = useState(false);
@@ -714,27 +709,67 @@ function App() {
   }
 
   // --------- OCR ----------
+  const stopOcrMessageLoop = () => {
+    if (ocrMsgIntervalRef.current != null) {
+      clearInterval(ocrMsgIntervalRef.current);
+      ocrMsgIntervalRef.current = null;
+    }
+    setOcrMsgIndex(0);
+  };
+
+  const startOcrMessageLoop = (messages: string[], delay = 1600) => {
+    stopOcrMessageLoop();
+    if (!messages.length) return;
+
+    let idx = 0;
+    let dotIdx = 0;
+    setOcrMsg(messages[idx]);
+    setOcrMsgIndex(dotIdx);
+
+    if (messages.length === 1) return;
+
+    ocrMsgIntervalRef.current = window.setInterval(() => {
+      idx = (idx + 1) % messages.length;
+      dotIdx = (dotIdx + 1) % 3;
+      setOcrMsg(messages[idx]);
+      setOcrMsgIndex(dotIdx);
+    }, delay);
+  };
+
+  useEffect(() => {
+    return () => stopOcrMessageLoop();
+  }, []);
+
   async function runOCR(selectedFiles: File[]) {
     try {
+      stopOcrMessageLoop();
       setOcrStatus('uploading');
-      setOcrMsg('Subiendo archivos…');
+      startOcrMessageLoop(['Subiendo archivos…', 'Preparando imágenes…']);
 
       const limitedFiles = selectedFiles.slice(0, 2);
-      const dataUrls = await Promise.all(limitedFiles.map(fileToDataUrl));
-      const compressed = limitedFiles[0] ? await compressDataUrl(dataUrls[0], limitedFiles[0].type || '') : null;
+      const firstDataUrl = limitedFiles[0] ? await fileToDataUrl(limitedFiles[0]) : null;
+      const compressed = limitedFiles[0] && firstDataUrl
+        ? await compressDataUrl(firstDataUrl, limitedFiles[0].type || '')
+        : null;
 
       setOcrStatus('analyzing');
-      setOcrMsg('Analizando páginas…');
+      startOcrMessageLoop([
+        'Analizando páginas…',
+        'Extrayendo datos de tu recibo…',
+        'Interpretando cifras y periodos…'
+      ]);
 
-      const payload = { images: dataUrls, filename: limitedFiles[0]?.name || 'upload', compressed_image: compressed };
-      const primaryEndpoint = resolveOcrEndpoint(OCR_BASE, OCR_ENDPOINT_OVERRIDE) || '/api/ocr_cfe';
-      const fallbackEndpoint = '/api/ocr_cfe';
+      const primaryEndpoint = resolveOcrEndpoint(OCR_ENDPOINT_OVERRIDE);
+
+      console.log('🛰️ OCR endpoint frontend:', primaryEndpoint);
+
+      const formData = new FormData();
+      limitedFiles.forEach(file => formData.append('files', file));
 
       const callEndpoint = async (url: string) => {
         const resp = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: formData
         });
         let data: any = null;
         try {
@@ -745,33 +780,16 @@ function App() {
         return { resp, data };
       };
 
-      let response: Response;
-      let resultBody: any = null;
-
-      try {
-        const primaryResult = await callEndpoint(primaryEndpoint);
-        response = primaryResult.resp;
-        resultBody = primaryResult.data;
-
-        if (!response.ok && primaryEndpoint !== fallbackEndpoint) {
-          console.warn('OCR primary endpoint failed, retrying fallback…', response.status, resultBody);
-          const fallbackResult = await callEndpoint(fallbackEndpoint);
-          response = fallbackResult.resp;
-          resultBody = fallbackResult.data;
-        }
-      } catch (err) {
-        if (primaryEndpoint !== fallbackEndpoint) {
-          console.warn('OCR primary endpoint failed, retrying fallback…', err);
-          const fallbackResult = await callEndpoint(fallbackEndpoint);
-          response = fallbackResult.resp;
-          resultBody = fallbackResult.data;
-        } else {
-          throw err;
-        }
-      }
+      const primaryResult = await callEndpoint(primaryEndpoint);
+      let response: Response = primaryResult.resp;
+      let resultBody: any = primaryResult.data;
 
       setOcrStatus('extracting');
-      setOcrMsg('Recopilando información…');
+      startOcrMessageLoop([
+        'Recopilando información…',
+        'Afinando detalles…',
+        'Preparando tu propuesta…'
+      ]);
 
       const result = resultBody ?? (await response.json().catch(() => null));
 
@@ -782,6 +800,7 @@ function App() {
           : 'Hubo un error al analizar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.';
 
         setOcrStatus('fail');
+        stopOcrMessageLoop();
         setOcrMsg(friendlyMsg);
         setOcrResult(result || null);
         setOcrQuality(null);
@@ -796,8 +815,10 @@ function App() {
       const cpOCR = result.form_overrides?.cp || '';
       const periodicidadOCR = normalized.Periodicidad || '';
       const pagoProm = prom.Pago_Prom_MXN_Periodo;
+      const estadoOCR = normalized.Estado || '';
 
       setOcrStatus('ok');
+      stopOcrMessageLoop();
       setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
       setOcrResult({ ...result, data: normalized });
       setOcrQuality(typeof result.quality === 'number' ? result.quality : null);
@@ -806,14 +827,17 @@ function App() {
       if (tarifaOCR) setTarifa(tarifaOCR);
       if (cpOCR) setCP(cpOCR);
       if (periodicidadOCR) setPeriodo(periodicidadOCR);
+      if (estadoOCR) setEstado(estadoOCR);
       if (pagoProm != null && !Number.isNaN(Number(pagoProm))) setPago(String(Math.round(Number(pagoProm))));
 
       setHasCFE('si');
+      setJustMoved('si');
       setPlanCFE('');
       setShowManual(false);
     } catch (e) {
       console.error('OCR error:', e);
       setOcrStatus('fail');
+      stopOcrMessageLoop();
       setOcrMsg('Hubo un error al analizar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
       setOcrResult(null);
       setOcrQuality(null);
@@ -836,6 +860,7 @@ function App() {
     setFiles(next);
     setFileNames(next.map(f => f.name));
     if (next.length === 0) {
+      stopOcrMessageLoop();
       setOcrStatus('idle');
       setOcrMsg('');
       setOcrResult(null);
@@ -848,6 +873,7 @@ function App() {
     setShowManual(true);
     setFiles([]);
     setFileNames([]);
+    stopOcrMessageLoop();
     setOcrStatus('idle');
     setOcrMsg('');
     setOcrResult(null);
@@ -885,7 +911,7 @@ function App() {
 
   const canProceedStep1 = () => {
     if (fileUploaded) {
-      return ocrStatus === 'ok';
+      return ocrStatus === 'ok' && !!expand;
     }
     if (!showManual) return false;
     if (!hasCFE) return false;
@@ -897,7 +923,7 @@ function App() {
         if (usoCasaNegocio === 'casa' && !numPersonasCasa) return false;
         if (usoCasaNegocio === 'negocio' && !rangoPersonasNegocio) return false;
         if (!estado) return false;
-        if (planCFE === 'aislado' && !expand) return false;
+        if (!expand) return false;
         return true;
       }
       return false;
@@ -937,6 +963,7 @@ function App() {
     if (!tipoInmueble) return false;
     if (['2', '4', '5', '8', '9'].includes(tipoInmueble) && !pisos) return false;
     if (['3', '6', '7'].includes(tipoInmueble) && !distanciaTechoTablero) return false;
+    if (showError && cargas.includes('ninguna')) return false;
 
     // Validate carga details
     if (cargas.includes('ev')) {
@@ -1047,8 +1074,8 @@ function App() {
       periodicidad: periodo || 'bimestral',
       pago_promedio_mxn: parseFloat(pago || '0') || 0,
       cp,
-      estado: estado || '',
-      municipio: estado || '',
+      estado: estado || ocrResult?.data?.Estado || '',
+      municipio: estado || ocrResult?.data?.Estado || '',
       tarifa: tarifa || (ocrResult?.data?.Tarifa || ocrResult?.data?.tarifa || ocrResult?.form_overrides?.tarifa || ''),
       kwh_consumidos:
         ocrResult?.data?.historicals_promedios?.kWh_consumidos ||
@@ -1062,7 +1089,7 @@ function App() {
       notes: notas || '',
       loads,
       has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
-      tiene_recibo: hasCFE === 'si' ? justMoved === 'si' : false,
+      tiene_recibo: hasCFE === 'si' ? (justMoved === 'si' || ocrResult?.ok === true) : false,
       plans_cfe: planCFE,
       ya_tiene_fv: expandNormalized ? expandNormalized === 'si' : undefined,
       propuesta_auto: flow === 'AUTO',
@@ -1075,10 +1102,12 @@ function App() {
 
       console.log('📤 Enviando datos al backend...');
 
+      const submissionPayload = { form: formPayload, ocr: ocrResult || null };
+
       const response = await fetch('/api/cotizacion_v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formPayload)
+        body: JSON.stringify(submissionPayload)
       });
 
       console.log('📥 Respuesta recibida:', response.status);
@@ -1139,7 +1168,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (!showManual || hasCFE !== 'si' || !pago) {
+    if (hasCFE !== 'si' || !pago) {
       setShowError(false);
       setErrorMessage('');
       return;
@@ -1252,9 +1281,9 @@ function App() {
                         <div className="w-12 h-12 rounded-full border-4 border-slate-200 animate-spin" style={{ borderTopColor: '#1e3a2b' }} />
                         <p className="text-slate-700 font-semibold">{ocrMsg}</p>
                         <div className="flex gap-2 items-center">
-                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'uploading' ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'analyzing' ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <div className={`w-2 h-2 rounded-full ${ocrStatus === 'extracting' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 1 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 2 ? 'bg-green-500' : 'bg-slate-300'}`} />
                         </div>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mt-2">
                           <p className="text-xs text-amber-800 font-semibold">⚠️ No cierres el navegador</p>
@@ -1288,6 +1317,29 @@ function App() {
                         <p className="text-sm text-green-800 font-semibold">Datos extraídos correctamente</p>
                         {ocrQuality != null && ocrQuality < 1 && <p className="text-xs text-green-700">Calidad OCR: {(ocrQuality * 100).toFixed(0)}%</p>}
                       </div>
+                    </div>
+                  )}
+                  {ocrStatus === 'ok' && (
+                    <div className="mt-6 text-left">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        ¿Ya tienes un sistema de paneles solares y planeas expandirlo?
+                      </label>
+                      <select
+                        value={expand}
+                        onChange={(e) => setExpand(e.target.value)}
+                        className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                        style={{
+                          outlineColor: '#3cd070',
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
+                      >
+                        <option value="">Selecciona una opción</option>
+                        <option value="si">Sí</option>
+                        <option value="no">No</option>
+                      </select>
                     </div>
                   )}
                   {ocrStatus === 'fail' && (
@@ -1529,7 +1581,7 @@ function App() {
                         </div>
                         )}
 
-                        {planCFE === 'aislado' && (
+                        {(planCFE === 'si' || planCFE === 'aislado') && (
                           <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                               ¿Ya tienes un sistema de paneles solares y planeas expandirlo?
@@ -2242,7 +2294,7 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!phoneValid}
+                  disabled={!phoneValid || !privacidad}
                   className="flex items-center gap-2 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90 shadow-lg transition-all disabled:opacity-60"
                   style={{ background: '#ff5c36' }}
                 >

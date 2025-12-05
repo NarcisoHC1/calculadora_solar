@@ -23,6 +23,20 @@ import {
 
 const IVA = 1.16;
 
+const parseNumberInput = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const direct = Number(trimmed);
+    if (Number.isFinite(direct)) return direct;
+    const cleaned = Number(trimmed.replace(/[^0-9.+-]/g, ""));
+    return Number.isFinite(cleaned) ? cleaned : null;
+  }
+  return null;
+};
+
 export async function generateCompleteProposal(formData) {
   const params = await getParams();
   const limiteDACMensual = params.tarifaDAC?.Limite_Mensual_kWh ?? null;
@@ -39,8 +53,8 @@ export async function generateCompleteProposal(formData) {
   const hasContrato = formData.has_cfe === true;
   const tieneRecibo = formData.tiene_recibo === true;
   const tarifaKnown = formData.tarifa && formData.tarifa !== "no conoce";
-  const pagoPromedioInput = Number(formData.pago_promedio || 0);
-  const kwhInput = formData.kwh_consumidos && formData.kwh_consumidos > 0 ? Number(formData.kwh_consumidos) : null;
+  const pagoPromedioInput = parseNumberInput(formData.pago_promedio) ?? 0;
+  const kwhInput = parseNumberInput(formData.kwh_consumidos);
   const plansCFE = formData.plans_cfe === true || formData.plans_cfe === "si" || formData.plans_cfe === "aislado";
 
   // Si la ubicación no es válida, marcar tarifa provincia y detener cálculos pesados
@@ -93,7 +107,7 @@ export async function generateCompleteProposal(formData) {
       tarifaFinal = deduceTarifaByUso();
     }
 
-    if (kwhInput) {
+    if (kwhInput && kwhInput > 0) {
       kwhConsumidos = kwhInput;
       if (!pagoPromedio) {
         pagoPromedio = calculatePaymentFromKwh(kwhConsumidos, tarifaFinal, factorP, params);

@@ -187,21 +187,54 @@ export function calculateExtraLoads(loads, periodicidad, params) {
 // CÁLCULO DE METROS DISTANCIA
 // ========================================
 
+function normalizeTipoInmueble(tipoInmueble) {
+  const raw = (tipoInmueble || "").toString().trim();
+  if (!raw) return "";
+
+  const byLabel = {
+    "casa o negocio independiente de 1-2 pisos": "1",
+    "departamento/local en edificio / condominio vertical": "2",
+    "solo areas comunes de condominio / fraccionamiento": "3",
+    "sólo areas comunes de condominio / fraccionamiento": "3",
+    "sólo áreas comunes de condominio / fraccionamiento": "3",
+    "solo areas comunes de edificio vertical": "9",
+    "sólo areas comunes de edificio vertical": "9",
+    "sólo áreas comunes de edificio vertical": "9",
+    "local en plaza comercial o edificio": "4",
+    "conjunto habitacional vertical / condominio vertical": "5",
+    "conjunto habitacional horizontal / condominio horizontal": "6",
+    "nave industrial / bodega": "7",
+    "edificios enteros (hoteles, oficinas, publicos)": "8",
+    "edificios enteros (hoteles, oficinas, públicos)": "8"
+  };
+
+  const lower = raw.toLowerCase();
+  if (byLabel[lower]) return byLabel[lower];
+  return raw;
+}
+
 export function calculateMetrosDistancia(tipoInmueble, pisos, distanciaReportada, params) {
+  const tipo = normalizeTipoInmueble(tipoInmueble);
+
+  const metersPerFloorRaw = params?.metersPerFloor;
+  const metersPerFloor = Number.isFinite(Number(metersPerFloorRaw)) && Number(metersPerFloorRaw) > 0
+    ? Number(metersPerFloorRaw)
+    : 3;
+
   // Tipo 1: Casa o negocio independiente de 1-2 pisos
-  if (tipoInmueble === "1" || tipoInmueble === "Casa o negocio independiente de 1-2 pisos") {
+  if (tipo === "1") {
     return 30;
   }
 
   // Tipos que usan pisos: 2, 4, 5, 8, 9
-  if (["2", "4", "5", "8", "9"].includes(tipoInmueble)) {
+  if (["2", "4", "5", "8", "9"].includes(tipo)) {
     const numPisos = Number(pisos) || 0;
-    return numPisos * params.metersPerFloor + 30;
+    return 30 + numPisos * metersPerFloor;
   }
 
   // Tipos que usan metros: 3, 6, 7
-  if (["3", "6", "7"].includes(tipoInmueble)) {
-    return Math.max(30, Number(distanciaReportada) || 30);
+  if (["3", "6", "7"].includes(tipo)) {
+    return Math.max(30, Number(distanciaReportada) || 0);
   }
 
   return 30;
@@ -563,18 +596,20 @@ export function selectMontaje(cantidadPaneles, params) {
 // ========================================
 
 export function calculateDACHypothetical(kwhConsumidos, periodicidad, tarifaBase, params) {
-  // Sólo aplica cuando la tarifa reportada/asignada es "1"
-  if ((tarifaBase || "").toString().toUpperCase() !== "1") return null;
+  const kwh = Number(kwhConsumidos);
+  if (!Number.isFinite(kwh) || kwh <= 0) return null;
 
-  const factorP = periodicidad === "bimestral" ? 2 : 1;
   const dac = params.tarifaDAC;
+  if (!dac) return null;
+
+  const period = (periodicidad || "").toLowerCase() === "mensual" ? "mensual" : "bimestral";
+  const factorP = period === "bimestral" ? 2 : 1;
 
   const limiteDAC = dac.Limite_Mensual_kWh * factorP;
-  if (kwhConsumidos < limiteDAC) return null;
+  if (kwh <= limiteDAC) return null;
 
-  const fijo = dac.Fijo_Mensual * 2 * IVA; // siempre se usa 2 meses
-  const variableMultiplier = periodicidad === "bimestral" ? 1 : 2;
-  const variable = dac.Variable * kwhConsumidos * variableMultiplier * IVA;
+  const fijo = dac.Fijo_Mensual * factorP * IVA;
+  const variable = dac.Variable * kwh * IVA;
 
   return fijo + variable;
 }
