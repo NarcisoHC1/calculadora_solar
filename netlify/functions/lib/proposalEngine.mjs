@@ -417,8 +417,8 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     costoTransporte = (costoPaneles + costoMontaje + costoMicroinversores + costoExtrasMicroinversores) * params.deliveryCosts;
   }
 
-  // 8. Calcular mano de obra
-  const costoMO = potenciaPanel * cantidadPaneles * 5.8;
+  // 8. Calcular mano de obra usando tarifa MXN/W del instalador "Final" desde Params
+  const costoMO = potenciaPanel * cantidadPaneles * params.installerCostFinalMXNW;
 
   // 9. Calcular seguro RC
   let costoSeguroRC = 0;

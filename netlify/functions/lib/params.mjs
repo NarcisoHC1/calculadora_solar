@@ -130,7 +130,8 @@ export async function getParams() {
     businessLoadsGuess,
     houseLoadsGuess,
     environmentalImpact,
-    thresholdMicroInverter
+    thresholdMicroInverter,
+    installerCosts
   ] = await Promise.all([
     fetchTable("Tarifa_1_CFE"),
     fetchTable("Tarifa_PDBT_CFE"),
@@ -155,7 +156,8 @@ export async function getParams() {
     fetchTable("Business_Loads_Guess"),
     fetchTable("House_Loads_Guess"),
     fetchTable("Environmental_Impact"),
-    fetchTable("Threshold_Micro_Inverter")
+    fetchTable("Threshold_Micro_Inverter"),
+    fetchTable("Installer_Costs")
   ]);
 
   // Get latest tarifa records (most recent by year/month)
@@ -178,6 +180,8 @@ export async function getParams() {
   const deliveryCostsRecord = deliveryCosts[0];
   const commercialConditionsRecord = commercialConditions[0];
   const thresholdValue = Number(thresholdMicroInverter?.[0]?.Threshold);
+  const installerFinalRecord = installerCosts.find(cost => cost.Instalador === "Final");
+  const installerCostMXNW = installerFinalRecord?.MXN_W;
 
   // Validate critical params with detailed logging
   console.log("🔍 Validating params...");
@@ -201,6 +205,12 @@ export async function getParams() {
   }
   if (!Number.isFinite(thresholdValue)) {
     throw new Error(`❌ Threshold_Micro_Inverter table missing Threshold value`);
+  }
+  if (!installerFinalRecord) {
+    throw new Error("❌ Installer_Costs table missing Instalador='Final' record");
+  }
+  if (!Number.isFinite(installerCostMXNW)) {
+    throw new Error(`❌ MXN_W missing for Instalador='Final'. Keys: ${Object.keys(installerFinalRecord).join(', ')}`);
   }
 
   console.log("✅ Params validated successfully");
@@ -237,7 +247,9 @@ export async function getParams() {
     businessLoadsGuess: businessLoadsGuess,
     houseLoadsGuess: houseLoadsGuess,
     environmentalImpact,
-    thresholdMicroInverter: thresholdValue
+    thresholdMicroInverter: thresholdValue,
+    installerCosts,
+    installerCostFinalMXNW: installerCostMXNW
   };
 
   cacheTimestamp = now;
