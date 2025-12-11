@@ -323,7 +323,8 @@ export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params)
 // ========================================
 
 export function calculateMicroinverters(cantidadPaneles, params) {
-  // Selección greedy priorizando MPPT más alto; sólo se aceptan combinaciones con máximo 2 IDs y No_Trunk homogéneo
+  // Selección greedy priorizando MPPT más alto; se permiten canales libres para cubrir al menos todos los paneles
+  // con máximo 2 IDs y No_Trunk homogéneo.
   const sortedSpecs = (params.microinverterSpecs || [])
     .map(spec => ({
       ...spec,
@@ -336,40 +337,47 @@ export function calculateMicroinverters(cantidadPaneles, params) {
       return (a.Price_USD || 0) - (b.Price_USD || 0);
     });
 
+  if (!sortedSpecs.length) {
+    throw new Error("❌ No hay microinversores configurados en Microinverter_Specs.Params");
+  }
+
+  const maxMppt = sortedSpecs[0].mppt;
+  const maxCapacidad = cantidadPaneles + maxMppt - 1; // permite canales libres en el último micro
   const combinations = [];
 
-  const dfs = (idx, remaining, current, currentNoTrunk) => {
-    if (remaining === 0) {
-      if (!current.length) return;
-      combinations.push({ items: current, noTrunk: currentNoTrunk });
-      return;
+  const dfs = (idx, asignados, current, currentNoTrunk) => {
+    if (asignados >= cantidadPaneles && asignados <= maxCapacidad) {
+      if (current.length) {
+        combinations.push({ items: current, noTrunk: currentNoTrunk, totalPaneles: asignados });
+      }
+      // se sigue buscando por si hay otra combinación con menor costo/micros y mismo mppt prioritario
     }
-    if (idx >= sortedSpecs.length) return;
+
+    if (idx >= sortedSpecs.length || asignados > maxCapacidad) return;
 
     const spec = sortedSpecs[idx];
-    const maxCount = Math.floor(remaining / spec.mppt);
+    const maxCount = Math.floor((maxCapacidad - asignados) / spec.mppt);
 
     for (let count = maxCount; count >= 0; count--) {
       if (count === 0) {
-        dfs(idx + 1, remaining, current, currentNoTrunk);
+        dfs(idx + 1, asignados, current, currentNoTrunk);
         continue;
       }
 
       if (currentNoTrunk && currentNoTrunk !== spec.noTrunk) continue;
 
-      const panelsCubiertos = count * spec.mppt;
-      if (panelsCubiertos > remaining) continue;
+      const nuevosAsignados = asignados + (count * spec.mppt);
 
       dfs(
         idx + 1,
-        remaining - panelsCubiertos,
+        nuevosAsignados,
         [...current, { spec, count }],
         currentNoTrunk || spec.noTrunk
       );
     }
   };
 
-  dfs(0, cantidadPaneles, [], null);
+  dfs(0, 0, [], null);
 
   const combosSinTrunk = combinations.filter(c => c.noTrunk === "si" && c.items.length <= 2);
   const combosConTrunk = combinations.filter(c => c.noTrunk === "no" && c.items.length <= 2);
@@ -379,12 +387,14 @@ export function calculateMicroinverters(cantidadPaneles, params) {
       .map(combo => {
         const costoUSD = combo.items.reduce((acc, item) => acc + (item.spec.Price_USD || 0) * item.count, 0);
         const totalMicros = combo.items.reduce((acc, item) => acc + item.count, 0);
-        const totalPaneles = combo.items.reduce((acc, item) => acc + item.count * item.spec.mppt, 0);
-        return { ...combo, costoUSD, totalMicros, totalPaneles };
+        const totalPaneles = combo.totalPaneles;
+        const extrasLibres = totalPaneles - cantidadPaneles;
+        return { ...combo, costoUSD, totalMicros, extrasLibres };
       })
       .sort((a, b) => {
-        if (a.costoUSD !== b.costoUSD) return a.costoUSD - b.costoUSD;
-        return a.totalMicros - b.totalMicros;
+        if (a.extrasLibres !== b.extrasLibres) return a.extrasLibres - b.extrasLibres; // menos canales libres primero
+        if (a.costoUSD !== b.costoUSD) return a.costoUSD - b.costoUSD; // luego menor costo
+        return a.totalMicros - b.totalMicros; // finalmente menos micros
       })[0];
   };
 
@@ -394,7 +404,7 @@ export function calculateMicroinverters(cantidadPaneles, params) {
   const elegida = mejorSi || mejorNo;
 
   if (!elegida) {
-    throw new Error("❌ No se encontró combinación de microinversores que cubra todos los paneles");
+    throw new Error("❌ No se encontró combinación de microinversores que cubra todos los paneles (permitiendo canales libres)");
   }
 
   const idPrimario = elegida.items[0]?.spec.ID || null;
