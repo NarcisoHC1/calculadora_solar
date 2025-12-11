@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { getEstadosUnique, getMinStateThreshold, getMaxStateThreshold, isCDMXorMexico } from './stateThresholds';
-import { computeFuturePayment, generateProposal, getDefaultTarifaParams } from './calculationEngine';
+import { computeFuturePayment, getDefaultTarifaParams } from './calculationEngine';
 import type { Proposal, ComponentBreakdown, ProposalData } from './types';
 import ProposalComponent from './Proposal';
 
@@ -510,7 +510,8 @@ function blockToProposalData(
     descuentoPorcentaje: descuentoPorcentaje || undefined,
     ahorroEn25: Number(block.ahorro_en_25_anos ?? 0) || undefined
   };
-  financial.ahorroEn25 = financial.ahorroEn25 ?? (financial.ahorroBimestral * 6 * 25);
+  // Ahorro a 25 años con serie geométrica fija: (1 - 0.996^25)/(1 - 0.996) * (ahorroBimestral * 6)
+  financial.ahorroEn25 = (1 - Math.pow(0.996, 25)) / (1 - 0.996) * (financial.ahorroBimestral * 6);
 
   const porcentajeCobertura = block.generas_el_x_porcentaje_consumo != null
     ? (block.generas_el_x_porcentaje_consumo || 0) * 100
@@ -1152,25 +1153,11 @@ function App() {
       }
 
       const proposalFromBackend = mapBackendToProposal(result.proposal, formPayload.tarifa || '1', formPayload.periodicidad);
+      if (!proposalFromBackend) {
+        throw new Error('La propuesta debe generarse en backend (sin cálculos locales)');
+      }
 
-      const proposal = proposalFromBackend || generateProposal({
-        hasCFE: hasCFE === 'si',
-        plansCFE: planCFE === 'si',
-        isAislado: planCFE === 'aislado',
-        tarifa: formPayload.tarifa || '1',
-        periodo: formPayload.periodicidad,
-        pagoActual: formPayload.pago_promedio_mxn,
-        estado: estado || 'Ciudad de México',
-        cargas: cargas.length > 0 ? {
-          ev: cargas.includes('ev') ? cargaDetalles.ev : undefined,
-          minisplit: cargas.includes('minisplit') ? cargaDetalles.minisplit : undefined,
-          secadora: cargas.includes('secadora'),
-          bomba: cargas.includes('bomba'),
-          otro: cargas.includes('otro')
-        } : undefined,
-        tipoInmueble: tipoInmueble,
-        pisos: parseInt(pisos || '0', 10)
-      });
+      const proposal = proposalFromBackend;
 
       hideLoading();
       bridge?.gtm?.('cotizador_v2_auto', { pid: req_id });

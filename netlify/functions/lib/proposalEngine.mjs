@@ -359,19 +359,22 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
   const costoPaneles = cantidadPaneles * potenciaPanel * panel.Price_USD_W * tc;
 
   // 4. Determinar micro vs central
-  const microCentral = cantidadPaneles >= 15 ? "central" : "micro";
+  const thresholdMicros = Number(params.thresholdMicroInverter);
+  if (!Number.isFinite(thresholdMicros)) {
+    throw new Error("❌ Threshold_Micro_Inverter.Params inválido");
+  }
+  const microCentral = cantidadPaneles > thresholdMicros ? "central" : "micro";
 
   let idInversor = null;
   let costoInversor = 0;
-  let idMicro2Panel = null;
-  let cantidadMicro2Panel = 0;
-  let idMicro4Panel = null;
-  let cantidadMicro4Panel = 0;
+  let idMicroPrimario = null;
+  let cantidadMicroPrimario = 0;
+  let idMicroSecundario = null;
+  let cantidadMicroSecundario = 0;
   let costoMicroinversores = 0;
   let costoExtrasMicroinversores = 0;
   let inverterSpec = null;
-  let micro2Spec = null;
-  let micro4Spec = null;
+  let microSpecsSeleccionados = [];
 
   if (microCentral === "central") {
     // Sistema con inversor central
@@ -384,21 +387,16 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
   } else {
     // Sistema con microinversores
     const microConfig = calculateMicroinverters(cantidadPaneles, params);
-    idMicro2Panel = microConfig.idMicro2Panel;
-    cantidadMicro2Panel = microConfig.cantidadMicro2Panel;
-    idMicro4Panel = microConfig.idMicro4Panel;
-    cantidadMicro4Panel = microConfig.cantidadMicro4Panel;
+    idMicroPrimario = microConfig.idMicroPrimario;
+    cantidadMicroPrimario = microConfig.cantidadMicroPrimario;
+    idMicroSecundario = microConfig.idMicroSecundario;
+    cantidadMicroSecundario = microConfig.cantidadMicroSecundario;
 
     const costs = calculateMicroCosts(microConfig, params);
     costoMicroinversores = costs.costoMicroinversores;
     costoExtrasMicroinversores = costs.costoExtras;
 
-    if (idMicro2Panel) {
-      micro2Spec = params.microinverterSpecs.find(m => m.ID === idMicro2Panel) || null;
-    }
-    if (idMicro4Panel) {
-      micro4Spec = params.microinverterSpecs.find(m => m.ID === idMicro4Panel) || null;
-    }
+    microSpecsSeleccionados = microConfig.microCombination.items.map(item => item.spec).filter(Boolean);
   }
 
   // 5. Seleccionar montaje (greedy)
@@ -476,8 +474,8 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     panel_specs_params: panel,
     inverter_specs: inverterSpec,
     inverter_specs_params: inverterSpec,
-    microinverter_specs: [micro4Spec, micro2Spec].filter(Boolean),
-    microinverter_specs_params: [micro4Spec, micro2Spec].filter(Boolean),
+    microinverter_specs: microSpecsSeleccionados,
+    microinverter_specs_params: microSpecsSeleccionados,
     montaje_specs: [montajeA, montajeB].filter(Boolean),
     montaje_specs_params: [montajeA, montajeB].filter(Boolean),
 
@@ -486,10 +484,10 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     costo_inversor: Math.round(costoInversor),
 
     // Microinversores (si aplica)
-    id_micro_2_panel: idMicro2Panel,
-    cantidad_micro_2_panel: cantidadMicro2Panel,
-    id_micro_4_panel: idMicro4Panel,
-    cantidad_micro_4_panel: cantidadMicro4Panel,
+    id_micro_2_panel: idMicroPrimario,
+    cantidad_micro_2_panel: cantidadMicroPrimario,
+    id_micro_4_panel: idMicroSecundario,
+    cantidad_micro_4_panel: cantidadMicroSecundario,
     costo_microinversores: Math.round(costoMicroinversores),
     costo_extras_microinversores: Math.round(costoExtrasMicroinversores),
 
@@ -585,18 +583,11 @@ function computeFrontendBlock({ periodicidad, tarifa, pagoActual, kwhObjetivo, p
   const inversionTotal = propuesta.total || null;
   const roi = inversionTotal && ahorrasBimestre ? inversionTotal / (ahorrasBimestre * 6) : null;
 
-  const annualDeg = propuesta.annual_degradation || 0;
-  let ahorro25 = null;
-  if (ahorrasBimestre && annualDeg !== null && annualDeg !== undefined) {
-    if (annualDeg === 0) {
-      ahorro25 = ahorrasBimestre * 6 * 25;
-    } else {
-      const factor = 1 - annualDeg;
-      const numerador = 1 - Math.pow(factor, 25);
-      const denominador = 1 - factor;
-      ahorro25 = denominador !== 0 ? (numerador / denominador) * (ahorrasBimestre * 6) : null;
-    }
-  }
+  // Ahorro a 25 años: suma geométrica con degradación anual fija del 0.4%
+  // Fórmula: (1 - 0.996^25) / (1 - 0.996) * (ahorroBimestral * 6)
+  const ahorro25 = ahorrasBimestre != null
+    ? (1 - Math.pow(0.996, 25)) / (1 - 0.996) * (ahorrasBimestre * 6)
+    : null;
 
   const secuencia = (params.commercialConditions.Secuencia_Exhibiciones || "")
     .split(",")
