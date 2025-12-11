@@ -147,7 +147,7 @@ function WhatYouGet({ maxEquipmentWarranty }: { maxEquipmentWarranty: number }) 
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
-            <p>Garantía de generación de energía: <strong>25 años</strong></p>
+            <p>Garantía de generación de energía: <strong>2 años</strong></p>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
