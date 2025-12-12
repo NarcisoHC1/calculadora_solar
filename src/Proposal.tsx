@@ -848,11 +848,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       const apiBase =
         import.meta.env.VITE_PROPOSAL_API_BASE ?? import.meta.env.VITE_API_BASE ?? '';
 
-      const response = await fetch(`${apiBase}/api/proposal_pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          html,
+        const response = await fetch(`${apiBase}/api/proposal_pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            html,
           fileName: `propuesta-${firstName.toLowerCase() || 'solarya'}.pdf`,
           margin: {
             top: '16mm',
@@ -864,6 +864,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       });
 
       if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        console.error('PDF function responded with an error', response.status, errorText);
         throw new Error('No pudimos generar el PDF');
       }
 

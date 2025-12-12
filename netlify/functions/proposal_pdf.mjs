@@ -59,23 +59,33 @@ export const handler = async event => {
   try {
     const executablePath = await chromium.executablePath();
 
+    if (!executablePath) {
+      throw new Error('Chromium executablePath is empty');
+    }
+
     browser = await playwrightChromium.launch({
       args: chromium.args,
       executablePath,
-      headless: chromium.headless,
+      headless: chromium.headless ?? true,
       chromiumSandbox: false
     });
 
-    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
-    await page.setContent(html, { waitUntil: 'networkidle' });
+    await page.setContent(html, {
+      waitUntil: 'domcontentloaded',
+      timeout: 20000
+    });
+
+    await page.emulateMedia({ media: 'print' });
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       preferCSSPageSize: true,
       landscape,
-      margin: margin || DEFAULT_MARGIN
+      margin: margin || DEFAULT_MARGIN,
+      timeout: 20000
     });
 
     const sanitizedFileName = `${fileName}`.replace(/"/g, '').trim() || 'propuesta-solarya.pdf';
@@ -92,7 +102,10 @@ export const handler = async event => {
       isBase64Encoded: true
     };
   } catch (error) {
-    console.error('PDF generation failed', error);
+    console.error('PDF generation failed', {
+      message: error?.message,
+      stack: error?.stack
+    });
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
