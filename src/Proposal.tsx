@@ -828,6 +828,84 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       .map(styleTag => styleTag.outerHTML)
       .join('\n');
 
+    const pdfStyles = `
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: #e2e8f0;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: #0f172a;
+      }
+
+      .pdf-container {
+        max-width: 920px;
+        margin: 20mm auto;
+        padding: 20px 24px 28px;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      .pdf-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 16px;
+      }
+
+      .pdf-logo {
+        height: 54px;
+        width: auto;
+        object-fit: contain;
+      }
+
+      .pdf-meta {
+        text-align: right;
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .pdf-meta .title {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 14px;
+      }
+
+      .pdf-meta .date {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .pdf-body .print-avoid-break,
+      .pdf-body section,
+      .pdf-body .rounded-2xl,
+      .pdf-body .shadow,
+      .pdf-body .shadow-lg,
+      .pdf-body .shadow-xl {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .pdf-body .proposal-scroll {
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+      }
+    `;
+
+    const generatedAt = new Date().toLocaleString('es-MX', {
+      dateStyle: 'long',
+      timeStyle: 'short'
+    });
+
     const html = `<!doctype html>
       <html lang="es">
         <head>
@@ -835,9 +913,21 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           ${stylesheetLinks}
           ${inlineStyles}
+          <style>${pdfStyles}</style>
         </head>
-        <body class="bg-slate-50">
-          <div class="proposal-overlay">${clone.outerHTML}</div>
+        <body>
+          <div class="pdf-container">
+            <header class="pdf-header">
+              <img src="${toAbsoluteUrl('/SolarYa logos_Primary Logo.png')}" alt="SolarYa" class="pdf-logo" />
+              <div class="pdf-meta">
+                <div class="title">Propuesta personalizada</div>
+                <div class="date">Generada el ${generatedAt}</div>
+              </div>
+            </header>
+            <div class="pdf-body">
+              <div class="proposal-overlay">${clone.outerHTML}</div>
+            </div>
+          </div>
         </body>
       </html>`;
 
