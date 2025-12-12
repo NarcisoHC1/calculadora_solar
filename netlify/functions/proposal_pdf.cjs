@@ -76,9 +76,23 @@ exports.handler = async event => {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
     await page.setContent(html, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'networkidle',
       timeout: 20000
     });
+
+    try {
+      await page.waitForLoadState('networkidle', { timeout: 15000 });
+    } catch {
+      /* noop */
+    }
+
+    try {
+      await page.evaluate(() =>
+        typeof document !== 'undefined' && document.fonts ? document.fonts.ready : Promise.resolve()
+      );
+    } catch {
+      /* noop */
+    }
 
     await page.emulateMedia({ media: 'print' });
 
