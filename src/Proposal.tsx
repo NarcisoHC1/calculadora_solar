@@ -285,9 +285,9 @@ function WhatYouGet({ maxEquipmentWarranty }: { maxEquipmentWarranty: number }) 
 }
 
 function openCalendlyPopup(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault();
   if (window.Calendly) {
-    window.Calendly.initPopupWidget({ url: 'https://calendly.com/narciso-solarya/30min' });
+    e.preventDefault();
+    window.Calendly.initPopupWidget({ url: CALENDLY_URL });
   }
 }
 
@@ -308,14 +308,16 @@ function CalendlyWidget() {
       <div className="mt-6">
         <div
           className="calendly-inline-widget"
-          data-url="https://calendly.com/narciso-solarya/30min"
+          data-url={CALENDLY_URL}
           style={{ minWidth: '320px', height: '700px' }}
         />
       </div>
       <div className="print-cta mt-6 text-center">
         <a
-          href="https://calendly.com/narciso-solarya/30min"
+          href={CALENDLY_URL}
           className="inline-block px-12 py-5 rounded-xl font-bold text-xl shadow-2xl mb-4"
+          target="_blank"
+          rel="noreferrer noopener"
           style={{ background: '#ff5c36', color: 'white' }}
         >
           Agendar Visita Técnica Gratuita
@@ -326,7 +328,21 @@ function CalendlyWidget() {
   );
 }
 
-function ProposalCard({ data, title, onClose, showSharedSections = true, validUntil }: { data: ProposalData; title: string; onClose: () => void; showSharedSections?: boolean; validUntil: Date }) {
+function ProposalCard({
+  data,
+  title,
+  onClose,
+  showSharedSections = true,
+  validUntil,
+  variantKey = 'actual'
+}: {
+  data: ProposalData;
+  title: string;
+  onClose: () => void;
+  showSharedSections?: boolean;
+  validUntil: Date;
+  variantKey?: 'actual' | 'futura';
+}) {
   const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
   const maxEquipmentWarranty = getMaxProductWarranty(components);
 
@@ -361,7 +377,11 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden print-compact-card">
-      <div className="p-6 md:p-8 print-compact-section">
+      <div
+        className="p-6 md:p-8 print-compact-section pdf-section"
+        data-pdf-section="overview"
+        data-pdf-variant={variantKey}
+      >
         <h3 className="text-2xl font-bold mb-6 print-compact-heading" style={{ color: '#1e3a2b' }}>{title}</h3>
 
         <div className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200 print-compact-card">
@@ -444,7 +464,13 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
             </div>
           </div>
         </div>
+      </div>
 
+      <div
+        className="p-6 md:p-8 pt-0 print-compact-section pdf-section"
+        data-pdf-section="investment"
+        data-pdf-variant={variantKey}
+      >
         <div className="border-t border-slate-200 pt-6 mb-6 print-break-before print-break-after print-avoid-break print-compact-section">
           <h4 className="text-lg font-bold text-slate-900 mb-4">Tu Inversión</h4>
           <div className="bg-slate-50 rounded-xl p-5 space-y-2 border border-slate-200 print-compact-card">
@@ -512,6 +538,14 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
           </div>
 
         </div>
+
+      </div>
+
+      <div
+        className="p-6 md:p-8 pt-0 print-compact-section pdf-section"
+        data-pdf-section="components"
+        data-pdf-variant={variantKey}
+      >
 
         {showSharedSections && (
           <div className="mt-6 border-t border-slate-200 pt-8 print-break-before print-avoid-break print-hidden">
@@ -675,7 +709,10 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         <TopBrandsSection />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card">
+      <div
+        className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card"
+        data-pdf-section="process"
+      >
         <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
         <div className="relative">
@@ -756,10 +793,12 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
 
         <div className="mt-6 text-center">
           <a
-            href=""
+            href={CALENDLY_URL}
             onClick={openCalendlyPopup}
             className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
+            target="_blank"
+            rel="noreferrer noopener"
           >
             Agendar visita técnica gratuita
           </a>
@@ -767,24 +806,33 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+      <div
+        className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8"
+        data-pdf-section="faq"
+      >
         <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
         <FAQAccordion />
 
         <div className="mt-8 pt-6 border-t border-slate-200 text-center">
           <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
           <a
-            href=""
+            href={CALENDLY_URL}
             onClick={openCalendlyPopup}
             className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90 cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
+            target="_blank"
+            rel="noreferrer noopener"
           >
             Agendar visita técnica gratuita
           </a>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff9b7a' }}>
+      <div
+        className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center"
+        style={{ borderColor: '#ff9b7a' }}
+        data-pdf-section="cta"
+      >
         <div className="text-6xl mb-4">🚀</div>
         <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
           Da el Primer Paso Hacia Tu Independencia Energética
@@ -793,10 +841,12 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
           Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
         </p>
         <a
-          href=""
+          href={CALENDLY_URL}
           onClick={openCalendlyPopup}
           className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4 cursor-pointer"
           style={{ background: '#ff5c36', color: 'white' }}
+          target="_blank"
+          rel="noreferrer noopener"
         >
           Agendar Visita Técnica Gratuita
         </a>
@@ -962,6 +1012,49 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       .map(styleTag => styleTag.outerHTML)
       .join('\n');
 
+    const reorganizeForPdf = (root: HTMLElement) => {
+      const hero = root.querySelector('[data-pdf-section="hero"]') as HTMLElement | null;
+      const overviewSections = Array.from(root.querySelectorAll('[data-pdf-section="overview"]')) as HTMLElement[];
+      const investmentSections = Array.from(root.querySelectorAll('[data-pdf-section="investment"]')) as HTMLElement[];
+      const componentSections = Array.from(root.querySelectorAll('[data-pdf-section="components"]')) as HTMLElement[];
+      const processSection = root.querySelector('[data-pdf-section="process"]') as HTMLElement | null;
+      const faqSection = root.querySelector('[data-pdf-section="faq"]') as HTMLElement | null;
+      const ctaSection = root.querySelector('[data-pdf-section="cta"]') as HTMLElement | null;
+
+      const createGrid = (nodes: HTMLElement[], extraClass = '') => {
+        const grid = document.createElement('div');
+        grid.className = `pdf-inline-grid ${nodes.length > 1 ? 'pdf-inline-grid-double' : ''} ${extraClass}`.trim();
+        nodes.forEach(node => grid.appendChild(node));
+        return grid;
+      };
+
+      const stack = document.createElement('div');
+      stack.className = 'pdf-page-stack';
+
+      const addPage = (className: string, nodes: (HTMLElement | null)[]) => {
+        const filtered = nodes.filter(Boolean) as HTMLElement[];
+        if (!filtered.length) return;
+        const page = document.createElement('section');
+        page.className = `pdf-page ${className}`.trim();
+        filtered.forEach(node => page.appendChild(node));
+        stack.appendChild(page);
+      };
+
+      addPage('page-1', [hero, overviewSections.length ? createGrid(overviewSections) : null]);
+      addPage('page-2', [investmentSections.length ? createGrid(investmentSections) : null]);
+      addPage('page-3', [componentSections.length ? createGrid(componentSections) : null]);
+      addPage('page-4', [processSection]);
+      addPage('page-5', [faqSection]);
+      addPage('page-6', [ctaSection]);
+
+      if (stack.childElementCount === 0) return;
+
+      root.innerHTML = '';
+      root.appendChild(stack);
+    };
+
+    reorganizeForPdf(clone);
+
     const pdfStyles = `
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -980,6 +1073,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         --accent: #ff5c36;
         --accent-soft: #ff9b7a;
         --accent-contrast: #0f172a;
+        --pdf-page-height: 268mm;
       }
 
       body {
@@ -1053,6 +1147,76 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         background: linear-gradient(180deg, rgba(241, 245, 249, 0.6), rgba(255, 255, 255, 0.9));
         padding: 6px;
         border-radius: 14px;
+      }
+
+      .pdf-page-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .pdf-page {
+        page-break-after: always;
+        break-after: page;
+        min-height: var(--pdf-page-height);
+        padding: 14mm 10mm 12mm;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .pdf-page:last-child {
+        page-break-after: auto;
+      }
+
+      .pdf-inline-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .pdf-inline-grid.pdf-inline-grid-double {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      [data-pdf-section] {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      [data-pdf-section="hero"] {
+        min-height: 55mm;
+        display: flex;
+        align-items: center;
+      }
+
+      [data-pdf-section="overview"] {
+        min-height: 110mm;
+      }
+
+      [data-pdf-section="investment"] {
+        min-height: 120mm;
+      }
+
+      [data-pdf-section="components"] {
+        min-height: 130mm;
+      }
+
+      [data-pdf-section="process"] {
+        min-height: 150mm;
+      }
+
+      [data-pdf-section="faq"] {
+        min-height: 160mm;
+      }
+
+      [data-pdf-section="cta"] {
+        min-height: 110mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       .pdf-body .proposal-scroll {
@@ -1465,7 +1629,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           )}
 
           <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-compact-card">
+            <div
+              className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-compact-card"
+              data-pdf-section="hero"
+            >
               <div className="flex items-center justify-between flex-wrap gap-6">
                 <div>
                   <img
@@ -1623,10 +1790,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
               <div className="mt-6 text-center">
                 <a
-                  href=""
+                  href={CALENDLY_URL}
                   onClick={openCalendlyPopup}
                   className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg cursor-pointer"
                   style={{ background: '#ff5c36', color: 'white' }}
+                  target="_blank"
+                  rel="noreferrer noopener"
                 >
                   Agendar visita técnica gratuita
                 </a>
@@ -1641,10 +1810,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               <div className="mt-8 pt-6 border-t border-slate-200 text-center">
                 <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
                 <a
-                  href=""
+                  href={CALENDLY_URL}
                   onClick={openCalendlyPopup}
                   className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90 cursor-pointer"
                   style={{ background: '#ff5c36', color: 'white' }}
+                  target="_blank"
+                  rel="noreferrer noopener"
                 >
                   Agendar visita técnica gratuita
                 </a>
@@ -1660,10 +1831,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
           </p>
           <a
-            href=""
+            href={CALENDLY_URL}
             onClick={openCalendlyPopup}
             className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4 cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
+            target="_blank"
+            rel="noreferrer noopener"
           >
             Agendar Visita Técnica Gratuita
           </a>
@@ -1764,3 +1937,5 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     </>
   );
 }
+const CALENDLY_URL = 'https://calendly.com/narciso-solarya/30min';
+
