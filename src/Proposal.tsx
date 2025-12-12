@@ -955,7 +955,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       };
 
       const stack = document.createElement('div');
-      stack.className = 'pdf-page-stack pdf-stack';
+      stack.className = 'pdf-stack';
 
       const addPage = (className: string, nodes: (HTMLElement | null)[]) => {
         const filtered = nodes.filter(Boolean) as HTMLElement[];
@@ -981,7 +981,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
       if (stack.childElementCount === 0) return;
 
-      root.className = 'pdf-stack';
+      root.className = 'pdf-wrapper';
       root.removeAttribute('style');
       root.innerHTML = '';
       root.appendChild(stack);
@@ -1018,7 +1018,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     --pdf-page-width: 210mm;
   }
 
-  .pdf-stack, .pdf-page-stack {
+  .pdf-wrapper { display: flex; justify-content: center; background: #fff; }
+  .pdf-stack {
     width: var(--pdf-page-width);
     margin: 0 auto;
     display: flex;
@@ -1028,11 +1029,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   }
   .pdf-page {
     width: var(--pdf-page-width);
-    height: var(--pdf-page-height);
+    min-height: var(--pdf-page-height);
+    height: auto;
     page-break-after: always;
     break-after: page;
     box-sizing: border-box;
-    padding: 8mm 8mm;
+    padding: 8mm 8mm 6mm;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -1041,7 +1043,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   .pdf-page:last-child { page-break-after: auto; break-after: auto; }
 
   .pdf-page-card {
-    min-height: 100%;
+    height: auto;
+    min-height: calc(var(--pdf-page-height) - 14mm);
     border-radius: 12px;
     padding: 7mm;
     border: 1px solid #e2e8f0;
