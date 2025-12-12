@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
+import { ProposalData, DualProposal, EnvironmentalImpact, ComponentBreakdown } from './types';
 import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check } from 'lucide-react';
 
 interface ProposalProps {
@@ -74,6 +74,29 @@ const TOP_BRAND_LOGOS = [
   { alt: 'Canadian Solar', src: '/canadian_solar_square_logo.jpg' }
 ];
 
+const FAQ_ITEMS = [
+  {
+    question: '¿Qué incluye exactamente el sistema?',
+    answer:
+      'TODO INCLUIDO: Paneles de última generación, inversores/microinversores, estructura de montaje profesional, cableado especializado, protecciones eléctricas, instalación por técnicos certificados, trámites completos ante CFE, app de monitoreo en tiempo real, y todas las garantías respaldadas.'
+  },
+  {
+    question: '¿Cuánto tiempo dura la instalación?',
+    answer:
+      'Instalación física: 5 días laborales (1 semana). Trámites CFE: 2-4 semanas adicionales. Tiempo total: 4-6 semanas desde la visita técnica hasta que empiezas a generar energía.'
+  },
+  {
+    question: '¿Qué garantías tengo?',
+    answer:
+      '✓ 2 años garantía total de instalación y mano de obra\n✓ 12 años garantía en equipos (inversores y accesorios)\n✓ 25 años garantía de generación de energía en paneles solares'
+  },
+  {
+    question: '¿Qué mantenimiento requiere el sistema?',
+    answer:
+      'Los sistemas solares requieren muy poco mantenimiento. Se recomienda limpiar los paneles 2-3 veces al año (o después de tormentas de polvo) y una revisión técnica anual. Los componentes están diseñados para operar sin problemas durante décadas.'
+  }
+];
+
 function StaticBrandRow({ logos }: { logos: { alt: string; src: string }[] }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -114,6 +137,80 @@ function TopBrandsSection() {
       <h4 className="text-xl font-bold text-slate-900 mb-4">Usamos Sólo las Mejores Marcas</h4>
       <p className="text-sm text-slate-600 mb-6">Líderes mundiales en tecnología solar</p>
       <BrandCarousel logos={TOP_BRAND_LOGOS} className="py-2" />
+    </div>
+  );
+}
+
+function ProcessTimeline() {
+  return (
+    <div className="relative">
+      <div className="absolute left-6 top-12 bottom-12 w-0.5" style={{ background: '#ff5c36' }}></div>
+
+      <div className="space-y-8">
+        <div className="flex gap-4 relative">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+            1
+          </div>
+          <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <h5 className="font-bold text-slate-900">Visita Técnica</h5>
+              <span className="text-sm text-slate-600 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                ~1 día
+              </span>
+            </div>
+            <p className="text-sm text-slate-700">Evaluación gratuita y propuesta final</p>
+          </div>
+        </div>
+
+        <div className="flex gap-4 relative">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+            2
+          </div>
+          <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
+              <span className="text-sm text-slate-600 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                ~1 día
+              </span>
+            </div>
+            <p className="text-sm text-slate-700">Firma y pago del 50%</p>
+          </div>
+        </div>
+
+        <div className="flex gap-4 relative">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+            3
+          </div>
+          <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <h5 className="font-bold text-slate-900">Instalación</h5>
+              <span className="text-sm text-slate-600 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                ~5 días
+              </span>
+            </div>
+            <p className="text-sm text-slate-700">Sistema funcionando</p>
+          </div>
+        </div>
+
+        <div className="flex gap-4 relative">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
+            4
+          </div>
+          <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
+              <span className="text-sm text-slate-600 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                2-4 semanas
+              </span>
+            </div>
+            <p className="text-sm text-slate-700">Trámites y medidor bidireccional</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -557,75 +654,7 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card">
         <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
-        <div className="relative">
-          <div className="absolute left-6 top-12 bottom-12 w-0.5" style={{ background: '#ff5c36' }}></div>
-
-          <div className="space-y-8">
-            <div className="flex gap-4 relative">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                1
-              </div>
-              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Visita Técnica</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    ~1 día
-                  </span>
-                </div>
-                <p className="text-sm text-slate-700">Evaluación gratuita y propuesta final</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 relative">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                2
-              </div>
-              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    ~1 día
-                  </span>
-                </div>
-                <p className="text-sm text-slate-700">Firma y pago del 50%</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 relative">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                3
-              </div>
-              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Instalación</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    ~5 días
-                  </span>
-                </div>
-                <p className="text-sm text-slate-700">Sistema funcionando</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 relative">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                4
-              </div>
-              <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
-                  <span className="text-sm text-slate-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    2-4 semanas
-                  </span>
-                </div>
-                <p className="text-sm text-slate-700">Trámites y medidor bidireccional</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProcessTimeline />
 
         <div className="mt-6 bg-slate-50 border-2 rounded-xl p-4 text-center" style={{ borderColor: '#ff9b7a' }}>
           <p className="text-sm font-semibold" style={{ color: '#1e3a2b' }}>
@@ -721,35 +750,16 @@ function FAQAccordion() {
     };
   }, []);
 
-  const faqs = [
-    {
-      question: '¿Qué incluye exactamente el sistema?',
-      answer: 'TODO INCLUIDO: Paneles de última generación, inversores/microinversores, estructura de montaje profesional, cableado especializado, protecciones eléctricas, instalación por técnicos certificados, trámites completos ante CFE, app de monitoreo en tiempo real, y todas las garantías respaldadas.'
-    },
-    {
-      question: '¿Cuánto tiempo dura la instalación?',
-      answer: 'Instalación física: 5 días laborales (1 semana). Trámites CFE: 2-4 semanas adicionales. Tiempo total: 4-6 semanas desde la visita técnica hasta que empiezas a generar energía.'
-    },
-    {
-      question: '¿Qué garantías tengo?',
-      answer: '✓ 2 años garantía total de instalación y mano de obra\n✓ 12 años garantía en equipos (inversores y accesorios)\n✓ 25 años garantía de generación de energía en paneles solares'
-    },
-    {
-      question: '¿Qué mantenimiento requiere el sistema?',
-      answer: 'Los sistemas solares requieren muy poco mantenimiento. Se recomienda limpiar los paneles 2-3 veces al año (o después de tormentas de polvo) y una revisión técnica anual. Los componentes están diseñados para operar sin problemas durante décadas.'
-    }
-  ];
-
   return (
     <div className="space-y-3">
-      {faqs.map((faq, index) => (
+      {FAQ_ITEMS.map((faq, index) => (
         <div key={index} className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
             className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-100 transition-colors"
           >
             <span className="font-bold text-slate-900 pr-4">{faq.question}</span>
-            {openIndex === index ? (
+            {isPrintMode || openIndex === index ? (
               <Minus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
             ) : (
               <Plus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
@@ -760,6 +770,23 @@ function FAQAccordion() {
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{faq.answer}</p>
             </div>
           )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FAQSection() {
+  return (
+    <div className="space-y-4">
+      {FAQ_ITEMS.map((faq, index) => (
+        <div key={index} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <h5 className="font-bold text-slate-900 mb-2">{faq.question}</h5>
+          {faq.answer.split('\n').map((paragraph, idx) => (
+            <p key={idx} className="text-sm text-slate-700 leading-relaxed">
+              {paragraph}
+            </p>
+          ))}
         </div>
       ))}
     </div>
@@ -817,29 +844,91 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
+  const printableProposal = proposal.future && showFutureProposal ? proposal.future : proposal.current;
+  const printableComponents = printableProposal.components;
+  const printableMaxEquipmentWarranty = getMaxProductWarranty(printableComponents);
+  const printablePanelComponent = printableComponents.find(
+    comp => comp.type === 'panel' || comp.concepto.toLowerCase().includes('panel')
+  );
+  const printableMicroinverterComponent = printableComponents.find(
+    comp => comp.type === 'microinverter' || comp.concepto.toLowerCase().includes('microinversor')
+  );
+  const printableInverterComponent = printableComponents.find(comp => {
+    const concepto = comp.concepto.toLowerCase();
+    return comp.type === 'inverter' || (concepto.includes('inversor') && !concepto.includes('micro'));
+  });
+  const printableMontajeComponent = printableComponents.find(
+    comp => comp.type === 'montaje' || comp.concepto.toLowerCase().includes('montaje')
+  );
+  const printablePanelInfo: ComponentBreakdown = printablePanelComponent || {
+    concepto: 'Paneles solares',
+    cantidad: printableProposal.system.numPaneles,
+    marca: '',
+    modelo: '',
+    productWarrantyYears: undefined,
+    generationWarrantyYears: undefined,
+    capacityWatts: printableProposal.system.potenciaPorPanel
+  };
+  const printablePanelProductWarranty = inferProductWarrantyYears(printablePanelInfo);
+  const printablePanelGenerationWarranty = inferGenerationWarrantyYears(printablePanelInfo);
+  const printableMicroWarranty = printableMicroinverterComponent
+    ? inferProductWarrantyYears(printableMicroinverterComponent)
+    : undefined;
+  const printableInverterWarranty = printableInverterComponent
+    ? inferProductWarrantyYears(printableInverterComponent)
+    : undefined;
+  const printableMontajeWarranty = printableMontajeComponent
+    ? inferProductWarrantyYears(printableMontajeComponent)
+    : undefined;
+
   return (
     <>
       <style>{`
         @media print {
+          html,
+          body,
+          #root {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+            background: white !important;
+            margin: 0;
+            width: 100% !important;
+            min-height: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .proposal-print,
+          .proposal-print * {
+            visibility: visible !important;
+          }
+          #root > * {
+            display: none !important;
+          }
+          #root > .proposal-print {
+            display: block !important;
+          }
+          @page {
+            margin: 0.5cm;
+            size: letter;
+          }
           .no-print {
             display: none !important;
           }
-          body * {
-            visibility: hidden;
-          }
-          .app-main-content {
+          .proposal-screen {
             display: none !important;
           }
-          .proposal-overlay, .proposal-overlay * {
-            visibility: visible;
-          }
-          .proposal-overlay, .proposal-scroll {
+          .proposal-print {
+            display: block !important;
             position: static !important;
-            height: auto !important;
-            overflow: visible !important;
-            background: white !important;
-            padding: 8px 10px !important;
+            inset: 0 !important;
             width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 auto !important;
           }
           .calendly-inline-widget {
             display: none !important;
@@ -850,64 +939,19 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           .print-cta {
             display: block !important;
           }
-          .print-break-before {
-            break-before: page;
-            page-break-before: always;
-          }
-          .print-break-after {
-            break-after: page;
-            page-break-after: always;
-          }
-          .print-avoid-break {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          .print-compact-card {
-            padding: 14px 16px !important;
-            margin-bottom: 12px !important;
-          }
-          .print-compact-grid {
-            gap: 12px !important;
-          }
-          .print-compact-section {
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
-          }
-          .print-compact-heading {
-            margin-bottom: 12px !important;
-          }
-          .print-compact-text {
-            margin-bottom: 8px !important;
-            line-height: 1.3 !important;
-          }
           .print-page {
-            break-after: page;
-            page-break-after: always;
-            break-inside: avoid;
-            page-break-inside: avoid;
+            break-after: page !important;
+            page-break-after: always !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            overflow: visible !important;
           }
           .print-last-page {
-            break-after: avoid;
-            page-break-after: auto;
+            break-after: avoid !important;
+            page-break-after: auto !important;
           }
           .faq-answer {
             display: block !important;
-          }
-          @page {
-            margin: 0.5cm;
-            size: letter;
-          }
-          body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-            background: white !important;
-          }
-          .bg-white.rounded-2xl {
-            page-break-inside: auto;
-            page-break-after: auto;
-          }
-          h2, h3, h4 {
-            page-break-after: avoid;
           }
         }
         .print-cta {
@@ -916,8 +960,346 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         .print-hidden {
           display: block;
         }
+        .proposal-print {
+          display: none;
+        }
       `}</style>
-      <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
+
+      <div className="proposal-print bg-white text-slate-900">
+        <div className="max-w-4xl mx-auto py-6 space-y-6">
+          <div className="print-page bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <div className="p-6 space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-6">
+                <div>
+                  <img src="/SolarYa logos_Primary Logo.png" alt="SolarYa" className="h-8 w-auto opacity-90" />
+                  <p className="text-slate-500 text-xs md:text-sm mt-1.5">Accesible. Confiable. Simple.</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
+                  <p className="text-sm text-slate-600">{formatLongDate(creationDate)}</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                <div className="flex items-center justify-center mb-4">
+                  <TrendingDown className="w-5 h-5" style={{ color: '#ff5c36' }} />
+                  <h4 className="text-base font-bold text-slate-900 ml-2">Tu Ahorro con SolarYa</h4>
+                </div>
+
+                <div className="flex items-center justify-center gap-6 mb-5 flex-wrap">
+                  <div className="text-center">
+                    <div className="text-xs font-semibold text-slate-600 mb-1">PAGAS AHORA A CFE</div>
+                    <div className="text-3xl font-bold text-slate-700 line-through">{formatCurrency(printableProposal.financial.pagoAhora)}</div>
+                  </div>
+                  <div className="text-4xl font-bold" style={{ color: '#ff5c36' }}>→</div>
+                  <div className="text-center">
+                    <div className="text-xs font-semibold text-slate-600 mb-1">CON SOLARYA PAGARÁS</div>
+                    <div className="text-3xl font-bold" style={{ color: '#3cd070' }}>{formatCurrency(printableProposal.financial.pagoFuturo)}</div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 text-center border-2" style={{ borderColor: '#ff9b7a' }}>
+                  <p className="text-xs font-semibold text-slate-600 mb-1">AHORRAS CADA BIMESTRE</p>
+                  <p className="text-4xl font-bold" style={{ color: '#ff5c36' }}>
+                    {formatCurrency(printableProposal.financial.ahorroBimestral)}
+                  </p>
+                </div>
+              </div>
+
+              {printableProposal.showDACWarning && printableProposal.dacBimonthlyPayment !== undefined && printableProposal.dacFinancial && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                  <p className="text-sm font-bold text-amber-900 mb-3">⚠️ Advertencia Tarifa DAC</p>
+                  <ul className="space-y-2 text-sm text-amber-800">
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-900 font-bold mt-0.5">•</span>
+                      <span>Tu consumo bimestral de energía es alto y de seguir así los siguientes meses, la CFE podría pasarte a tarifa DAC (tarifa residencial de alto consumo).</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-900 font-bold mt-0.5">•</span>
+                      <span>Si caes (o ya estás) en tarifa DAC, pagarías <strong>{formatCurrency(printableProposal.dacBimonthlyPayment)}</strong> al bimestre.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-900 font-bold mt-0.5">•</span>
+                      <span>Con SolarYa pagarías <strong>{formatCurrency(printableProposal.financial.pagoFuturo)}</strong> al bimestre.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-900 font-bold mt-0.5">•</span>
+                      <span>Tu ahorro bimestral en DAC sería de <strong>{formatCurrency((printableProposal.dacBimonthlyPayment || 0) - printableProposal.financial.pagoFuturo)}</strong>.</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#ff5c36' }}>
+                      <Zap className="w-5 h-5 text-white" />
+                    </div>
+                    <h5 className="text-sm font-bold text-slate-700">Tu Sistema Solar</h5>
+                  </div>
+                  <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(printableProposal.system.potenciaTotal / 1000, 1)} kilowatts</p>
+                  <div className="space-y-1 text-sm text-slate-600">
+                    <p><strong className="text-slate-900">{printableProposal.system.numPaneles}</strong> paneles solares de <strong className="text-slate-900">{printableProposal.system.potenciaPorPanel}</strong> watts c/u</p>
+                    <p>Energía generada: <strong className="text-slate-900">{Math.round(printableProposal.system.generacionMensualKwh * 2)}</strong> kWh/bimestre</p>
+                    <p>Generas el <strong className="text-slate-900">{safeToFixed(printableProposal.porcentajeCobertura, 0)}%</strong> de tu consumo</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#1e3a2b' }}>
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    <h5 className="text-sm font-bold text-slate-700">Retorno de Inversión</h5>
+                  </div>
+                  <p className="text-3xl font-bold mb-2" style={{ color: '#1e3a2b' }}>{safeToFixed(printableProposal.financial.anosRetorno, 1)} años</p>
+                  <div className="space-y-1 text-sm text-slate-600">
+                    <p>Ahorro en 25 años:</p>
+                    <p className="text-xl font-bold text-slate-900">{formatCurrency((printableProposal.financial.ahorroEn25 ?? (printableProposal.financial.ahorroBimestral * 6 * 25)))}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="print-page bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <div className="p-6 space-y-5">
+              <div>
+                <h4 className="text-lg font-bold text-slate-900 mb-4">Tu Inversión</h4>
+                <div className="bg-slate-50 rounded-xl p-5 space-y-2 border border-slate-200">
+                  <div className="flex justify-between text-slate-700">
+                    <span>Precio de lista:</span>
+                    <span className="font-semibold">{formatCurrency(printableProposal.financial.precioLista)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold" style={{ color: '#3cd070' }}>
+                    <span>Descuento {printableProposal.financial.descuentoPorcentaje ? `(${Math.round(printableProposal.financial.descuentoPorcentaje * 100)}%)` : ''}:</span>
+                    <span>-{formatCurrency(printableProposal.financial.descuento)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-700 border-t pt-2">
+                    <span>Subtotal:</span>
+                    <span className="font-semibold">{formatCurrency(printableProposal.financial.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-700">
+                    <span>IVA:</span>
+                    <span className="font-semibold">{formatCurrency(printableProposal.financial.iva)}</span>
+                  </div>
+                  <div className="flex justify-between text-xl font-bold pt-2 border-t" style={{ color: '#1e3a2b' }}>
+                    <span>INVERSIÓN TOTAL</span>
+                    <span>{formatCurrency(printableProposal.financial.total)}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 mt-3 text-right">Vigencia de propuesta: hasta {formatLongDate(validUntil)}</p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <p className="text-sm font-bold text-slate-900 mb-3">Pago en 3 exhibiciones:</p>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  {(printableProposal.financial.pagosEnExhibiciones && printableProposal.financial.pagosEnExhibiciones.length > 0
+                    ? printableProposal.financial.pagosEnExhibiciones
+                    : [printableProposal.financial.total * 0.5, printableProposal.financial.total * 0.25, printableProposal.financial.total * 0.25]
+                  ).map((pago, idx) => {
+                    const pct = printableProposal.financial.secuenciaExhibiciones?.[idx]
+                      ? Math.round(printableProposal.financial.secuenciaExhibiciones[idx] * 100)
+                      : idx === 0
+                        ? 50
+                        : 25;
+                    return (
+                      <div key={idx}>
+                        <p className="text-xs text-slate-600 mb-1">{idx === 0 ? 'Anticipo' : `${idx + 1}º pago`} {pct}%</p>
+                        <p className="text-lg font-bold" style={{ color: '#1e3a2b' }}>{formatCurrency(pago)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-5">
+                <h5 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <TreePine className="w-4 h-4" style={{ color: '#3cd070' }} />
+                  Impacto ambiental anual de tu sistema
+                </h5>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">🌳</div>
+                    <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{printableProposal.environmental.arboles}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">🛢️</div>
+                    <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{printableProposal.environmental.barrilesPetroleo}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">☁️</div>
+                    <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{printableProposal.environmental.toneladasCO2}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">kilogramos de CO₂ reducidos</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="print-page bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <div className="p-6 space-y-5">
+              <div>
+                <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-slate-700" />
+                  Componentes del Sistema
+                </h4>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-base font-semibold text-slate-900">Paneles solares</p>
+                      <p className="text-sm text-slate-600">Marcas líderes Tier 1</p>
+                    </div>
+                    <p className="text-sm text-slate-600 font-semibold">×{printablePanelComponent?.cantidad ?? printableProposal.system.numPaneles}</p>
+                  </div>
+                  <div className="mt-4">
+                    <StaticBrandRow
+                      logos={[
+                        { alt: 'JA Solar', src: '/ja_solar_square_logo.jpg' },
+                        { alt: 'Canadian Solar', src: '/canadian_solar_square_logo.jpg' },
+                        { alt: 'LONGi', src: '/longi_square_logo.png' }
+                      ]}
+                    />
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm text-slate-700">
+                    <p>• Potencia: <strong>{printablePanelComponent?.capacityWatts ?? printableProposal.system.potenciaPorPanel}</strong> Watts</p>
+                    <p>• Dimensiones: {printablePanelComponent?.measurementsM2 ? `${printablePanelComponent.measurementsM2} metros cuadrados` : 'Datos por confirmar'}</p>
+                    <p>
+                      • Garantía de producto: <strong>{printablePanelProductWarranty || 'Por confirmar'}</strong>
+                      {printablePanelProductWarranty ? ' años' : ''}
+                    </p>
+                    <p>
+                      • Garantía de generación: <strong>{printablePanelGenerationWarranty || 'Por confirmar'}</strong>
+                      {printablePanelGenerationWarranty ? ' años' : ''}
+                    </p>
+                  </div>
+                </div>
+
+                {printableMicroinverterComponent ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-base font-semibold text-slate-900">Microinversor {printableMicroinverterComponent.marca}</p>
+                        <p className="text-sm text-slate-600">Modelo {printableMicroinverterComponent.modelo}</p>
+                      </div>
+                      <p className="text-sm text-slate-600 font-semibold">×{printableMicroinverterComponent.cantidad}</p>
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                      <p>
+                        • Garantía: <strong>{printableMicroWarranty || 'Por confirmar'}</strong>
+                        {printableMicroWarranty ? ' años' : ''}
+                      </p>
+                      <p>• Incluye DTU para monitoreo de generación de energía</p>
+                    </div>
+                  </div>
+                ) : printableInverterComponent ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-base font-semibold text-slate-900">Inversor {printableInverterComponent.marca}</p>
+                        <p className="text-sm text-slate-600">Modelo {printableInverterComponent.modelo}</p>
+                      </div>
+                      <p className="text-sm text-slate-600 font-semibold">×{printableInverterComponent.cantidad}</p>
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                      <p>• Potencia: {printableInverterComponent.capacityKw ?? printableInverterComponent.modelo} kW</p>
+                      <p>
+                        • Garantía: <strong>{printableInverterWarranty || 'Por confirmar'}</strong>
+                        {printableInverterWarranty ? ' años' : ''}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {printableMontajeComponent && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-base font-semibold text-slate-900">Montaje {printableMontajeComponent.marca}</p>
+                      </div>
+                      <p className="text-sm text-slate-600 font-semibold">×{printableMontajeComponent.cantidad}</p>
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                      <p>• Material: aluminio de alta resistencia</p>
+                      <p>• Certificación antisísmica</p>
+                      <p>• Resistente a corrosión</p>
+                      <p>
+                        • Garantía: <strong>{printableMontajeWarranty || 'Por confirmar'}</strong>
+                        {printableMontajeWarranty ? ' años' : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-4 print-last-page">
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  <strong className="text-slate-900">Nota:</strong> Esta es una cotización preliminar basada en la información proporcionada.
+                  El precio final se ajustará tras la visita técnica gratuita donde validaremos las condiciones específicas de tu instalación.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="print-page bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <div className="p-6 space-y-6">
+              <div className="border-b border-slate-200 pb-4">
+                <WhatYouGet maxEquipmentWarranty={printableMaxEquipmentWarranty} />
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
+                <ProcessTimeline />
+              </div>
+            </div>
+          </div>
+
+          <div className="print-page bg-white rounded-2xl border border-slate-200 shadow-sm print-last-page">
+            <div className="p-6 space-y-6">
+              <div>
+                <h4 className="text-xl font-bold text-slate-900 mb-4">Preguntas Frecuentes</h4>
+                <FAQSection />
+              </div>
+              <div className="text-center">
+                <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
+                  Da el Primer Paso Hacia Tu Independencia Energética
+                </h3>
+                <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+                  Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
+                </p>
+                <a
+                  href=""
+                  onClick={openCalendlyPopup}
+                  className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4 cursor-pointer"
+                  style={{ background: '#ff5c36', color: 'white' }}
+                >
+                  Agendar Visita Técnica Gratuita
+                </a>
+                <p className="text-sm text-slate-500">Respuesta en menos de 24 horas · Sin letra pequeña</p>
+                <div className="mt-8 flex items-center justify-center gap-8 flex-wrap text-sm text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+                    <span>Sin compromiso</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+                    <span>100% gratis</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" style={{ color: '#3cd070' }} />
+                    <span>Respuesta rápida</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="proposal-screen min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
         <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
           <button
             onClick={handleGenerateReferral}
@@ -1023,76 +1405,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card">
               <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
-
-              <div className="relative">
-                <div className="absolute left-6 top-12 bottom-12 w-0.5" style={{ background: '#ff5c36' }}></div>
-
-                <div className="space-y-8">
-                  <div className="flex gap-4 relative">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                      1
-                    </div>
-                    <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h5 className="font-bold text-slate-900">Visita Técnica</h5>
-                        <span className="text-sm text-slate-600 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          ~1 día
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700">Evaluación gratuita y propuesta final</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 relative">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                      2
-                    </div>
-                    <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h5 className="font-bold text-slate-900">Contrato y Anticipo</h5>
-                        <span className="text-sm text-slate-600 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          ~1 día
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700">Firma y pago del 50%</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 relative">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                      3
-                    </div>
-                    <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h5 className="font-bold text-slate-900">Instalación</h5>
-                        <span className="text-sm text-slate-600 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          ~5 días
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700">Sistema funcionando</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 relative">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white z-10" style={{ background: '#ff5c36' }}>
-                      4
-                    </div>
-                    <div className="flex-1 bg-white border-2 rounded-xl p-4" style={{ borderColor: '#ff9b7a' }}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h5 className="font-bold text-slate-900">Interconexión CFE</h5>
-                        <span className="text-sm text-slate-600 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          2-4 semanas
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700">Trámites y medidor bidireccional</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ProcessTimeline />
 
               <div className="mt-6 bg-slate-50 border-2 rounded-xl p-4 text-center" style={{ borderColor: '#ff9b7a' }}>
                 <p className="text-sm font-semibold" style={{ color: '#1e3a2b' }}>
