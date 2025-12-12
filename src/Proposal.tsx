@@ -981,6 +981,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
       if (stack.childElementCount === 0) return;
 
+      root.className = 'pdf-stack';
+      root.removeAttribute('style');
       root.innerHTML = '';
       root.appendChild(stack);
     };
@@ -1022,6 +1024,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     display: flex;
     flex-direction: column;
     gap: 0;
+    background: #fff;
   }
   .pdf-page {
     width: var(--pdf-page-width);
@@ -1030,6 +1033,9 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     break-after: page;
     box-sizing: border-box;
     padding: 10mm 8mm;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .pdf-page:last-child { page-break-after: auto; break-after: auto; }
 
@@ -1044,12 +1050,14 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     gap: 6mm;
     box-sizing: border-box;
     background: #fff;
+    overflow: hidden;
   }
 
-  .pdf-inline-grid { display: grid; gap: 6mm; width: 100%; }
+  .pdf-inline-grid { display: grid; gap: 6mm; width: 100%; align-items: start; }
   .pdf-inline-grid-double { grid-template-columns: 1fr 1fr; }
+  .pdf-inline-grid > * { width: 100%; }
 
-  .pdf-section { break-inside: avoid; page-break-inside: avoid; }
+  .pdf-section { break-inside: avoid; page-break-inside: avoid; width: 100%; }
 
   /* Remove app background/padding so PDF layout controls spacing */
   .proposal-scroll { background: transparent !important; padding: 0 !important; }
