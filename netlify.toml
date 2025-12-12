@@ -25,6 +25,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/proposal_pdf"
+  to   = "/.netlify/functions/proposal_pdf"
+  status = 200
+  force = true
+
 # Fallback SPA global (deja esto al final)
 [[redirects]]
   from = "/*"
