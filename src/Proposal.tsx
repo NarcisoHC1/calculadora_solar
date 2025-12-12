@@ -829,26 +829,43 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       .join('\n');
 
     const pdfStyles = `
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
       @page {
         size: A4;
         margin: 0;
       }
 
+      :root {
+        --slate-50: #f8fafc;
+        --slate-100: #f1f5f9;
+        --slate-200: #e2e8f0;
+        --slate-600: #475569;
+        --slate-700: #334155;
+        --slate-900: #0f172a;
+        --accent: #ff5c36;
+        --accent-soft: #ff9b7a;
+        --accent-contrast: #0f172a;
+      }
+
       body {
         margin: 0;
         padding: 0;
-        background: #e2e8f0;
+        background: radial-gradient(circle at 15% 20%, rgba(255, 92, 54, 0.08), transparent 35%),
+          radial-gradient(circle at 80% 10%, rgba(14, 165, 233, 0.08), transparent 30%),
+          var(--slate-50);
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        color: #0f172a;
+        color: var(--slate-900);
       }
 
       .pdf-container {
-        max-width: 920px;
-        margin: 20mm auto;
-        padding: 20px 24px 28px;
+        max-width: 960px;
+        margin: 18mm auto 16mm;
+        padding: 20px 26px 28px;
         background: #ffffff;
-        border-radius: 16px;
-        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+        border-radius: 20px;
+        border: 1px solid var(--slate-200);
+        box-shadow: 0 16px 70px rgba(15, 23, 42, 0.08);
       }
 
       .pdf-header {
@@ -857,31 +874,95 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         justify-content: space-between;
         gap: 16px;
         padding-bottom: 16px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1.5px solid var(--slate-200);
         margin-bottom: 16px;
       }
 
+      .pdf-header .brand-block {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
       .pdf-logo {
-        height: 54px;
+        height: 56px;
         width: auto;
         object-fit: contain;
       }
 
+      .pdf-brand-text {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--slate-600);
+        letter-spacing: 0.01em;
+      }
+
       .pdf-meta {
         text-align: right;
-        color: #475569;
+        color: var(--slate-600);
         font-size: 13px;
         line-height: 1.5;
       }
 
       .pdf-meta .title {
-        font-weight: 700;
-        color: #0f172a;
-        font-size: 14px;
+        font-weight: 800;
+        color: var(--slate-900);
+        font-size: 15px;
+        margin-bottom: 4px;
       }
 
       .pdf-meta .date {
         font-variant-numeric: tabular-nums;
+      }
+
+      .pdf-body {
+        background: linear-gradient(180deg, rgba(241, 245, 249, 0.6), rgba(255, 255, 255, 0.9));
+        padding: 6px;
+        border-radius: 14px;
+      }
+
+      .pdf-body .proposal-scroll {
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .pdf-body h1,
+      .pdf-body h2,
+      .pdf-body h3,
+      .pdf-body h4,
+      .pdf-body h5,
+      .pdf-body h6 {
+        color: var(--slate-900);
+        letter-spacing: -0.01em;
+      }
+
+      .pdf-body h2,
+      .pdf-body h3 {
+        border-left: 4px solid var(--accent);
+        padding-left: 10px;
+      }
+
+      .pdf-body p,
+      .pdf-body li,
+      .pdf-body span {
+        color: var(--slate-700);
+      }
+
+      .pdf-body strong {
+        color: var(--slate-900);
+      }
+
+      .pdf-body .bg-white,
+      .pdf-body .rounded-2xl,
+      .pdf-body .shadow,
+      .pdf-body .shadow-lg,
+      .pdf-body .shadow-xl,
+      .pdf-body .border,
+      .pdf-body .print-compact-card {
+        background: #ffffff !important;
+        border: 1px solid var(--slate-200) !important;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06) !important;
       }
 
       .pdf-body .print-avoid-break,
@@ -894,12 +975,107 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         page-break-inside: avoid;
       }
 
-      .pdf-body .proposal-scroll {
-        background: transparent;
-        box-shadow: none;
-        padding: 0;
+      .pdf-body .badge,
+      .pdf-body .chip,
+      .pdf-body .tag,
+      .pdf-body .text-orange-500,
+      .pdf-body .text-orange-600,
+      .pdf-body .text-orange-700 {
+        color: var(--accent) !important;
+      }
+
+      .pdf-body .border-orange-200,
+      .pdf-body .border-orange-300 {
+        border-color: var(--accent-soft) !important;
+      }
+
+      .pdf-body .bg-orange-50 {
+        background: rgba(255, 92, 54, 0.06) !important;
+      }
+
+      .pdf-body .highlight-box,
+      .pdf-body .bg-slate-50,
+      .pdf-body .bg-slate-100,
+      .pdf-body .bg-slate-200 {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95)) !important;
+        border: 1px solid var(--slate-200) !important;
+      }
+
+      .pdf-body .stat-value,
+      .pdf-body .text-3xl,
+      .pdf-body .text-4xl {
+        color: var(--slate-900) !important;
+      }
+
+      .pdf-body .accent-divider {
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(90deg, rgba(255, 92, 54, 0), rgba(255, 92, 54, 0.7), rgba(255, 92, 54, 0));
+        margin: 12px 0 6px;
+      }
+
+      .pdf-body ul {
+        padding-left: 18px;
+      }
+
+      .pdf-body li {
+        margin-bottom: 6px;
+      }
+
+      .pdf-body table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      .pdf-body th,
+      .pdf-body td {
+        border: 1px solid var(--slate-200);
+        padding: 10px 12px;
+      }
+
+      .pdf-body th {
+        background: rgba(255, 92, 54, 0.06);
+        color: var(--slate-900);
+        font-weight: 700;
+      }
+
+      .pdf-body .print-break-before {
+        break-before: page;
+        page-break-before: always;
+      }
+
+      .pdf-body .print-break-after {
+        break-after: page;
+        page-break-after: always;
       }
     `;
+
+    const fetchDataUrl = async (url: string) => {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result;
+            if (typeof result === 'string') {
+              resolve(result);
+            } else {
+              reject(new Error('Unable to encode asset'));
+            }
+          };
+          reader.onerror = () => reject(new Error('Unable to encode asset'));
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error('No pudimos incrustar el logo en base64', error);
+        return url;
+      }
+    };
+
+    const logoAbsoluteUrl = toAbsoluteUrl('/SolarYa logos_Primary Logo.png');
+    const logoDataUrl = await fetchDataUrl(logoAbsoluteUrl);
 
     const generatedAt = new Date().toLocaleString('es-MX', {
       dateStyle: 'long',
@@ -918,7 +1094,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         <body>
           <div class="pdf-container">
             <header class="pdf-header">
-              <img src="${toAbsoluteUrl('/SolarYa logos_Primary Logo.png')}" alt="SolarYa" class="pdf-logo" />
+              <div class="brand-block">
+                <img src="${logoDataUrl}" alt="SolarYa" class="pdf-logo" />
+                <div class="pdf-brand-text">Accesible. Confiable. Simple.</div>
+              </div>
               <div class="pdf-meta">
                 <div class="title">Propuesta personalizada</div>
                 <div class="date">Generada el ${generatedAt}</div>
