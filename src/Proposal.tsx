@@ -1002,11 +1002,15 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   @page { size: A4; margin: 0; }
   html, body { margin: 0; padding: 0; }
   body.pdf-root { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Asegura que el print CSS del sitio no oculte todo */
   @media print {
-    body.pdf-root *, body.pdf-root *::before, body.pdf-root *::after { visibility: visible !important; }
+    body.pdf-root *, body.pdf-root *::before, body.pdf-root *::after {
+      visibility: visible !important;
+    }
   }
 
-  /* Neutralize existing print break utilities (avoid blank pages / double breaks) */
+  /* Neutraliza utilidades viejas de print para que NO metan saltos raros */
   .print-break-after, .print-break-before {
     break-after: auto !important;
     page-break-after: auto !important;
@@ -1018,61 +1022,57 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     page-break-inside: auto !important;
   }
 
-  /* Calendly in PDF: hide embed; show printable CTA instead */
+  /* Calendly en PDF: ocultar embed, mostrar CTA */
   .calendly-inline-widget { display: none !important; height: auto !important; }
   .print-cta { display: block !important; }
 
-  :root {
-    --pdf-page-height: 297mm;
-    --pdf-page-width: 210mm;
-  }
-
-  .pdf-wrapper { display: flex; justify-content: center; background: #fff; }
+  .pdf-wrapper { background: #fff; }
   .pdf-stack {
-    width: var(--pdf-page-width);
+    width: 210mm;
     margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
     background: #fff;
   }
+
+  /* Cada .pdf-page arranca en página nueva */
   .pdf-page {
-    width: var(--pdf-page-width);
-    min-height: var(--pdf-page-height);
-    height: var(--pdf-page-height);
-    page-break-after: always;
+    break-before: page;
+    page-break-before: always;
     break-after: page;
+    page-break-after: always;
+    padding: 10mm;
     box-sizing: border-box;
-    padding: 8mm 8mm 6mm;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    overflow: visible;
+    background: #fff;
   }
-  .pdf-page:last-child { page-break-after: auto; break-after: auto; }
+  .pdf-page:first-child {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  .pdf-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
 
   .pdf-page-card {
-    height: 100%;
-    min-height: 0;
     border-radius: 12px;
-    padding: 7mm;
+    padding: 8mm;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 10px rgba(15,23,42,0.12);
-    display: flex;
-    flex-direction: column;
-    gap: 4mm;
     box-sizing: border-box;
     background: #fff;
-    overflow: visible;
   }
 
   .pdf-inline-grid { display: grid; gap: 6mm; width: 100%; align-items: start; }
   .pdf-inline-grid-double { grid-template-columns: 1fr 1fr; }
   .pdf-inline-grid > * { width: 100%; }
 
-  .pdf-section { break-inside: avoid; page-break-inside: avoid; width: 100%; }
+  .pdf-page, .pdf-page-card, .pdf-section, .pdf-inline-grid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 
-  /* Remove app background/padding so PDF layout controls spacing */
+  img { max-width: 100%; height: auto; }
+
+  /* Por si algo del layout original mete padding raro */
   .proposal-scroll { background: transparent !important; padding: 0 !important; }
 `;
 
@@ -1104,15 +1104,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             html,
-          fileName: `propuesta-${firstName.toLowerCase() || 'solarya'}.pdf`,
-          margin: {
-            top: '16mm',
-            right: '12mm',
-            bottom: '16mm',
-            left: '12mm'
-          }
-        })
-      });
+            fileName: `propuesta-${firstName.toLowerCase() || 'solarya'}.pdf`,
+            landscape: false
+          })
+        });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
@@ -1328,11 +1323,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
                   <p className="text-slate-500 text-xs md:text-sm mt-1.5">Accesible. Confiable. Simple.</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
-                  <p className="text-sm text-slate-600">{formatLongDate(creationDate)}</p>
-                </div>
-              </div>
+              <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
+              <p className="text-sm text-slate-600">{formatLongDate(creationDate)}</p>
             </div>
+          </div>
+        </div>
 
         {proposal.future && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 print-hidden">
@@ -1394,7 +1389,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               <TopBrandsSection />
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card">
+            <div
+              className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card pdf-section"
+              data-pdf-section="process"
+            >
               <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
               <div className="relative">
@@ -1488,7 +1486,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card">
+            <div
+              className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card pdf-section"
+              data-pdf-section="faq"
+            >
               <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
               <FAQAccordion forceOpen={forcePdfOpen} />
 
@@ -1507,7 +1508,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center print-last-page print-avoid-break print-compact-card" style={{ borderColor: '#ff9b7a' }}>
+            <div
+              className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center print-last-page print-avoid-break print-compact-card pdf-section"
+              style={{ borderColor: '#ff9b7a' }}
+              data-pdf-section="cta"
+            >
           <div className="text-6xl mb-4">🚀</div>
           <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
             Da el Primer Paso Hacia Tu Independencia Energética
