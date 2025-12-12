@@ -1,9 +1,6 @@
 const chromium = require('@sparticuz/chromium');
 const { chromium: playwrightChromium } = require('playwright-core');
 
-chromium.setHeadlessMode(true);
-chromium.setGraphicsMode(false);
-
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',

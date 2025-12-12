@@ -916,20 +916,29 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       (answer as HTMLElement).style.display = 'block';
     });
 
+    const sameOriginStylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map(link => toAbsoluteUrl(link.getAttribute('href')))
+      .filter(Boolean)
+      .filter(href => {
+        try {
+          const url = new URL(href);
+          return url.origin === origin;
+        } catch {
+          return false;
+        }
+      });
+
     const stylesheetLinksResults = await Promise.all(
-      Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-        .map(link => toAbsoluteUrl(link.getAttribute('href')))
-        .filter(Boolean)
-        .map(async href => {
-          try {
-            const res = await fetch(href);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return await res.text();
-          } catch (error) {
-            console.warn('No pudimos inlinear stylesheet', href, error);
-            return '';
-          }
-        })
+      sameOriginStylesheets.map(async href => {
+        try {
+          const res = await fetch(href);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.text();
+        } catch (error) {
+          console.warn('No pudimos inlinear stylesheet', href, error);
+          return '';
+        }
+      })
     );
 
     const inlineStyles = [
