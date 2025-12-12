@@ -845,7 +845,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     setDownloadError('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || ''}/api/proposal_pdf`, {
+      const apiBase =
+        import.meta.env.VITE_PROPOSAL_API_BASE ?? import.meta.env.VITE_API_BASE ?? '';
+
+      const response = await fetch(`${apiBase}/api/proposal_pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

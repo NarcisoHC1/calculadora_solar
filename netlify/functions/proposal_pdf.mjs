@@ -12,10 +12,23 @@ const DEFAULT_MARGIN = {
 };
 
 export const handler = async event => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
       body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
@@ -26,7 +39,7 @@ export const handler = async event => {
   } catch (error) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
       body: JSON.stringify({ error: 'Invalid JSON body', details: error.message })
     };
   }
@@ -36,7 +49,7 @@ export const handler = async event => {
   if (!html || typeof html !== 'string' || html.trim().length === 0) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
       body: JSON.stringify({ error: 'Missing HTML content' })
     };
   }
@@ -72,7 +85,8 @@ export const handler = async event => {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${sanitizedFileName}"`,
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
+        ...corsHeaders
       },
       body: pdfBuffer.toString('base64'),
       isBase64Encoded: true
@@ -81,7 +95,7 @@ export const handler = async event => {
     console.error('PDF generation failed', error);
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
       body: JSON.stringify({ error: 'Failed to generate PDF', details: error.message })
     };
   } finally {
