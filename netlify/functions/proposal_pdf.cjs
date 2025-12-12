@@ -63,10 +63,13 @@ exports.handler = async event => {
       throw new Error('Chromium executablePath is empty');
     }
 
+    const headless =
+      chromium.headless === undefined ? true : Boolean(chromium.headless);
+
     browser = await playwrightChromium.launch({
       args: chromium.args,
       executablePath,
-      headless: chromium.headless ?? true,
+      headless,
       chromiumSandbox: false
     });
 
