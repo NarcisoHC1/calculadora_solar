@@ -981,6 +981,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
     const clone = proposalNode.cloneNode(true) as HTMLElement;
 
+    clone.querySelectorAll('.no-print, .print-hidden').forEach(node => node.parentElement?.removeChild(node));
+
     clone.querySelectorAll('img').forEach(img => {
       const src = img.getAttribute('src');
       if (src) img.setAttribute('src', toAbsoluteUrl(src));
@@ -1178,10 +1180,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         page-break-after: always;
         break-after: page;
         min-height: var(--pdf-page-height);
-        height: var(--pdf-page-height);
         padding: 10mm 8mm;
         box-sizing: border-box;
-        display: flex;
       }
 
       .pdf-page:last-child {
@@ -1198,15 +1198,17 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         flex-direction: column;
         gap: 10mm;
         width: 100%;
-        height: 100%;
+        min-height: calc(var(--pdf-page-height) - 20mm);
         box-sizing: border-box;
+        position: relative;
+        overflow: visible;
       }
 
       .pdf-inline-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 12px;
-        align-items: stretch;
+        gap: 16px;
+        align-items: start;
       }
 
       .pdf-inline-grid.pdf-inline-grid-double {
@@ -1218,7 +1220,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       }
 
       .pdf-inline-grid > [data-pdf-section] {
-        height: 100%;
+        height: auto;
       }
 
       [data-pdf-section] {
