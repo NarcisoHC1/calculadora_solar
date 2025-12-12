@@ -88,10 +88,20 @@ exports.handler = async event => {
     const executablePath = await chromium.executablePath();
     if (!executablePath) throw new Error('Chromium executablePath is empty');
 
+    const resolvedHeadless = (() => {
+      if (typeof chromium.headless === 'boolean') return chromium.headless;
+      if (typeof chromium.headless === 'string') {
+        const value = chromium.headless.toLowerCase();
+        if (value === 'false') return false;
+        if (value === 'true') return true;
+      }
+      return true;
+    })();
+
     browser = await playwrightChromium.launch({
       args: [...chromium.args, '--hide-scrollbars', '--disable-dev-shm-usage'],
       executablePath,
-      headless: chromium.headless ?? true,
+      headless: resolvedHeadless,
       chromiumSandbox: false
     });
 
