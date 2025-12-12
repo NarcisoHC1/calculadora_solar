@@ -1032,25 +1032,26 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     page-break-after: always;
     break-after: page;
     box-sizing: border-box;
-    padding: 10mm 8mm;
+    padding: 8mm 8mm;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    align-items: stretch;
+    overflow: visible;
   }
   .pdf-page:last-child { page-break-after: auto; break-after: auto; }
 
   .pdf-page-card {
-    height: 100%;
+    min-height: 100%;
     border-radius: 12px;
-    padding: 8mm;
+    padding: 7mm;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 10px rgba(15,23,42,0.12);
     display: flex;
     flex-direction: column;
-    gap: 6mm;
+    gap: 5mm;
     box-sizing: border-box;
     background: #fff;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .pdf-inline-grid { display: grid; gap: 6mm; width: 100%; align-items: start; }
