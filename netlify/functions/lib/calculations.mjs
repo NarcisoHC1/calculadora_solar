@@ -254,90 +254,66 @@ export function calculateMetrosDistancia(tipoInmueble, pisos, distanciaReportada
 // ========================================
 
 export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params) {
-  const dias = periodicidad === "bimestral" ? 60 : 30;
-  const potenciaRequerida = kwhTarget / (hsp * pr * dias);
+  const diasBimestre = 60;
+  const diasPeriodo = periodicidad === "bimestral" ? diasBimestre : 30;
+
+  // Potencia requerida en kWp según consumo bimestral, HSP de Airtable y PR de Airtable
+  const potenciaRequeridaKw = kwhTarget / (hsp * diasBimestre * pr);
 
   let bestConfig = null;
   let bestError = Infinity;
 
   for (const panel of params.panelSpecs) {
     const potenciaPanelKw = panel.Capacity_W / 1000;
-    const numPanelesReal = potenciaRequerida / potenciaPanelKw;
 
-    const numPanelesFloor = Math.floor(numPanelesReal);
-    const numPanelesCeil = Math.ceil(numPanelesReal);
+    for (let cantidadPaneles = 1; cantidadPaneles <= 50; cantidadPaneles++) {
+      const potenciaInstaladaKw = potenciaPanelKw * cantidadPaneles;
+      const generacionPeriodo = potenciaInstaladaKw * hsp * pr * diasPeriodo;
+      const errorAbsoluto = Math.abs(generacionPeriodo - kwhTarget);
 
-    for (const numPaneles of [numPanelesFloor, numPanelesCeil]) {
-      if (numPaneles <= 0) continue;
-      if (panel.Capacity_W >= 700 && numPaneles < 20) continue;
-
-      const generacion = (panel.Capacity_W / 1000) * numPaneles * hsp * pr * dias;
-      const error = Math.abs(generacion - kwhTarget) / kwhTarget;
-
-      if (!bestConfig || error < bestError) {
-        bestError = error;
+      if (errorAbsoluto < bestError) {
+        bestError = errorAbsoluto;
         bestConfig = {
           panelId: panel.ID,
           potenciaPanel: panel.Capacity_W,
-          cantidadPaneles: numPaneles,
-          generacion,
-          error,
+          cantidadPaneles,
+          generacion: generacionPeriodo,
+          generacionMensual: periodicidad === "bimestral" ? generacionPeriodo / 2 : generacionPeriodo,
+          generacionAnual: (periodicidad === "bimestral" ? generacionPeriodo / 2 : generacionPeriodo) * 12,
+          error: errorAbsoluto,
           panel
         };
         continue;
       }
 
-      // Tie-breakers: prefer lower price/W and better warranties when error ties
-      if (Math.abs(error - bestError) < 1e-6) {
-        const currentPrice = panel.Price_USD_W;
-        const bestPrice = bestConfig.panel.Price_USD_W;
-
-        if (currentPrice < bestPrice) {
+      const esEmpate = Math.abs(errorAbsoluto - bestError) < 1e-6;
+      const bestGeneracion = bestConfig?.generacion ?? 0;
+      if (esEmpate) {
+        const sobreActual = generacionPeriodo >= kwhTarget;
+        const sobreMejor = bestGeneracion >= kwhTarget;
+        if (sobreActual && !sobreMejor) {
           bestConfig = {
             panelId: panel.ID,
             potenciaPanel: panel.Capacity_W,
-            cantidadPaneles: numPaneles,
-            generacion,
-            error,
+            cantidadPaneles,
+            generacion: generacionPeriodo,
+            generacionMensual: periodicidad === "bimestral" ? generacionPeriodo / 2 : generacionPeriodo,
+            generacionAnual: (periodicidad === "bimestral" ? generacionPeriodo / 2 : generacionPeriodo) * 12,
+            error: errorAbsoluto,
             panel
           };
-          bestError = error;
           continue;
-        }
-
-        if (currentPrice === bestPrice) {
-          const currentProdW = panel.Product_Warranty_Years || 0;
-          const bestProdW = bestConfig.panel.Product_Warranty_Years || 0;
-          if (currentProdW > bestProdW) {
-            bestConfig = {
-              panelId: panel.ID,
-              potenciaPanel: panel.Capacity_W,
-              cantidadPaneles: numPaneles,
-              generacion,
-              error,
-              panel
-            };
-            bestError = error;
-            continue;
-          }
-
-          const currentGenW = panel.Generation_Warranty_Years || 0;
-          const bestGenW = bestConfig.panel.Generation_Warranty_Years || 0;
-          if (currentGenW > bestGenW) {
-            bestConfig = {
-              panelId: panel.ID,
-              potenciaPanel: panel.Capacity_W,
-              cantidadPaneles: numPaneles,
-              generacion,
-              error,
-              panel
-            };
-            bestError = error;
-          }
         }
       }
     }
   }
+
+  if (!bestConfig) {
+    throw new Error("No se pudo determinar configuración de paneles con los parámetros de Airtable");
+  }
+
+  // Documentar la potencia objetivo para trazabilidad
+  bestConfig.potenciaObjetivoKw = potenciaRequeridaKw;
 
   return bestConfig;
 }
@@ -347,63 +323,103 @@ export function findOptimalPanelConfig(kwhTarget, periodicidad, hsp, pr, params)
 // ========================================
 
 export function calculateMicroinverters(cantidadPaneles, params) {
-  const quadsTeoricos = Math.floor(cantidadPaneles / 4);
-  const residuo = cantidadPaneles % 4;
+  // Selección greedy priorizando MPPT más alto; se permiten canales libres para cubrir al menos todos los paneles
+  // con máximo 2 IDs y No_Trunk homogéneo.
+  const sortedSpecs = (params.microinverterSpecs || [])
+    .map(spec => ({
+      ...spec,
+      mppt: Number(spec.MPPT),
+      noTrunk: (spec.No_Trunk || "").toString().toLowerCase()
+    }))
+    .filter(spec => Number.isFinite(spec.mppt) && spec.mppt > 0)
+    .sort((a, b) => {
+      if (b.mppt !== a.mppt) return b.mppt - a.mppt; // prioriza MPPT alto
+      return (a.Price_USD || 0) - (b.Price_USD || 0);
+    });
 
-  let cantidadMicro4Panel = 0;
-  let cantidadMicro2Panel = 0;
-
-  if (residuo === 0) {
-    cantidadMicro4Panel = quadsTeoricos;
-    cantidadMicro2Panel = 0;
-  } else if (residuo === 1) {
-    cantidadMicro4Panel = quadsTeoricos + 1;
-    cantidadMicro2Panel = 0;
-  } else if (residuo === 2) {
-    cantidadMicro4Panel = quadsTeoricos;
-    cantidadMicro2Panel = 1;
-  } else if (residuo === 3) {
-    cantidadMicro4Panel = quadsTeoricos + 1;
-    cantidadMicro2Panel = 0;
+  if (!sortedSpecs.length) {
+    throw new Error("❌ No hay microinversores configurados en Microinverter_Specs.Params");
   }
 
-  const cantidadTotalMicros = cantidadMicro4Panel + cantidadMicro2Panel;
+  const maxMppt = sortedSpecs[0].mppt;
+  const maxCapacidad = cantidadPaneles + maxMppt - 1; // permite canales libres en el último micro
+  const combinations = [];
 
-  // Selección de modelo
-  let idMicro2Panel = null;
-  let idMicro4Panel = null;
+  const dfs = (idx, asignados, current, currentNoTrunk) => {
+    if (asignados >= cantidadPaneles && asignados <= maxCapacidad) {
+      if (current.length) {
+        combinations.push({ items: current, noTrunk: currentNoTrunk, totalPaneles: asignados });
+      }
+      // se sigue buscando por si hay otra combinación con menor costo/micros y mismo mppt prioritario
+    }
 
-  const pickMicro = (predicate) => {
-    const candidates = params.microinverterSpecs
-      .filter(predicate)
-      .sort((a, b) => {
-        if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
-        const aw = a["Product Warranty_Years"] || 0;
-        const bw = b["Product Warranty_Years"] || 0;
-        return bw - aw;
-      });
-    return candidates[0] || null;
+    if (idx >= sortedSpecs.length || asignados > maxCapacidad) return;
+
+    const spec = sortedSpecs[idx];
+    const maxCount = Math.floor((maxCapacidad - asignados) / spec.mppt);
+
+    for (let count = maxCount; count >= 0; count--) {
+      if (count === 0) {
+        dfs(idx + 1, asignados, current, currentNoTrunk);
+        continue;
+      }
+
+      if (currentNoTrunk && currentNoTrunk !== spec.noTrunk) continue;
+
+      const nuevosAsignados = asignados + (count * spec.mppt);
+
+      dfs(
+        idx + 1,
+        nuevosAsignados,
+        [...current, { spec, count }],
+        currentNoTrunk || spec.noTrunk
+      );
+    }
   };
 
-  if (cantidadMicro2Panel > 0) {
-    // Sistema MIXTO - requiere Trunk (No_Trunk="no")
-    const micro2 = pickMicro(m => m.MPPT === 2 && m.No_Trunk === "no");
-    const micro4 = pickMicro(m => m.MPPT === 4 && m.No_Trunk === "no");
-    idMicro2Panel = micro2?.ID || null;
-    idMicro4Panel = micro4?.ID || null;
-  } else {
-    // Sistema PURO 4T - preferir DW (No_Trunk="si")
-    const micro4 = pickMicro(m => m.MPPT === 4 && m.No_Trunk === "si");
-    idMicro4Panel = micro4?.ID || null;
+  dfs(0, 0, [], null);
+
+  const combosSinTrunk = combinations.filter(c => c.noTrunk === "si" && c.items.length <= 2);
+  const combosConTrunk = combinations.filter(c => c.noTrunk === "no" && c.items.length <= 2);
+
+  const seleccionarPorCosto = (lista) => {
+    return lista
+      .map(combo => {
+        const costoUSD = combo.items.reduce((acc, item) => acc + (item.spec.Price_USD || 0) * item.count, 0);
+        const totalMicros = combo.items.reduce((acc, item) => acc + item.count, 0);
+        const totalPaneles = combo.totalPaneles;
+        const extrasLibres = totalPaneles - cantidadPaneles;
+        return { ...combo, costoUSD, totalMicros, extrasLibres };
+      })
+      .sort((a, b) => {
+        if (a.extrasLibres !== b.extrasLibres) return a.extrasLibres - b.extrasLibres; // menos canales libres primero
+        if (a.costoUSD !== b.costoUSD) return a.costoUSD - b.costoUSD; // luego menor costo
+        return a.totalMicros - b.totalMicros; // finalmente menos micros
+      })[0];
+  };
+
+  const mejorSi = seleccionarPorCosto(combosSinTrunk);
+  const mejorNo = seleccionarPorCosto(combosConTrunk);
+
+  const elegida = mejorSi || mejorNo;
+
+  if (!elegida) {
+    throw new Error("❌ No se encontró combinación de microinversores que cubra todos los paneles (permitiendo canales libres)");
   }
 
+  const idPrimario = elegida.items[0]?.spec.ID || null;
+  const countPrimario = elegida.items[0]?.count || 0;
+  const idSecundario = elegida.items[1]?.spec.ID || null;
+  const countSecundario = elegida.items[1]?.count || 0;
+
   return {
-    cantidadMicro2Panel,
-    cantidadMicro4Panel,
-    cantidadTotalMicros,
-    idMicro2Panel,
-    idMicro4Panel,
-    isDW: cantidadMicro2Panel === 0
+    microCombination: elegida,
+    cantidadTotalMicros: elegida.totalMicros,
+    idMicroPrimario: idPrimario,
+    cantidadMicroPrimario: countPrimario,
+    idMicroSecundario: idSecundario,
+    cantidadMicroSecundario: countSecundario,
+    requiereTrunk: elegida.noTrunk === "no"
   };
 }
 
@@ -414,45 +430,34 @@ export function calculateMicroinverters(cantidadPaneles, params) {
 export function calculateMicroCosts(microConfig, params) {
   const tc = params.commercialConditions.MXN_USD;
 
-  let costoMicroinversores = 0;
+  const costoMicroinversoresUSD = microConfig.microCombination.items.reduce(
+    (acc, item) => acc + (item.spec.Price_USD || 0) * item.count,
+    0
+  );
 
-  if (microConfig.idMicro2Panel && microConfig.cantidadMicro2Panel > 0) {
-    const micro2 = params.microinverterSpecs.find(m => m.ID === microConfig.idMicro2Panel);
-    costoMicroinversores += (micro2?.Price_USD || 0) * microConfig.cantidadMicro2Panel;
+  const dtu = params.dtuSpecs?.[0];
+  if (!dtu?.Price_USD) {
+    throw new Error("❌ DTU_Specs.Params sin precio");
   }
 
-  if (microConfig.idMicro4Panel && microConfig.cantidadMicro4Panel > 0) {
-    const micro4 = params.microinverterSpecs.find(m => m.ID === microConfig.idMicro4Panel);
-    costoMicroinversores += (micro4?.Price_USD || 0) * microConfig.cantidadMicro4Panel;
+  const microExtras = {
+    trunk: params.microExtras.find(e => e.Type === "Trunk_Cable"),
+    endCap: params.microExtras.find(e => e.Type === "End_Cap"),
+    acConnector: params.microExtras.find(e => e.Type === "AC_Connector")
+  };
+
+  if (!microExtras.endCap?.Price_USD || (!microExtras.trunk?.Price_USD && !microExtras.acConnector?.Price_USD)) {
+    throw new Error("❌ Micro_extras.Params incompletos");
   }
 
-  costoMicroinversores *= tc;
+  const costoExtrasUSD = microConfig.requiereTrunk
+    ? (dtu.Price_USD + (microExtras.trunk.Price_USD * microConfig.cantidadTotalMicros) + microExtras.endCap.Price_USD)
+    : (dtu.Price_USD + microExtras.acConnector.Price_USD + microExtras.endCap.Price_USD);
 
-  // Calcular extras
-  const dtu = params.dtuSpecs[0]; // Asumimos primer DTU
-  let costoExtras = 0;
-
-  if (microConfig.isDW) {
-    // CASO A: SISTEMA DW
-    const acConnector = params.microExtras.find(e => e.Type === "AC_Connector");
-    const endCap = params.microExtras.find(e => e.Type === "End_Cap");
-    costoExtras = (
-      (dtu?.Price_USD || 0) +
-      (acConnector?.Price_USD || 0) +
-      (endCap?.Price_USD || 0)
-    ) * tc;
-  } else {
-    // CASO B: SISTEMA TRUNK
-    const trunkCable = params.microExtras.find(e => e.Type === "Trunk_Cable");
-    const endCap = params.microExtras.find(e => e.Type === "End_Cap");
-    costoExtras = (
-      (dtu?.Price_USD || 0) +
-      ((trunkCable?.Price_USD || 0) * microConfig.cantidadTotalMicros) +
-      (endCap?.Price_USD || 0)
-    ) * tc;
-  }
-
-  return { costoMicroinversores, costoExtras };
+  return {
+    costoMicroinversores: Math.round(costoMicroinversoresUSD * tc),
+    costoExtras: Math.round(costoExtrasUSD * tc)
+  };
 }
 
 // ========================================
@@ -462,86 +467,56 @@ export function calculateMicroCosts(microConfig, params) {
 export function buildMontajeCombination(cantidadPaneles, params) {
   const montajes = (params.montajeSpecs || [])
     .filter(m => m.No_Panels)
-    .sort((a, b) => {
-      if (b.No_Panels !== a.No_Panels) return b.No_Panels - a.No_Panels;
-      if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
-      const aw = a.Product_Warranty_Years || 0;
-      const bw = b.Product_Warranty_Years || 0;
-      return bw - aw;
-    });
+    .sort((a, b) => b.No_Panels - a.No_Panels || (a.Price_USD || 0) - (b.Price_USD || 0));
 
+  const objetivo = cantidadPaneles === 1 ? 2 : cantidadPaneles;
   const candidates = [];
 
   for (const montA of montajes) {
-    const maxA = Math.floor(cantidadPaneles / montA.No_Panels);
+    const maxA = Math.floor(objetivo / montA.No_Panels);
     for (let countA = maxA; countA >= 0; countA--) {
-      const restante = cantidadPaneles - (countA * montA.No_Panels);
-      if (restante === 0) {
+      const restante = objetivo - (countA * montA.No_Panels);
+      if (restante === 0 && countA > 0) {
         candidates.push({
           idA: montA.ID,
           countA,
           idB: null,
           countB: 0,
-          costUSD: (montA.Price_USD || 0) * countA
+          costUSD: (montA.Price_USD || 0) * countA,
+          piezas: countA
         });
         continue;
       }
 
       for (const montB of montajes) {
-        if (montB.No_Panels > restante) continue;
+        if (montB.No_Panels === 0) continue;
         if (restante % montB.No_Panels !== 0) continue;
         const countB = restante / montB.No_Panels;
+        if (countA === 0 && countB === 0) continue;
         candidates.push({
           idA: montA.ID,
           countA,
           idB: montB.ID,
           countB,
-          costUSD: (montA.Price_USD || 0) * countA + (montB.Price_USD || 0) * countB
+          costUSD: (montA.Price_USD || 0) * countA + (montB.Price_USD || 0) * countB,
+          piezas: countA + countB
         });
       }
     }
   }
 
-  const selectBest = (list) => {
-    return list
-      .filter(c => (c.countA + c.countB) > 0)
-      .sort((a, b) => {
-        if ((a.countA + a.countB) !== (b.countA + b.countB)) return (a.countA + a.countB) - (b.countA + b.countB);
-        if (a.costUSD !== b.costUSD) return a.costUSD - b.costUSD;
-        const panelsA = (montajes.find(m => m.ID === a.idA)?.No_Panels || 0) * a.countA + (montajes.find(m => m.ID === a.idB)?.No_Panels || 0) * a.countB;
-        const panelsB = (montajes.find(m => m.ID === b.idA)?.No_Panels || 0) * b.countA + (montajes.find(m => m.ID === b.idB)?.No_Panels || 0) * b.countB;
-        return panelsB - panelsA;
-      })[0];
-  };
-
-  let best = selectBest(candidates);
+  const best = candidates
+    .filter(c => c.piezas > 0)
+    .sort((a, b) => {
+      if (a.piezas !== b.piezas) return a.piezas - b.piezas; // mínima cantidad de estructuras
+      return a.costUSD - b.costUSD;
+    })[0];
 
   if (!best) {
-    // Fallback greedy puro si no hubo combinación exacta
-    let restante = cantidadPaneles;
-    const taken = [];
-    for (const mont of montajes) {
-      const canTake = Math.floor(restante / mont.No_Panels);
-      if (canTake > 0) {
-        taken.push({ mont, count: canTake });
-        restante -= canTake * mont.No_Panels;
-      }
-    }
-
-    const primario = taken[0];
-    const secundario = taken[1];
-    best = {
-      idA: primario?.mont?.ID || null,
-      countA: primario?.count || 0,
-      idB: secundario?.mont?.ID || null,
-      countB: secundario?.count || 0,
-      costUSD:
-        (primario ? (primario.mont.Price_USD || 0) * primario.count : 0) +
-        (secundario ? (secundario.mont.Price_USD || 0) * secundario.count : 0)
-    };
+    throw new Error("❌ No se encontró combinación de montaje que cubra los paneles");
   }
 
-  return best || { idA: null, countA: 0, idB: null, countB: 0, costUSD: 0 };
+  return best;
 }
 
 // ========================================
@@ -570,17 +545,28 @@ export function calculateEnvironmentalImpact(generacionAnualKwh, params) {
 // ========================================
 
 export function selectCentralInverter(cantidadPaneles, potenciaPanel, params) {
-  const potenciaRequerida = (cantidadPaneles * potenciaPanel / 1000) / params.oversizingFactor;
+  const potenciaObjetivoKw = (cantidadPaneles * potenciaPanel / 1000) / params.oversizingFactor;
 
-  const suitable = params.inverterSpecs
-    .filter(inv => inv.Capacity_kW >= potenciaRequerida)
+  const candidates = (params.inverterSpecs || [])
+    .filter(inv => inv.Capacity_kW)
+    .map(inv => ({ ...inv, distancia: Math.abs(inv.Capacity_kW - potenciaObjetivoKw) }))
     .sort((a, b) => {
+      if (a.distancia !== b.distancia) return a.distancia - b.distancia;
       if (a.Price_USD !== b.Price_USD) return a.Price_USD - b.Price_USD;
-      if (a.Product_Warranty_Years !== b.Product_Warranty_Years) return b.Product_Warranty_Years - a.Product_Warranty_Years;
-      return 0;
+      if ((a.Product_Warranty_Years || 0) !== (b.Product_Warranty_Years || 0)) {
+        return (b.Product_Warranty_Years || 0) - (a.Product_Warranty_Years || 0);
+      }
+      return Math.random() - 0.5;
     });
 
-  return suitable[0] || null;
+  const elegido = candidates[0];
+
+  if (!elegido) {
+    throw new Error("❌ No se encontró inversor central que cumpla el dimensionamiento");
+  }
+
+  elegido.potenciaObjetivoKw = potenciaObjetivoKw;
+  return elegido;
 }
 
 // ========================================

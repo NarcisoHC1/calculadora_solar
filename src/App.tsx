@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Upload, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { getEstadosUnique, getMinStateThreshold, getMaxStateThreshold, isCDMXorMexico } from './stateThresholds';
-import { computeFuturePayment, generateProposal, getDefaultTarifaParams } from './calculationEngine';
+import { computeFuturePayment, getDefaultTarifaParams } from './calculationEngine';
 import type { Proposal, ComponentBreakdown, ProposalData } from './types';
 import ProposalComponent from './Proposal';
 
@@ -510,7 +510,8 @@ function blockToProposalData(
     descuentoPorcentaje: descuentoPorcentaje || undefined,
     ahorroEn25: Number(block.ahorro_en_25_anos ?? 0) || undefined
   };
-  financial.ahorroEn25 = financial.ahorroEn25 ?? (financial.ahorroBimestral * 6 * 25);
+  // Ahorro a 25 años con serie geométrica fija: (1 - 0.996^25)/(1 - 0.996) * (ahorroBimestral * 6)
+  financial.ahorroEn25 = (1 - Math.pow(0.996, 25)) / (1 - 0.996) * (financial.ahorroBimestral * 6);
 
   const porcentajeCobertura = block.generas_el_x_porcentaje_consumo != null
     ? (block.generas_el_x_porcentaje_consumo || 0) * 100
@@ -1152,25 +1153,11 @@ function App() {
       }
 
       const proposalFromBackend = mapBackendToProposal(result.proposal, formPayload.tarifa || '1', formPayload.periodicidad);
+      if (!proposalFromBackend) {
+        throw new Error('La propuesta debe generarse en backend (sin cálculos locales)');
+      }
 
-      const proposal = proposalFromBackend || generateProposal({
-        hasCFE: hasCFE === 'si',
-        plansCFE: planCFE === 'si',
-        isAislado: planCFE === 'aislado',
-        tarifa: formPayload.tarifa || '1',
-        periodo: formPayload.periodicidad,
-        pagoActual: formPayload.pago_promedio_mxn,
-        estado: estado || 'Ciudad de México',
-        cargas: cargas.length > 0 ? {
-          ev: cargas.includes('ev') ? cargaDetalles.ev : undefined,
-          minisplit: cargas.includes('minisplit') ? cargaDetalles.minisplit : undefined,
-          secadora: cargas.includes('secadora'),
-          bomba: cargas.includes('bomba'),
-          otro: cargas.includes('otro')
-        } : undefined,
-        tipoInmueble: tipoInmueble,
-        pisos: parseInt(pisos || '0', 10)
-      });
+      const proposal = proposalFromBackend;
 
       hideLoading();
       bridge?.gtm?.('cotizador_v2_auto', { pid: req_id });
@@ -2367,17 +2354,90 @@ function App() {
               </button>
             </div>
             <div className="mt-4 max-h-72 overflow-y-auto pr-2 text-sm text-slate-700 space-y-3">
+              <p className="font-semibold">AVISO DE PRIVACIDAD</p>
+              <p>Fecha de última actualización: 14 Agosto 2025</p>
+              <p className="font-semibold">1. Responsable del Tratamiento de Datos Personales</p>
               <p>
-                Este es un texto provisional del aviso de privacidad. Aquí podrás colocar la redacción oficial
-                sobre cómo se recopilan, utilizan y protegen los datos personales de los usuarios.
+                ENERGÍAS SOLARYA S.A.P.I. de C.V. ("SolarYa"), con domicilio en Calle Ignacio L. Vallarta 1 Edificio A
+                Departamento 787, Piso 3 Tabacalera, CDMX 06030, es responsable del tratamiento de sus datos
+                personales. Contacto: privacidad@solarya.mx | Teléfono: 5534379516 | Horario: 9am-7pm.
+              </p>
+              <p className="font-semibold">2. Datos Personales Recabados</p>
+              <p>
+                <span className="font-semibold">2.1 Datos de Identificación (Obligatorios)</span><br />
+                Identificación: Nombre completo, domicilio, RFC, CURP, identificación oficial.<br />
+                Contacto: Correo electrónico, teléfono celular/fijo.<br />
+                Inmueble: Superficie construida, características del techo, tipo de servicio eléctrico.<br />
+                Consumo energético: Número de servicio CFE, tarifa eléctrica, recibos de CFE.<br />
+                Datos de pago único: Comprobantes de transferencia o depósito para liquidación total.<br />
+                Datos de monitoreo en tiempo real del sistema.
+              </p>
+              <p className="font-semibold">3. Finalidades del Tratamiento</p>
+              <p>
+                <span className="font-semibold">3.1 Finalidades Primarias</span><br />
+                Identificación y verificación del cliente.<br />
+                Evaluación técnica para instalación.<br />
+                Gestión de contratos y trámites ante CFE.<br />
+                Facturación, instalación y servicio postventa.<br />
+                Monitoreo remoto de sistemas instalados.<br />
+                Monitoreo continuo para garantizar niveles de servicio.<br />
+                Confirmación de pagos únicos y cierre de transacción.
+              </p>
+              <p className="font-semibold">4. Transferencias de Datos</p>
+              <p>
+                <span className="font-semibold">4.1 Transferencias sin Consentimiento</span><br />
+                Sus datos podrán ser transferidos sin requerir su consentimiento a:<br />
+                Autoridades competentes: En los casos legalmente previstos.<br />
+                Empresas del mismo grupo corporativo: Para fines operativos.<br />
+                Proveedores de servicios: Necesarios para la instalación y mantenimiento.<br />
+                CFE: Para trámites de interconexión.<br />
+                Archivo interno seguro: Conservación de datos para cumplimiento de garantías post-pago.
               </p>
               <p>
-                La información detallará los fines del tratamiento de los datos, los mecanismos para ejercer
-                derechos ARCO y los medios de contacto para cualquier aclaración.
+                <span className="font-semibold">4.2 Transferencias Internacionales</span><br />
+                Sus datos podrán ser almacenados en servidores a nivel mundial, los cuales cumplen con los estándares de
+                protección requeridos por la legislación mexicana.
               </p>
+              <p className="font-semibold">5. Derechos ARCO</p>
               <p>
-                Reemplaza este texto con el contenido definitivo de tu aviso de privacidad. Mientras tanto,
-                puedes usar este espacio para revisar el flujo y la experiencia de lectura.
+                Usted puede Acceder, Rectificar, Cancelar u Oponerse al tratamiento de sus datos enviando una solicitud a
+                privacidad@solarya.mx, con:<br />
+                Nombre completo y datos de contacto.<br />
+                Descripción clara de la solicitud.<br />
+                Documento de identificación.<br />
+                Plazo de respuesta: 20 días hábiles.
+              </p>
+              <p className="font-semibold">6. Medidas de Seguridad</p>
+              <p>
+                Implementamos medidas de seguridad:<br />
+                Administrativas: políticas y procedimientos<br />
+                Técnicas: controles de acceso<br />
+                Físicas: control de acceso a instalaciones<br />
+                Capacitación continua al personal
+              </p>
+              <p className="font-semibold">7. Conservación de Datos</p>
+              <p>Conservados durante la relación comercial + 5 años posteriores.</p>
+              <p className="font-semibold">8. Cookies y Tecnologías Similares</p>
+              <p>Utilizamos cookies técnicas y analíticas. Las cookies publicitarias requieren su consentimiento.</p>
+              <p className="font-semibold">9. Datos Sensibles</p>
+              <p>
+                SolarYa no recaba datos sensibles (origen racial, salud, etc.). Si usted proporciona documentos con datos
+                sensibles, deberá tacharlos previamente.
+              </p>
+              <p className="font-semibold">10. Modificaciones al Aviso</p>
+              <p>
+                Nos reservamos el derecho de modificar este aviso. Los cambios serán publicados en www.solarya.mx o
+                notificados por correo electrónico.
+              </p>
+              <p className="font-semibold">11. Fundamento Legal</p>
+              <p>
+                Ley Federal de Protección de Datos Personales.<br />
+                Reglamento de la LFPDPPP.
+              </p>
+              <p className="font-semibold">12. Jurisdicción</p>
+              <p>
+                Este aviso se rige por las leyes mexicanas. Para la interpretación o cumplimiento del mismo, las partes se
+                someten a la jurisdicción de los tribunales de Ciudad de Mexico, renunciando a cualquier otro fuero.
               </p>
             </div>
             <div className="mt-6 text-right">
