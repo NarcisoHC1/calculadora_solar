@@ -957,9 +957,17 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       const stack = document.createElement('div');
       stack.className = 'pdf-stack';
 
+      const normalizeSpacing = (nodes: HTMLElement[]) => {
+        nodes.forEach(node => {
+          node.style.marginTop = '0';
+          node.style.marginBottom = '6mm';
+        });
+      };
+
       const addPage = (className: string, nodes: (HTMLElement | null)[]) => {
         const filtered = nodes.filter(Boolean) as HTMLElement[];
         if (!filtered.length) return;
+        normalizeSpacing(filtered);
         const page = document.createElement('section');
         page.className = `pdf-page ${className}`.trim();
         const card = document.createElement('div');
@@ -970,7 +978,8 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       };
 
       const investmentGrid = investmentSections.length ? createGrid(investmentSections) : null;
-      const benefitsGrid = whatYouGetSections.length ? createGrid(whatYouGetSections, 'pdf-inline-grid-stack') : null;
+      const benefitsSource = whatYouGetSections.length ? [whatYouGetSections[0]] : [];
+      const benefitsGrid = benefitsSource.length ? createGrid(benefitsSource, 'pdf-inline-grid-stack') : null;
 
       addPage('page-1', [hero, overviewSections.length ? createGrid(overviewSections) : null]);
       addPage('page-2', [investmentGrid, benefitsGrid]);
@@ -1030,7 +1039,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   .pdf-page {
     width: var(--pdf-page-width);
     min-height: var(--pdf-page-height);
-    height: auto;
+    height: var(--pdf-page-height);
     page-break-after: always;
     break-after: page;
     box-sizing: border-box;
@@ -1043,15 +1052,15 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   .pdf-page:last-child { page-break-after: auto; break-after: auto; }
 
   .pdf-page-card {
-    height: auto;
-    min-height: calc(var(--pdf-page-height) - 14mm);
+    height: 100%;
+    min-height: 0;
     border-radius: 12px;
     padding: 7mm;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 10px rgba(15,23,42,0.12);
     display: flex;
     flex-direction: column;
-    gap: 5mm;
+    gap: 4mm;
     box-sizing: border-box;
     background: #fff;
     overflow: visible;
