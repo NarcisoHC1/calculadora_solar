@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
-import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check } from 'lucide-react';
+import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2 } from 'lucide-react';
 
 interface ProposalProps {
   proposal: DualProposal;
@@ -73,6 +73,7 @@ const TOP_BRAND_LOGOS = [
   { alt: 'LONGi', src: '/longi_square_logo.png' },
   { alt: 'Canadian Solar', src: '/canadian_solar_square_logo.jpg' }
 ];
+
 
 function StaticBrandRow({ logos }: { logos: { alt: string; src: string }[] }) {
   return (
@@ -164,9 +165,9 @@ function WhatYouGet({ maxEquipmentWarranty }: { maxEquipmentWarranty: number }) 
 }
 
 function openCalendlyPopup(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault();
   if (window.Calendly) {
-    window.Calendly.initPopupWidget({ url: 'https://calendly.com/narciso-solarya/30min' });
+    e.preventDefault();
+    window.Calendly.initPopupWidget({ url: CALENDLY_URL });
   }
 }
 
@@ -187,14 +188,16 @@ function CalendlyWidget() {
       <div className="mt-6">
         <div
           className="calendly-inline-widget"
-          data-url="https://calendly.com/narciso-solarya/30min"
+          data-url={CALENDLY_URL}
           style={{ minWidth: '320px', height: '700px' }}
         />
       </div>
       <div className="print-cta mt-6 text-center">
         <a
-          href="https://calendly.com/narciso-solarya/30min"
+          href={CALENDLY_URL}
           className="inline-block px-12 py-5 rounded-xl font-bold text-xl shadow-2xl mb-4"
+          target="_blank"
+          rel="noreferrer noopener"
           style={{ background: '#ff5c36', color: 'white' }}
         >
           Agendar Visita Técnica Gratuita
@@ -205,7 +208,21 @@ function CalendlyWidget() {
   );
 }
 
-function ProposalCard({ data, title, onClose, showSharedSections = true, validUntil }: { data: ProposalData; title: string; onClose: () => void; showSharedSections?: boolean; validUntil: Date }) {
+function ProposalCard({
+  data,
+  title,
+  onClose,
+  showSharedSections = true,
+  validUntil,
+  variantKey = 'actual'
+}: {
+  data: ProposalData;
+  title: string;
+  onClose: () => void;
+  showSharedSections?: boolean;
+  validUntil: Date;
+  variantKey?: 'actual' | 'futura';
+}) {
   const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
   const maxEquipmentWarranty = getMaxProductWarranty(components);
 
@@ -240,7 +257,11 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden print-compact-card">
-      <div className="p-6 md:p-8 print-compact-section">
+      <div
+        className="p-6 md:p-8 print-compact-section pdf-section"
+        data-pdf-section="overview"
+        data-pdf-variant={variantKey}
+      >
         <h3 className="text-2xl font-bold mb-6 print-compact-heading" style={{ color: '#1e3a2b' }}>{title}</h3>
 
         <div className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200 print-compact-card">
@@ -323,7 +344,13 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
             </div>
           </div>
         </div>
+      </div>
 
+      <div
+        className="p-6 md:p-8 pt-0 print-compact-section pdf-section"
+        data-pdf-section="investment"
+        data-pdf-variant={variantKey}
+      >
         <div className="border-t border-slate-200 pt-6 mb-6 print-break-before print-break-after print-avoid-break print-compact-section">
           <h4 className="text-lg font-bold text-slate-900 mb-4">Tu Inversión</h4>
           <div className="bg-slate-50 rounded-xl p-5 space-y-2 border border-slate-200 print-compact-card">
@@ -392,6 +419,14 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
 
         </div>
 
+      </div>
+
+      <div
+        className="p-6 md:p-8 pt-0 print-compact-section pdf-section"
+        data-pdf-section="components"
+        data-pdf-variant={variantKey}
+      >
+
         {showSharedSections && (
           <div className="mt-6 border-t border-slate-200 pt-8 print-break-before print-avoid-break print-hidden">
             <div className="flex items-center justify-center gap-3 mb-4">
@@ -413,7 +448,10 @@ function ProposalCard({ data, title, onClose, showSharedSections = true, validUn
         )}
 
         {showSharedSections && (
-          <div className="border-t border-slate-200 pt-6 mb-6 print-break-before print-avoid-break">
+          <div
+            className="border-t border-slate-200 pt-6 mb-6 print-break-before print-avoid-break pdf-section"
+            data-pdf-section="whatyouget"
+          >
             <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
           </div>
         )}
@@ -546,7 +584,10 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card">
+      <div
+        className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card pdf-section"
+        data-pdf-section="whatyouget"
+      >
         <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
       </div>
 
@@ -554,7 +595,10 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         <TopBrandsSection />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card">
+      <div
+        className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card pdf-section"
+        data-pdf-section="process"
+      >
         <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
         <div className="relative">
@@ -635,10 +679,12 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
 
         <div className="mt-6 text-center">
           <a
-            href=""
+            href={CALENDLY_URL}
             onClick={openCalendlyPopup}
             className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
+            target="_blank"
+            rel="noreferrer noopener"
           >
             Agendar visita técnica gratuita
           </a>
@@ -646,24 +692,33 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8">
+      <div
+        className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 pdf-section"
+        data-pdf-section="faq"
+      >
         <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
-        <FAQAccordion />
+        <FAQAccordion forceOpen={forcePdfOpen} />
 
         <div className="mt-8 pt-6 border-t border-slate-200 text-center">
           <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
           <a
-            href=""
+            href={CALENDLY_URL}
             onClick={openCalendlyPopup}
             className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90 cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
+            target="_blank"
+            rel="noreferrer noopener"
           >
             Agendar visita técnica gratuita
           </a>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center" style={{ borderColor: '#ff9b7a' }}>
+      <div
+        className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center pdf-section"
+        style={{ borderColor: '#ff9b7a' }}
+        data-pdf-section="cta"
+      >
         <div className="text-6xl mb-4">🚀</div>
         <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
           Da el Primer Paso Hacia Tu Independencia Energética
@@ -672,10 +727,12 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
           Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
         </p>
         <a
-          href=""
+          href={CALENDLY_URL}
           onClick={openCalendlyPopup}
           className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4 cursor-pointer"
           style={{ background: '#ff5c36', color: 'white' }}
+          target="_blank"
+          rel="noreferrer noopener"
         >
           Agendar Visita Técnica Gratuita
         </a>
@@ -700,7 +757,7 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
   );
 }
 
-function FAQAccordion() {
+function FAQAccordion({ forceOpen = false }: { forceOpen?: boolean }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [isPrintMode, setIsPrintMode] = useState(false);
 
@@ -721,7 +778,7 @@ function FAQAccordion() {
     };
   }, []);
 
-  const faqs = [
+    const faqs = [
     {
       question: '¿Qué incluye exactamente el sistema?',
       answer: 'TODO INCLUIDO: Paneles de última generación, inversores/microinversores, estructura de montaje profesional, cableado especializado, protecciones eléctricas, instalación por técnicos certificados, trámites completos ante CFE, app de monitoreo en tiempo real, y todas las garantías respaldadas.'
@@ -755,7 +812,7 @@ function FAQAccordion() {
               <Plus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
             )}
           </button>
-          {(isPrintMode || openIndex === index) && (
+          {(forceOpen || isPrintMode || openIndex === index) && (
             <div className="px-5 pb-5 pt-0 faq-answer">
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{faq.answer}</p>
             </div>
@@ -773,11 +830,305 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   const [referralLink, setReferralLink] = useState('');
   const [referralLoading, setReferralLoading] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
+  const [forcePdfOpen, setForcePdfOpen] = useState(false);
   const creationDate = useMemo(() => new Date(), []);
   const validUntil = useMemo(() => addDays(creationDate, 7), [creationDate]);
 
-  const handleDownloadPDF = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    setForcePdfOpen(true);
+
+    await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
+
+    const proposalNode = document.querySelector('.proposal-scroll');
+
+    if (!proposalNode) {
+      setDownloadError('No pudimos encontrar la propuesta para exportarla.');
+      setForcePdfOpen(false);
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const toAbsoluteUrl = (url: string | null) => {
+      if (!url) return '';
+      try {
+        return new URL(url, baseUrl).toString();
+      } catch {
+        return url;
+      }
+    };
+
+    const clone = proposalNode.cloneNode(true) as HTMLElement;
+
+    clone.classList.add('pdf-export-root');
+    clone.style.minHeight = 'auto';
+    clone.style.padding = '0';
+    clone.style.background = 'transparent';
+    clone.style.position = 'static';
+
+    clone.querySelectorAll('.no-print, .print-hidden').forEach(node => node.parentElement?.removeChild(node));
+
+    clone.querySelectorAll('.calendly-inline-widget').forEach(el => el.remove());
+    clone.querySelectorAll('.print-cta').forEach(el => {
+      (el as HTMLElement).style.display = 'block';
+    });
+
+    const origin = window.location.origin;
+
+    clone.querySelectorAll('img').forEach(img => {
+      const src = img.getAttribute('src');
+      if (src) img.setAttribute('src', toAbsoluteUrl(src));
+    });
+
+    clone.querySelectorAll('source').forEach(source => {
+      const srcset = source.getAttribute('srcset');
+      if (!srcset) return;
+
+      const absoluteSrcset = srcset
+        .split(',')
+        .map(entry => {
+          const [url, descriptor] = entry.trim().split(/\s+/, 2);
+          return `${toAbsoluteUrl(url)}${descriptor ? ` ${descriptor}` : ''}`;
+        })
+        .join(', ');
+
+      source.setAttribute('srcset', absoluteSrcset);
+    });
+
+    clone.querySelectorAll('a[href]').forEach(a => {
+      const href = a.getAttribute('href') || '';
+      if (!href || href.startsWith('#')) return;
+
+      try {
+        const abs = new URL(href, origin).toString();
+        a.setAttribute('href', abs);
+      } catch {
+        // ignore
+      }
+    });
+
+    clone.querySelectorAll('details').forEach(details => {
+      (details as HTMLDetailsElement).open = true;
+    });
+
+    clone.querySelectorAll('.faq-answer').forEach(answer => {
+      (answer as HTMLElement).style.display = 'block';
+    });
+
+    const stylesheetLinksResults = await Promise.all(
+      Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .map(link => toAbsoluteUrl(link.getAttribute('href')))
+        .filter(Boolean)
+        .map(async href => {
+          try {
+            const res = await fetch(href);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.text();
+          } catch (error) {
+            console.warn('No pudimos inlinear stylesheet', href, error);
+            return '';
+          }
+        })
+    );
+
+    const inlineStyles = [
+      ...stylesheetLinksResults.filter(Boolean),
+      ...Array.from(document.querySelectorAll('style')).map(styleTag => styleTag.textContent || '')
+    ];
+
+    const reorganizeForPdf = (root: HTMLElement) => {
+      const hero = root.querySelector('[data-pdf-section="hero"]') as HTMLElement | null;
+      const overviewSections = Array.from(root.querySelectorAll('[data-pdf-section="overview"]')) as HTMLElement[];
+      const investmentSections = Array.from(root.querySelectorAll('[data-pdf-section="investment"]')) as HTMLElement[];
+      const whatYouGetSections = Array.from(root.querySelectorAll('[data-pdf-section="whatyouget"]')) as HTMLElement[];
+      const componentSections = Array.from(root.querySelectorAll('[data-pdf-section="components"]')) as HTMLElement[];
+      const processSection = root.querySelector('[data-pdf-section="process"]') as HTMLElement | null;
+      const faqSection = root.querySelector('[data-pdf-section="faq"]') as HTMLElement | null;
+      const ctaSection = root.querySelector('[data-pdf-section="cta"]') as HTMLElement | null;
+
+      const createGrid = (nodes: HTMLElement[], extraClass = '') => {
+        const grid = document.createElement('div');
+        grid.className = `pdf-inline-grid ${nodes.length > 1 ? 'pdf-inline-grid-double' : ''} ${extraClass}`.trim();
+        nodes.forEach(node => grid.appendChild(node));
+        return grid;
+      };
+
+      const stack = document.createElement('div');
+      stack.className = 'pdf-stack';
+
+      const normalizeSpacing = (nodes: HTMLElement[]) => {
+        nodes.forEach(node => {
+          node.style.marginTop = '0';
+          node.style.marginBottom = '6mm';
+        });
+      };
+
+      const addPage = (className: string, nodes: (HTMLElement | null)[]) => {
+        const filtered = nodes.filter(Boolean) as HTMLElement[];
+        if (!filtered.length) return;
+        normalizeSpacing(filtered);
+        const page = document.createElement('section');
+        page.className = `pdf-page ${className}`.trim();
+        const card = document.createElement('div');
+        card.className = 'pdf-page-card';
+        filtered.forEach(node => card.appendChild(node));
+        page.appendChild(card);
+        stack.appendChild(page);
+      };
+
+      const investmentGrid = investmentSections.length ? createGrid(investmentSections) : null;
+      const benefitsSource = whatYouGetSections.length ? [whatYouGetSections[0]] : [];
+      const benefitsGrid = benefitsSource.length ? createGrid(benefitsSource, 'pdf-inline-grid-stack') : null;
+
+      addPage('page-1', [hero, overviewSections.length ? createGrid(overviewSections) : null]);
+      addPage('page-2', [investmentGrid, benefitsGrid]);
+      addPage('page-3', [componentSections.length ? createGrid(componentSections) : null]);
+      addPage('page-4', [processSection]);
+      addPage('page-5', [faqSection]);
+      addPage('page-6', [ctaSection]);
+
+      if (stack.childElementCount === 0) return;
+
+      root.className = 'pdf-wrapper';
+      root.removeAttribute('style');
+      root.innerHTML = '';
+      root.appendChild(stack);
+    };
+
+    reorganizeForPdf(clone);
+
+    const pdfStyles = `
+  @page { size: A4; margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  body.pdf-root { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Asegura que el print CSS del sitio no oculte todo */
+  @media print {
+    body.pdf-root *, body.pdf-root *::before, body.pdf-root *::after {
+      visibility: visible !important;
+    }
+  }
+
+  /* Neutraliza utilidades viejas de print para que NO metan saltos raros */
+  .print-break-after, .print-break-before {
+    break-after: auto !important;
+    page-break-after: auto !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
+  .print-avoid-break {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* Calendly en PDF: ocultar embed, mostrar CTA */
+  .calendly-inline-widget { display: none !important; height: auto !important; }
+  .print-cta { display: block !important; }
+
+  .pdf-wrapper { background: #fff; }
+  .pdf-stack {
+    width: 210mm;
+    margin: 0 auto;
+    background: #fff;
+  }
+
+  /* Cada .pdf-page arranca en página nueva */
+  .pdf-page {
+    break-before: page;
+    page-break-before: always;
+    break-after: page;
+    page-break-after: always;
+    padding: 10mm;
+    box-sizing: border-box;
+    background: #fff;
+  }
+  .pdf-page:first-child {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  .pdf-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .pdf-page-card {
+    border-radius: 12px;
+    padding: 8mm;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(15,23,42,0.12);
+    box-sizing: border-box;
+    background: #fff;
+  }
+
+  .pdf-inline-grid { display: grid; gap: 6mm; width: 100%; align-items: start; }
+  .pdf-inline-grid-double { grid-template-columns: 1fr 1fr; }
+  .pdf-inline-grid > * { width: 100%; }
+
+  .pdf-page, .pdf-page-card, .pdf-section, .pdf-inline-grid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  img { max-width: 100%; height: auto; }
+
+  /* Por si algo del layout original mete padding raro */
+  .proposal-scroll { background: transparent !important; padding: 0 !important; }
+`;
+
+
+    const html = `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>${inlineStyles.join('\n')}</style>
+  <style>${pdfStyles}</style>
+</head>
+<body class="pdf-root">
+  ${clone.outerHTML}
+</body>
+</html>
+`;
+
+    setIsDownloading(true);
+    setDownloadError('');
+
+    try {
+      const apiBase =
+        import.meta.env.VITE_PROPOSAL_API_BASE ?? import.meta.env.VITE_API_BASE ?? '';
+
+        const response = await fetch(`${apiBase}/api/proposal_pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            html,
+            fileName: `propuesta-${firstName.toLowerCase() || 'solarya'}.pdf`,
+            landscape: false
+          })
+        });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        console.error('PDF function responded with an error', response.status, errorText);
+        throw new Error('No pudimos generar el PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `propuesta-${firstName.toLowerCase() || 'solarya'}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF', error);
+      setDownloadError('No pudimos generar el PDF. Inténtalo de nuevo.');
+    } finally {
+      setIsDownloading(false);
+      setForcePdfOpen(false);
+    }
   };
 
   const handleGenerateReferral = async () => {
@@ -917,44 +1268,61 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           display: block;
         }
       `}</style>
-      <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
-        <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
-          <button
-            onClick={handleGenerateReferral}
-            className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
-            aria-label="Referir a un amigo"
-            title="Referir a un amigo"
-          >
-            <Share2 className="w-6 h-6 text-white" />
-          </button>
-          <button
-            onClick={handleDownloadPDF}
-            className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
-            aria-label="Descargar PDF"
-          >
-            <Download className="w-6 h-6 text-slate-700" />
-          </button>
-          <button
-            onClick={onClose}
-            className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
-            aria-label="Cerrar propuesta"
-          >
-            <X className="w-6 h-6 text-slate-700" />
-          </button>
-        </div>
+        <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
+          <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
+            <button
+              onClick={handleGenerateReferral}
+              className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
+              aria-label="Referir a un amigo"
+              title="Referir a un amigo"
+            >
+              <Share2 className="w-6 h-6 text-white" />
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
+                isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
+              }`}
+              aria-label="Descargar PDF"
+              aria-busy={isDownloading}
+            >
+              {isDownloading ? (
+                <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
+              ) : (
+                <Download className="w-6 h-6 text-slate-700" />
+              )}
+            </button>
+            <button
+              onClick={onClose}
+              className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
+              aria-label="Cerrar propuesta"
+            >
+              <X className="w-6 h-6 text-slate-700" />
+            </button>
+          </div>
 
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-compact-card">
-          <div className="flex items-center justify-between flex-wrap gap-6">
-            <div>
-              <img
-                src="/SolarYa logos_Primary Logo.png"
-                alt="SolarYa"
-                className="h-8 md:h-10 w-auto opacity-90"
-              />
-              <p className="text-slate-500 text-xs md:text-sm mt-1.5">Accesible. Confiable. Simple.</p>
+          {downloadError && (
+            <div className="fixed top-20 right-6 z-50 bg-red-50 text-red-800 border border-red-200 shadow-lg rounded-xl px-4 py-3 text-sm max-w-xs no-print">
+              {downloadError}
             </div>
-            <div className="text-right">
+          )}
+
+          <div className="max-w-6xl mx-auto">
+            <div
+              className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-compact-card"
+              data-pdf-section="hero"
+            >
+              <div className="flex items-center justify-between flex-wrap gap-6">
+                <div>
+                  <img
+                    src="/SolarYa logos_Primary Logo.png"
+                    alt="SolarYa"
+                    className="h-8 md:h-10 w-auto opacity-90"
+                  />
+                  <p className="text-slate-500 text-xs md:text-sm mt-1.5">Accesible. Confiable. Simple.</p>
+                </div>
+                <div className="text-right">
               <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
               <p className="text-sm text-slate-600">{formatLongDate(creationDate)}</p>
             </div>
@@ -1021,7 +1389,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               <TopBrandsSection />
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card">
+            <div
+              className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-avoid-break print-break-after print-compact-card pdf-section"
+              data-pdf-section="process"
+            >
               <h4 className="text-xl font-bold text-slate-900 mb-6">Proceso y Tiempos</h4>
 
               <div className="relative">
@@ -1102,10 +1473,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
               <div className="mt-6 text-center">
                 <a
-                  href=""
+                  href={CALENDLY_URL}
                   onClick={openCalendlyPopup}
                   className="inline-block px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 shadow-lg cursor-pointer"
                   style={{ background: '#ff5c36', color: 'white' }}
+                  target="_blank"
+                  rel="noreferrer noopener"
                 >
                   Agendar visita técnica gratuita
                 </a>
@@ -1113,24 +1486,33 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card">
+            <div
+              className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card pdf-section"
+              data-pdf-section="faq"
+            >
               <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
-              <FAQAccordion />
+              <FAQAccordion forceOpen={forcePdfOpen} />
 
               <div className="mt-8 pt-6 border-t border-slate-200 text-center">
                 <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
                 <a
-                  href=""
+                  href={CALENDLY_URL}
                   onClick={openCalendlyPopup}
                   className="inline-block px-8 py-3 rounded-xl font-bold transition-all hover:opacity-90 cursor-pointer"
                   style={{ background: '#ff5c36', color: 'white' }}
+                  target="_blank"
+                  rel="noreferrer noopener"
                 >
                   Agendar visita técnica gratuita
                 </a>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center print-last-page print-avoid-break print-compact-card" style={{ borderColor: '#ff9b7a' }}>
+            <div
+              className="bg-white rounded-2xl shadow-lg border-2 p-8 md:p-12 text-center print-last-page print-avoid-break print-compact-card pdf-section"
+              style={{ borderColor: '#ff9b7a' }}
+              data-pdf-section="cta"
+            >
           <div className="text-6xl mb-4">🚀</div>
           <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#1e3a2b' }}>
             Da el Primer Paso Hacia Tu Independencia Energética
@@ -1139,10 +1521,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             Agenda tu visita técnica <strong>100% gratuita</strong> y sin compromiso. Nuestros expertos evaluarán tu propiedad y te entregarán una propuesta personalizada.
           </p>
           <a
-            href=""
+            href={CALENDLY_URL}
             onClick={openCalendlyPopup}
             className="inline-block px-12 py-5 rounded-xl font-bold text-xl transition-all hover:opacity-90 shadow-2xl mb-4 cursor-pointer"
             style={{ background: '#ff5c36', color: 'white' }}
+            target="_blank"
+            rel="noreferrer noopener"
           >
             Agendar Visita Técnica Gratuita
           </a>
@@ -1243,3 +1627,5 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     </>
   );
 }
+const CALENDLY_URL = 'https://calendly.com/narciso-solarya/30min';
+
