@@ -568,7 +568,10 @@ function ProposalCard({
         )}
 
         {showSharedSections && (
-          <div className="border-t border-slate-200 pt-6 mb-6 print-break-before print-avoid-break">
+          <div
+            className="border-t border-slate-200 pt-6 mb-6 print-break-before print-avoid-break pdf-section"
+            data-pdf-section="whatyouget"
+          >
             <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
           </div>
         )}
@@ -701,7 +704,10 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card">
+      <div
+        className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card pdf-section"
+        data-pdf-section="whatyouget"
+      >
         <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
       </div>
 
@@ -811,7 +817,7 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
         data-pdf-section="faq"
       >
         <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
-        <FAQAccordion />
+        <FAQAccordion forceOpen={forcePdfOpen} />
 
         <div className="mt-8 pt-6 border-t border-slate-200 text-center">
           <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
@@ -871,7 +877,7 @@ function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void
   );
 }
 
-function FAQAccordion() {
+function FAQAccordion({ forceOpen = false }: { forceOpen?: boolean }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [isPrintMode, setIsPrintMode] = useState(false);
 
@@ -892,7 +898,7 @@ function FAQAccordion() {
     };
   }, []);
 
-  const faqs = [
+    const faqs = [
     {
       question: '¿Qué incluye exactamente el sistema?',
       answer: 'TODO INCLUIDO: Paneles de última generación, inversores/microinversores, estructura de montaje profesional, cableado especializado, protecciones eléctricas, instalación por técnicos certificados, trámites completos ante CFE, app de monitoreo en tiempo real, y todas las garantías respaldadas.'
@@ -926,7 +932,7 @@ function FAQAccordion() {
               <Plus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
             )}
           </button>
-          {(isPrintMode || openIndex === index) && (
+          {(forceOpen || isPrintMode || openIndex === index) && (
             <div className="px-5 pb-5 pt-0 faq-answer">
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{faq.answer}</p>
             </div>
@@ -946,14 +952,20 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   const [referralCopied, setReferralCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState('');
+  const [forcePdfOpen, setForcePdfOpen] = useState(false);
   const creationDate = useMemo(() => new Date(), []);
   const validUntil = useMemo(() => addDays(creationDate, 7), [creationDate]);
 
   const handleDownloadPDF = async () => {
+    setForcePdfOpen(true);
+
+    await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
+
     const proposalNode = document.querySelector('.proposal-scroll');
 
     if (!proposalNode) {
       setDownloadError('No pudimos encontrar la propuesta para exportarla.');
+      setForcePdfOpen(false);
       return;
     }
 
@@ -1016,6 +1028,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       const hero = root.querySelector('[data-pdf-section="hero"]') as HTMLElement | null;
       const overviewSections = Array.from(root.querySelectorAll('[data-pdf-section="overview"]')) as HTMLElement[];
       const investmentSections = Array.from(root.querySelectorAll('[data-pdf-section="investment"]')) as HTMLElement[];
+      const whatYouGetSections = Array.from(root.querySelectorAll('[data-pdf-section="whatyouget"]')) as HTMLElement[];
       const componentSections = Array.from(root.querySelectorAll('[data-pdf-section="components"]')) as HTMLElement[];
       const processSection = root.querySelector('[data-pdf-section="process"]') as HTMLElement | null;
       const faqSection = root.querySelector('[data-pdf-section="faq"]') as HTMLElement | null;
@@ -1036,12 +1049,18 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         if (!filtered.length) return;
         const page = document.createElement('section');
         page.className = `pdf-page ${className}`.trim();
-        filtered.forEach(node => page.appendChild(node));
+        const card = document.createElement('div');
+        card.className = 'pdf-page-card';
+        filtered.forEach(node => card.appendChild(node));
+        page.appendChild(card);
         stack.appendChild(page);
       };
 
+      const investmentGrid = investmentSections.length ? createGrid(investmentSections) : null;
+      const benefitsGrid = whatYouGetSections.length ? createGrid(whatYouGetSections, 'pdf-inline-grid-stack') : null;
+
       addPage('page-1', [hero, overviewSections.length ? createGrid(overviewSections) : null]);
-      addPage('page-2', [investmentSections.length ? createGrid(investmentSections) : null]);
+      addPage('page-2', [investmentGrid, benefitsGrid]);
       addPage('page-3', [componentSections.length ? createGrid(componentSections) : null]);
       addPage('page-4', [processSection]);
       addPage('page-5', [faqSection]);
@@ -1159,15 +1178,28 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         page-break-after: always;
         break-after: page;
         min-height: var(--pdf-page-height);
-        padding: 14mm 10mm 12mm;
+        height: var(--pdf-page-height);
+        padding: 10mm 8mm;
         box-sizing: border-box;
         display: flex;
-        flex-direction: column;
-        gap: 12px;
       }
 
       .pdf-page:last-child {
         page-break-after: auto;
+      }
+
+      .pdf-page-card {
+        background: #fff;
+        border-radius: 18px;
+        border: 1px solid var(--slate-200);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+        padding: 12mm 10mm;
+        display: flex;
+        flex-direction: column;
+        gap: 10mm;
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
       }
 
       .pdf-inline-grid {
@@ -1181,39 +1213,51 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .pdf-inline-grid.pdf-inline-grid-stack {
+        grid-auto-rows: 1fr;
+      }
+
+      .pdf-inline-grid > [data-pdf-section] {
+        height: 100%;
+      }
+
       [data-pdf-section] {
         break-inside: avoid;
         page-break-inside: avoid;
       }
 
-      [data-pdf-section="hero"] {
-        min-height: 55mm;
+      .pdf-page.page-1 [data-pdf-section="hero"] {
+        min-height: 40mm;
         display: flex;
         align-items: center;
       }
 
-      [data-pdf-section="overview"] {
-        min-height: 110mm;
-      }
-
-      [data-pdf-section="investment"] {
-        min-height: 120mm;
-      }
-
-      [data-pdf-section="components"] {
-        min-height: 130mm;
-      }
-
-      [data-pdf-section="process"] {
+      .pdf-page.page-1 [data-pdf-section="overview"] {
         min-height: 150mm;
       }
 
-      [data-pdf-section="faq"] {
-        min-height: 160mm;
+      .pdf-page.page-2 [data-pdf-section="investment"] {
+        min-height: 120mm;
       }
 
-      [data-pdf-section="cta"] {
-        min-height: 110mm;
+      .pdf-page.page-2 [data-pdf-section="whatyouget"] {
+        min-height: 90mm;
+      }
+
+      .pdf-page.page-3 [data-pdf-section="components"] {
+        min-height: 200mm;
+      }
+
+      .pdf-page.page-4 [data-pdf-section="process"] {
+        min-height: 190mm;
+      }
+
+      .pdf-page.page-5 [data-pdf-section="faq"] {
+        min-height: 190mm;
+      }
+
+      .pdf-page.page-6 [data-pdf-section="cta"] {
+        min-height: 140mm;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -1448,6 +1492,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       setDownloadError('No pudimos generar el PDF. Inténtalo de nuevo.');
     } finally {
       setIsDownloading(false);
+      setForcePdfOpen(false);
     }
   };
 
@@ -1805,7 +1850,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-break-before print-avoid-break print-compact-card">
               <h3 className="text-2xl font-bold mb-6" style={{ color: '#1e3a2b' }}>Preguntas Frecuentes</h3>
-              <FAQAccordion />
+              <FAQAccordion forceOpen={forcePdfOpen} />
 
               <div className="mt-8 pt-6 border-t border-slate-200 text-center">
                 <p className="text-slate-700 mb-4">¿Tienes más preguntas? Hablemos</p>
