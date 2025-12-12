@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
-import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check } from 'lucide-react';
+import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2 } from 'lucide-react';
 
 interface ProposalProps {
   proposal: DualProposal;
@@ -773,11 +773,110 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   const [referralLink, setReferralLink] = useState('');
   const [referralLoading, setReferralLoading] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
   const creationDate = useMemo(() => new Date(), []);
   const validUntil = useMemo(() => addDays(creationDate, 7), [creationDate]);
 
-  const handleDownloadPDF = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    const proposalNode = document.querySelector('.proposal-scroll');
+
+    if (!proposalNode) {
+      setDownloadError('No pudimos encontrar la propuesta para exportarla.');
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const toAbsoluteUrl = (url: string | null) => {
+      if (!url) return '';
+      try {
+        return new URL(url, baseUrl).toString();
+      } catch {
+        return url;
+      }
+    };
+
+    const clone = proposalNode.cloneNode(true) as HTMLElement;
+
+    clone.querySelectorAll('img').forEach(img => {
+      const src = img.getAttribute('src');
+      if (src) img.setAttribute('src', toAbsoluteUrl(src));
+    });
+
+    clone.querySelectorAll('source').forEach(source => {
+      const srcset = source.getAttribute('srcset');
+      if (!srcset) return;
+
+      const absoluteSrcset = srcset
+        .split(',')
+        .map(entry => {
+          const [url, descriptor] = entry.trim().split(/\s+/, 2);
+          return `${toAbsoluteUrl(url)}${descriptor ? ` ${descriptor}` : ''}`;
+        })
+        .join(', ');
+
+      source.setAttribute('srcset', absoluteSrcset);
+    });
+
+    const stylesheetLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map(link => toAbsoluteUrl(link.getAttribute('href')))
+      .filter(Boolean)
+      .map(href => `<link rel="stylesheet" href="${href}">`)
+      .join('\n');
+
+    const inlineStyles = Array.from(document.querySelectorAll('style'))
+      .map(styleTag => styleTag.outerHTML)
+      .join('\n');
+
+    const html = `<!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          ${stylesheetLinks}
+          ${inlineStyles}
+        </head>
+        <body class="bg-slate-50">
+          <div class="proposal-overlay">${clone.outerHTML}</div>
+        </body>
+      </html>`;
+
+    setIsDownloading(true);
+    setDownloadError('');
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || ''}/api/proposal_pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          html,
+          fileName: `propuesta-${firstName.toLowerCase() || 'solarya'}.pdf`,
+          margin: {
+            top: '16mm',
+            right: '12mm',
+            bottom: '16mm',
+            left: '12mm'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('No pudimos generar el PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `propuesta-${firstName.toLowerCase() || 'solarya'}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF', error);
+      setDownloadError('No pudimos generar el PDF. Inténtalo de nuevo.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleGenerateReferral = async () => {
@@ -917,49 +1016,63 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           display: block;
         }
       `}</style>
-      <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
-        <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
-          <button
-            onClick={handleGenerateReferral}
-            className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
-            aria-label="Referir a un amigo"
-            title="Referir a un amigo"
-          >
-            <Share2 className="w-6 h-6 text-white" />
-          </button>
-          <button
-            onClick={handleDownloadPDF}
-            className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
-            aria-label="Descargar PDF"
-          >
-            <Download className="w-6 h-6 text-slate-700" />
-          </button>
-          <button
-            onClick={onClose}
-            className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
-            aria-label="Cerrar propuesta"
-          >
-            <X className="w-6 h-6 text-slate-700" />
-          </button>
-        </div>
-
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-compact-card">
-          <div className="flex items-center justify-between flex-wrap gap-6">
-            <div>
-              <img
-                src="/SolarYa logos_Primary Logo.png"
-                alt="SolarYa"
-                className="h-8 md:h-10 w-auto opacity-90"
-              />
-              <p className="text-slate-500 text-xs md:text-sm mt-1.5">Accesible. Confiable. Simple.</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
-              <p className="text-sm text-slate-600">{formatLongDate(creationDate)}</p>
-            </div>
+        <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
+          <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
+            <button
+              onClick={handleGenerateReferral}
+              className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
+              aria-label="Referir a un amigo"
+              title="Referir a un amigo"
+            >
+              <Share2 className="w-6 h-6 text-white" />
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
+                isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
+              }`}
+              aria-label="Descargar PDF"
+              aria-busy={isDownloading}
+            >
+              {isDownloading ? (
+                <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
+              ) : (
+                <Download className="w-6 h-6 text-slate-700" />
+              )}
+            </button>
+            <button
+              onClick={onClose}
+              className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
+              aria-label="Cerrar propuesta"
+            >
+              <X className="w-6 h-6 text-slate-700" />
+            </button>
           </div>
-        </div>
+
+          {downloadError && (
+            <div className="fixed top-20 right-6 z-50 bg-red-50 text-red-800 border border-red-200 shadow-lg rounded-xl px-4 py-3 text-sm max-w-xs no-print">
+              {downloadError}
+            </div>
+          )}
+
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-compact-card">
+              <div className="flex items-center justify-between flex-wrap gap-6">
+                <div>
+                  <img
+                    src="/SolarYa logos_Primary Logo.png"
+                    alt="SolarYa"
+                    className="h-8 md:h-10 w-auto opacity-90"
+                  />
+                  <p className="text-slate-500 text-xs md:text-sm mt-1.5">Accesible. Confiable. Simple.</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-slate-900">Esta es tu propuesta, {firstName}</p>
+                  <p className="text-sm text-slate-600">{formatLongDate(creationDate)}</p>
+                </div>
+              </div>
+            </div>
 
         {proposal.future && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 print-hidden">
