@@ -861,6 +861,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
     const clone = proposalNode.cloneNode(true) as HTMLElement;
 
+    clone.classList.add('pdf-export-root');
+    clone.style.minHeight = 'auto';
+    clone.style.padding = '0';
+    clone.style.background = 'transparent';
+    clone.style.position = 'static';
+
     clone.querySelectorAll('.no-print, .print-hidden').forEach(node => node.parentElement?.removeChild(node));
 
     clone.querySelectorAll('.calendly-inline-widget').forEach(el => el.remove());
@@ -1010,7 +1016,13 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     --pdf-page-width: 210mm;
   }
 
-  .pdf-stack, .pdf-page-stack { width: var(--pdf-page-width); margin: 0 auto; }
+  .pdf-stack, .pdf-page-stack {
+    width: var(--pdf-page-width);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
   .pdf-page {
     width: var(--pdf-page-width);
     height: var(--pdf-page-height);
