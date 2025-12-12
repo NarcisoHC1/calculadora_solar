@@ -949,7 +949,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       };
 
       const stack = document.createElement('div');
-      stack.className = 'pdf-page-stack';
+      stack.className = 'pdf-page-stack pdf-stack';
 
       const addPage = (className: string, nodes: (HTMLElement | null)[]) => {
         const filtered = nodes.filter(Boolean) as HTMLElement[];
@@ -985,6 +985,9 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   @page { size: A4; margin: 0; }
   html, body { margin: 0; padding: 0; }
   body.pdf-root { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @media print {
+    body.pdf-root *, body.pdf-root *::before, body.pdf-root *::after { visibility: visible !important; }
+  }
 
   /* Neutralize existing print break utilities (avoid blank pages / double breaks) */
   .print-break-after, .print-break-before {
@@ -1007,7 +1010,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     --pdf-page-width: 210mm;
   }
 
-  .pdf-stack { width: var(--pdf-page-width); margin: 0 auto; }
+  .pdf-stack, .pdf-page-stack { width: var(--pdf-page-width); margin: 0 auto; }
   .pdf-page {
     width: var(--pdf-page-width);
     height: var(--pdf-page-height);
