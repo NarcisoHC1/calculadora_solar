@@ -817,9 +817,17 @@ function FAQAccordion({ forceOpen = false }: { forceOpen?: boolean }) {
           >
             <span className="font-bold text-slate-900 pr-4">{faq.question}</span>
             {openIndex === index ? (
-              <Minus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
+              <Minus
+                className="w-5 h-5 flex-shrink-0 faq-toggle-icon"
+                style={{ color: '#ff5c36' }}
+                aria-hidden="true"
+              />
             ) : (
-              <Plus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
+              <Plus
+                className="w-5 h-5 flex-shrink-0 faq-toggle-icon"
+                style={{ color: '#ff5c36' }}
+                aria-hidden="true"
+              />
             )}
           </button>
           {(forceOpen || isPrintMode || openIndex === index) && (
@@ -983,12 +991,14 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         });
       };
 
+      let pageCounter = 1;
       const addPage = (className: string, nodes: (HTMLElement | null)[]) => {
         const filtered = nodes.filter(Boolean) as HTMLElement[];
         if (!filtered.length) return;
         normalizeSpacing(filtered);
         const page = document.createElement('section');
-        page.className = `pdf-page ${className}`.trim();
+        page.className = `pdf-page page-${pageCounter} ${className}`.trim();
+        pageCounter += 1;
         const card = document.createElement('div');
         card.className = 'pdf-page-card';
         filtered.forEach(node => card.appendChild(node));
@@ -996,16 +1006,41 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         stack.appendChild(page);
       };
 
-      const investmentGrid = investmentSections.length ? createGrid(investmentSections) : null;
-      const benefitsSource = whatYouGetSections.length ? [whatYouGetSections[0]] : [];
-      const benefitsGrid = benefitsSource.length ? createGrid(benefitsSource, 'pdf-inline-grid-stack') : null;
+      const groupByVariant = (nodes: HTMLElement[]) =>
+        nodes.reduce((acc, node) => {
+          const variant = node.dataset.pdfVariant || 'default';
+          acc[variant] = acc[variant] || [];
+          acc[variant].push(node);
+          return acc;
+        }, {} as Record<string, HTMLElement[]>);
 
-      addPage('page-1', [hero, overviewSections.length ? createGrid(overviewSections) : null]);
-      addPage('page-2', [investmentGrid, benefitsGrid]);
-      addPage('page-3', [componentSections.length ? createGrid(componentSections) : null]);
-      addPage('page-4', [processSection]);
-      addPage('page-5', [faqSection]);
-      addPage('page-6', [ctaSection]);
+      const overviewByVariant = groupByVariant(overviewSections);
+      const investmentByVariant = groupByVariant(investmentSections);
+      const whatYouGetByVariant = groupByVariant(whatYouGetSections);
+      const componentsByVariant = groupByVariant(componentSections);
+
+      const variantsOrder = ['actual', 'futura', 'default', ...Object.keys(overviewByVariant)].filter(
+        (variant, index, self) => self.indexOf(variant) === index &&
+          (overviewByVariant[variant]?.length || investmentByVariant[variant]?.length || componentsByVariant[variant]?.length)
+      );
+
+      const addVariantPages = (variant: string, includeHero: boolean) => {
+        const overviewGrid = overviewByVariant[variant]?.length ? createGrid(overviewByVariant[variant]) : null;
+        const investmentGrid = investmentByVariant[variant]?.length ? createGrid(investmentByVariant[variant]) : null;
+        const benefitsSource = whatYouGetByVariant[variant]?.length ? [whatYouGetByVariant[variant][0]] : [];
+        const benefitsGrid = benefitsSource.length ? createGrid(benefitsSource, 'pdf-inline-grid-stack') : null;
+        const componentsGrid = componentsByVariant[variant]?.length ? createGrid(componentsByVariant[variant]) : null;
+
+        addPage('', [includeHero ? hero : null, overviewGrid]);
+        addPage('', [investmentGrid, benefitsGrid]);
+        addPage('', [componentsGrid]);
+      };
+
+      variantsOrder.forEach((variant, index) => addVariantPages(variant, index === 0));
+
+      addPage('', [processSection]);
+      addPage('', [faqSection]);
+      addPage('', [ctaSection]);
 
       if (stack.childElementCount === 0) return;
 
@@ -1046,6 +1081,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   .print-cta { display: block !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
   .print-cta a { background: #ff5c36 !important; color: #fff !important; box-shadow: none !important; border: none !important; }
   .print-cta p { color: #475569 !important; margin-top: 6px !important; }
+  .pdf-root .faq-toggle-icon { display: none !important; }
   .pdf-page a.shadow-lg, .pdf-page a.shadow-xl, .pdf-page a.shadow-2xl, .pdf-page a.shadow, .pdf-page a.shadow-md {
     box-shadow: none !important;
   }
@@ -1409,6 +1445,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
                   onClose={onClose}
                   showSharedSections={false}
                   validUntil={validUntil}
+                  variantKey="futura"
                   forcePdfOpen={forcePdfOpen}
                 />
               )}
