@@ -214,7 +214,8 @@ function ProposalCard({
   onClose,
   showSharedSections = true,
   validUntil,
-  variantKey = 'actual'
+  variantKey = 'actual',
+  forcePdfOpen = false
 }: {
   data: ProposalData;
   title: string;
@@ -222,6 +223,7 @@ function ProposalCard({
   showSharedSections?: boolean;
   validUntil: Date;
   variantKey?: 'actual' | 'futura';
+  forcePdfOpen?: boolean;
 }) {
   const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
   const maxEquipmentWarranty = getMaxProductWarranty(components);
@@ -1384,9 +1386,23 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         {proposal.future ? (
           <>
             <div className={`mb-8 ${showFutureProposal ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : ''}`}>
-              <ProposalCard data={proposal.current} title="Propuesta para Consumo Actual" onClose={onClose} showSharedSections={false} validUntil={validUntil} />
+              <ProposalCard
+                data={proposal.current}
+                title="Propuesta para Consumo Actual"
+                onClose={onClose}
+                showSharedSections={false}
+                validUntil={validUntil}
+                forcePdfOpen={forcePdfOpen}
+              />
               {showFutureProposal && (
-                <ProposalCard data={proposal.future} title="Propuesta con Cargas Futuras" onClose={onClose} showSharedSections={false} validUntil={validUntil} />
+                <ProposalCard
+                  data={proposal.future}
+                  title="Propuesta con Cargas Futuras"
+                  onClose={onClose}
+                  showSharedSections={false}
+                  validUntil={validUntil}
+                  forcePdfOpen={forcePdfOpen}
+                />
               )}
             </div>
             <SharedSections
@@ -1399,7 +1415,13 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
           </>
         ) : (
           <div className="mb-8">
-            <ProposalCard data={proposal.current} title="Tu Propuesta Personalizada de Sistema de Paneles Solares" onClose={onClose} validUntil={validUntil} />
+            <ProposalCard
+              data={proposal.current}
+              title="Tu Propuesta Personalizada de Sistema de Paneles Solares"
+              onClose={onClose}
+              validUntil={validUntil}
+              forcePdfOpen={forcePdfOpen}
+            />
           </div>
         )}
 
