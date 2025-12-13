@@ -502,9 +502,7 @@ function ProposalCard({
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
                   <p className="text-base font-semibold text-slate-900">Microinversores</p>
-                  <p className="text-sm text-slate-600">Selección dinámica según catálogo</p>
                 </div>
-                <p className="text-sm text-slate-600 font-semibold">×{microinverterComponents.reduce((sum, comp) => sum + (comp.cantidad || 0), 0)}</p>
               </div>
               <div className="mt-3 space-y-3 text-sm text-slate-700">
                 <div className="space-y-2">
@@ -566,7 +564,7 @@ function ProposalCard({
           )}
         </div>
 
-        <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4 print-avoid-break print-break-after print-compact-card">
+        <div className="mt-3 bg-slate-50 border border-slate-200 rounded-xl p-4 print-avoid-break print-break-after print-compact-card">
           <p className="text-xs text-slate-700 leading-relaxed">
             <strong className="text-slate-900">Nota:</strong> Esta es una cotización preliminar basada en la información proporcionada.
             El precio final se ajustará tras la visita técnica gratuita donde validaremos las condiciones específicas de tu instalación.
@@ -1358,21 +1356,24 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             >
               <Share2 className="w-6 h-6 text-white" />
             </button>
-            <button
-              onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
-                isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
-              }`}
-              aria-label="Descargar PDF"
-              aria-busy={isDownloading}
-            >
-              {isDownloading ? (
-                <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
-              ) : (
-                <Download className="w-6 h-6 text-slate-700" />
-              )}
-            </button>
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
+                  isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
+                }`}
+                aria-label="Descargar PDF"
+                aria-busy={isDownloading}
+              >
+                {isDownloading ? (
+                  <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
+                ) : (
+                  <Download className="w-6 h-6 text-slate-700" />
+                )}
+              </button>
+              <p className="text-[11px] text-slate-600 font-semibold">Descargar PDF</p>
+            </div>
             <button
               onClick={onClose}
               className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"
