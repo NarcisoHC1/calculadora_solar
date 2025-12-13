@@ -223,10 +223,18 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
   if (proposalData.costo_inversor) fields["Costo_Inversor"] = Math.round(proposalData.costo_inversor);
 
   // Microinversores (si aplica)
-  if (proposalData.id_micro_2_panel) fields["ID_Micro_2_Panel"] = proposalData.id_micro_2_panel;
-  if (proposalData.cantidad_micro_2_panel) fields["Cantidad_Micro_2_Panel"] = proposalData.cantidad_micro_2_panel;
-  if (proposalData.id_micro_4_panel) fields["ID_Micro_4_Panel"] = proposalData.id_micro_4_panel;
-  if (proposalData.cantidad_micro_4_panel) fields["Cantidad_Micro_4_Panel"] = proposalData.cantidad_micro_4_panel;
+  if (Array.isArray(proposalData.microinverters)) {
+    fields["Microinverters"] = JSON.stringify(proposalData.microinverters);
+  }
+  if (proposalData.microinverters_total_channels !== undefined) {
+    fields["Microinverters_Total_Channels"] = proposalData.microinverters_total_channels;
+  }
+  if (proposalData.microinverters_unused_channels !== undefined) {
+    fields["Microinverters_Unused_Channels"] = proposalData.microinverters_unused_channels;
+  }
+  if (proposalData.microinverters_total_price_usd !== undefined) {
+    fields["Microinverters_Total_Price_USD"] = proposalData.microinverters_total_price_usd;
+  }
   if (proposalData.costo_microinversores) fields["Costo_Microinversores"] = Math.round(proposalData.costo_microinversores);
   if (proposalData.costo_extras_microinversores) fields["Costo_Extras_Microniversores"] = Math.round(proposalData.costo_extras_microinversores);
 
@@ -279,10 +287,18 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
     if (proposalCargasExtra.id_inversor) fields["ID_Inversor_Cargas_Extra"] = proposalCargasExtra.id_inversor;
     if (proposalCargasExtra.costo_inversor) fields["Costo_Inversor_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_inversor);
 
-    if (proposalCargasExtra.id_micro_2_panel) fields["ID_Micro_2_Panel_Cargas_Extra"] = proposalCargasExtra.id_micro_2_panel;
-    if (proposalCargasExtra.cantidad_micro_2_panel) fields["Cantidad_Micro_2_Panel_Cargas_Extra"] = proposalCargasExtra.cantidad_micro_2_panel;
-    if (proposalCargasExtra.id_micro_4_panel) fields["ID_Micro_4_Panel_Cargas_Extra"] = proposalCargasExtra.id_micro_4_panel;
-    if (proposalCargasExtra.cantidad_micro_4_panel) fields["Cantidad_Micro_4_Panel_Cargas_Extra"] = proposalCargasExtra.cantidad_micro_4_panel;
+    if (Array.isArray(proposalCargasExtra.microinverters)) {
+      fields["Microinverters_Cargas_Extra"] = JSON.stringify(proposalCargasExtra.microinverters);
+    }
+    if (proposalCargasExtra.microinverters_total_channels !== undefined) {
+      fields["Microinverters_Total_Channels_Cargas_Extra"] = proposalCargasExtra.microinverters_total_channels;
+    }
+    if (proposalCargasExtra.microinverters_unused_channels !== undefined) {
+      fields["Microinverters_Unused_Channels_Cargas_Extra"] = proposalCargasExtra.microinverters_unused_channels;
+    }
+    if (proposalCargasExtra.microinverters_total_price_usd !== undefined) {
+      fields["Microinverters_Total_Price_USD_Cargas_Extra"] = proposalCargasExtra.microinverters_total_price_usd;
+    }
     if (proposalCargasExtra.costo_microinversores) fields["Costo_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_microinversores);
     if (proposalCargasExtra.costo_extras_microinversores) fields["Costo_Extras_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_extras_microinversores);
 

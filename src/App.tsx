@@ -263,85 +263,26 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
         pickFromParams(inverterParams, 'product_warranty_years', 'Product_Warranty_Years')
       )
     });
-  } else {
-    if (propuesta.id_micro_4_panel && propuesta.cantidad_micro_4_panel) {
-      const microBrand4 =
-        pickValue(
-          propuesta?.microinverter_brand_4_panel,
-          propuesta?.micro_brand_4_panel,
-          propuesta?.microinverter_specs_brand,
-          propuesta?.microinverter_specs_params_brand,
-          propuesta?.brand_microinverter_specs_params,
-          pickFromParams(microParams, 'brand', 'Brand')
-        );
-      const microModel4 =
-        pickValue(
-          propuesta?.microinverter_model_4_panel,
-          propuesta?.micro_model_4_panel,
-          propuesta?.microinverter_specs_model,
-          propuesta?.microinverter_specs_params_model,
-          propuesta?.model_microinverter_specs_params,
-          pickFromParams(microParams, 'model', 'Model')
-      );
+  } else if (Array.isArray(propuesta.microinverters)) {
+    const microSpecs = propuesta.microinverter_specs_params || propuesta.microinverter_specs || [];
+    propuesta.microinverters.forEach((micro: any) => {
+      const matchedSpec = microSpecs.find((spec: any) => spec?.ID === micro.id) || {};
       components.push({
-        concepto: 'Microinversor 4 paneles',
-        cantidad: propuesta.cantidad_micro_4_panel,
-        marca: microBrand4 || '',
-        modelo: microModel4 || '',
+        concepto: `Microinversor ${micro.mppt || matchedSpec.MPPT || ''} MPPT`,
+        cantidad: micro.qty,
+        marca: micro.brand ?? matchedSpec.Brand ?? pickFromParams(microParams, 'brand', 'Brand') ?? '',
+        modelo: micro.model ?? matchedSpec.Model ?? pickFromParams(microParams, 'model', 'Model') ?? '',
         type: 'microinverter',
-        productWarrantyYears: pickValue(
-          propuesta?.micro_product_warranty_years,
-          propuesta?.microinverter_specs_product_warranty_years,
-          propuesta?.microinverter_specs_params_product_warranty_years,
-          propuesta?.product_warranty_years_microinverter_specs_params,
-          pickFromParams(
+        productWarrantyYears: micro.product_warranty_years
+          ?? matchedSpec.Product_Warranty_Years
+          ?? pickFromParams(
             microParams,
             'product_warranty_years',
             'Product_Warranty_Years',
             'Product Warranty_Years'
           )
-        )
       });
-    }
-    if (propuesta.id_micro_2_panel && propuesta.cantidad_micro_2_panel) {
-      const microBrand2 =
-        pickValue(
-          propuesta?.microinverter_brand_2_panel,
-          propuesta?.micro_brand_2_panel,
-          propuesta?.microinverter_specs_brand,
-          propuesta?.microinverter_specs_params_brand,
-          propuesta?.brand_microinverter_specs_params,
-          pickFromParams(microParams, 'brand', 'Brand')
-        );
-      const microModel2 =
-        pickValue(
-          propuesta?.microinverter_model_2_panel,
-          propuesta?.micro_model_2_panel,
-          propuesta?.microinverter_specs_model,
-          propuesta?.microinverter_specs_params_model,
-          propuesta?.model_microinverter_specs_params,
-          pickFromParams(microParams, 'model', 'Model')
-      );
-      components.push({
-        concepto: 'Microinversor 2 paneles',
-        cantidad: propuesta.cantidad_micro_2_panel,
-        marca: microBrand2 || '',
-        modelo: microModel2 || '',
-        type: 'microinverter',
-        productWarrantyYears: pickValue(
-          propuesta?.micro_product_warranty_years,
-          propuesta?.microinverter_specs_product_warranty_years,
-          propuesta?.microinverter_specs_params_product_warranty_years,
-          propuesta?.product_warranty_years_microinverter_specs_params,
-          pickFromParams(
-            microParams,
-            'product_warranty_years',
-            'Product_Warranty_Years',
-            'Product Warranty_Years'
-          )
-        )
-      });
-    }
+    });
   }
 
   if (propuesta.id_montaje_a && propuesta.cantidad_montaje_a) {
