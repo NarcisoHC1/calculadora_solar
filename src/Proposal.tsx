@@ -817,9 +817,17 @@ function FAQAccordion({ forceOpen = false }: { forceOpen?: boolean }) {
           >
             <span className="font-bold text-slate-900 pr-4">{faq.question}</span>
             {openIndex === index ? (
-              <Minus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
+              <Minus
+                className="w-5 h-5 flex-shrink-0 faq-toggle-icon"
+                style={{ color: '#ff5c36' }}
+                aria-hidden="true"
+              />
             ) : (
-              <Plus className="w-5 h-5 flex-shrink-0" style={{ color: '#ff5c36' }} />
+              <Plus
+                className="w-5 h-5 flex-shrink-0 faq-toggle-icon"
+                style={{ color: '#ff5c36' }}
+                aria-hidden="true"
+              />
             )}
           </button>
           {(forceOpen || isPrintMode || openIndex === index) && (
@@ -1073,6 +1081,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   .print-cta { display: block !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
   .print-cta a { background: #ff5c36 !important; color: #fff !important; box-shadow: none !important; border: none !important; }
   .print-cta p { color: #475569 !important; margin-top: 6px !important; }
+  .pdf-root .faq-toggle-icon { display: none !important; }
   .pdf-page a.shadow-lg, .pdf-page a.shadow-xl, .pdf-page a.shadow-2xl, .pdf-page a.shadow, .pdf-page a.shadow-md {
     box-shadow: none !important;
   }
