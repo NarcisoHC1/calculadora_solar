@@ -1034,8 +1034,11 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   /* Calendly en PDF: ocultar embed, mostrar CTA */
   .calendly-inline-widget { display: none !important; height: auto !important; }
   .print-cta { display: block !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
-  .print-cta a { background: #ff5c36 !important; color: #fff !important; box-shadow: 0 8px 18px rgba(255,92,54,0.25) !important; border: none !important; }
+  .print-cta a { background: #ff5c36 !important; color: #fff !important; box-shadow: none !important; border: none !important; }
   .print-cta p { color: #475569 !important; margin-top: 6px !important; }
+  .pdf-page a.shadow-lg, .pdf-page a.shadow-xl, .pdf-page a.shadow-2xl, .pdf-page a.shadow, .pdf-page a.shadow-md {
+    box-shadow: none !important;
+  }
 
   .pdf-wrapper { background: #fff; }
   .pdf-stack {
