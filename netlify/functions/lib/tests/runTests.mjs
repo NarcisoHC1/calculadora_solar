@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { calculateMicroinverters, selectCentralInverter } from '../calculations.mjs';
+import { buildMicroFieldsFromProposal } from '../airtable.mjs';
 
 function testMicroAllSiCombo() {
   const params = {
@@ -48,10 +49,37 @@ function testCentralInverterTieBreaking() {
   assert.equal(inverter.ID, 'Z', 'Debe elegir el inversor con mejor garantía tras empatar en precio');
 }
 
+function testMicroAirtableMapping() {
+  const fields = buildMicroFieldsFromProposal({
+    micro_central: 'micro',
+    microinverters: [
+      { id: 'A', mppt: 2, qty: 3 },
+      { id: 'B', mppt: 4, qty: 1 }
+    ]
+  });
+
+  assert.equal(fields.ID_Micro_2_Panel, 'A', 'Debe mapear ID para micro de 2 MPPT');
+  assert.equal(fields.Cantidad_Micro_2_Panel, 3, 'Debe mapear cantidad para micro de 2 MPPT');
+  assert.equal(fields.ID_Micro_4_Panel, 'B', 'Debe mapear ID para micro de 4 MPPT');
+  assert.equal(fields.Cantidad_Micro_4_Panel, 1, 'Debe mapear cantidad para micro de 4 MPPT');
+}
+
+function testMicroAirtableMappingErrorOnMultipleIds() {
+  assert.throws(() => buildMicroFieldsFromProposal({
+    micro_central: 'micro',
+    microinverters: [
+      { id: 'A', mppt: 2, qty: 1 },
+      { id: 'B', mppt: 2, qty: 2 }
+    ]
+  }), /único modelo de microinversor de 2 MPPT/, 'Debe fallar con múltiples IDs por MPPT');
+}
+
 function run() {
   testMicroAllSiCombo();
   testMicroOnlyNoTrunk();
   testCentralInverterTieBreaking();
+  testMicroAirtableMapping();
+  testMicroAirtableMappingErrorOnMultipleIds();
   console.log('✅ Tests passed');
 }
 
