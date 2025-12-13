@@ -121,11 +121,11 @@ function TopBrandsSection() {
 
 function WhatYouGet({ maxEquipmentWarranty }: { maxEquipmentWarranty: number }) {
   return (
-    <>
+    <div className="pdf-whatyouget">
       <h4 className="text-xl font-bold text-slate-900 mb-6">¿Qué Obtienes con Tu Sistema Solar?</h4>
 
-      <div className="bg-slate-50 border-2 rounded-xl p-6 mb-6" style={{ borderColor: '#ff9b7a' }}>
-        <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-base text-slate-700 leading-relaxed">
+      <div className="bg-slate-50 border-2 rounded-xl p-6 mb-6 pdf-whatyouget-shell" style={{ borderColor: '#ff9b7a' }}>
+        <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-base text-slate-700 leading-relaxed pdf-whatyouget-grid">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#3cd070' }} />
             <p>Instalación por técnicos certificados</p>
@@ -160,7 +160,7 @@ function WhatYouGet({ maxEquipmentWarranty }: { maxEquipmentWarranty: number }) 
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -969,7 +969,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       const normalizeSpacing = (nodes: HTMLElement[]) => {
         nodes.forEach(node => {
           node.style.marginTop = '0';
-          node.style.marginBottom = '6mm';
+          node.style.marginBottom = '4mm';
         });
       };
 
@@ -1033,7 +1033,9 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
 
   /* Calendly en PDF: ocultar embed, mostrar CTA */
   .calendly-inline-widget { display: none !important; height: auto !important; }
-  .print-cta { display: block !important; }
+  .print-cta { display: block !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+  .print-cta a { background: #ff5c36 !important; color: #fff !important; box-shadow: 0 8px 18px rgba(255,92,54,0.25) !important; border: none !important; }
+  .print-cta p { color: #475569 !important; margin-top: 6px !important; }
 
   .pdf-wrapper { background: #fff; }
   .pdf-stack {
@@ -1041,6 +1043,12 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     margin: 0 auto;
     background: #fff;
   }
+
+  .pdf-page.page-2 .pdf-page-card { padding: 6mm; gap: 4mm; }
+
+  .pdf-whatyouget h4 { margin-bottom: 3mm; font-size: 15px; }
+  .pdf-whatyouget-shell { padding: 5mm !important; }
+  .pdf-whatyouget-grid { gap: 3mm 4mm !important; font-size: 12px !important; line-height: 1.35 !important; }
 
   /* Cada .pdf-page arranca en página nueva */
   .pdf-page {
