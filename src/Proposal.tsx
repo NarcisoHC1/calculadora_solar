@@ -231,7 +231,7 @@ function ProposalCard({
   const panelComponent = components.find(
     comp => comp.type === 'panel' || comp.concepto.toLowerCase().includes('panel')
   );
-  const microinverterComponent = components.find(
+  const microinverterComponents = components.filter(
     comp => comp.type === 'microinverter' || comp.concepto.toLowerCase().includes('microinversor')
   );
   const inverterComponent = components.find(comp => {
@@ -253,7 +253,9 @@ function ProposalCard({
 
   const panelProductWarranty = inferProductWarrantyYears(panelInfo);
   const panelGenerationWarranty = inferGenerationWarrantyYears(panelInfo);
-  const microWarranty = microinverterComponent ? inferProductWarrantyYears(microinverterComponent) : undefined;
+  const microWarranty = microinverterComponents.length > 0
+    ? getMaxProductWarranty(microinverterComponents)
+    : undefined;
   const inverterWarranty = inverterComponent ? inferProductWarrantyYears(inverterComponent) : undefined;
   const montajeWarranty = montajeComponent ? inferProductWarrantyYears(montajeComponent) : undefined;
 
@@ -495,17 +497,29 @@ function ProposalCard({
             </div>
           </div>
 
-          {microinverterComponent ? (
+          {microinverterComponents.length > 0 ? (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 print-compact-card">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                  <p className="text-base font-semibold text-slate-900">Microinversor {microinverterComponent.marca}</p>
-                  <p className="text-sm text-slate-600">Modelo {microinverterComponent.modelo}</p>
+                  <p className="text-base font-semibold text-slate-900">Microinversores</p>
+                  <p className="text-sm text-slate-600">Selección dinámica según catálogo</p>
                 </div>
-                <p className="text-sm text-slate-600 font-semibold">×{microinverterComponent.cantidad}</p>
+                <p className="text-sm text-slate-600 font-semibold">×{microinverterComponents.reduce((sum, comp) => sum + (comp.cantidad || 0), 0)}</p>
               </div>
-              <div className="mt-3 space-y-2 text-sm text-slate-700">
-                <p>
+              <div className="mt-3 space-y-3 text-sm text-slate-700">
+                <div className="space-y-2">
+                  {microinverterComponents.map((micro, idx) => (
+                    <div key={`${micro.modelo}-${micro.marca}-${idx}`} className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-900">{micro.marca || 'Microinversor'}</p>
+                        <p className="text-slate-600">Modelo {micro.modelo || 'Por confirmar'}</p>
+                        <p className="text-slate-600">{micro.concepto || ''}</p>
+                      </div>
+                      <p className="text-slate-600 font-semibold">×{micro.cantidad}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="pt-2 border-t border-slate-200">
                   • Garantía: <strong>{microWarranty || 'Por confirmar'}</strong>
                   {microWarranty ? ' años' : ''}
                 </p>

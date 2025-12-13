@@ -153,12 +153,6 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
     propuesta?.panel_specs?.Params,
     propuesta?.panel_specs
   );
-  const microParams = mergeParams(
-    propuesta?.microinverter_specs_params,
-    propuesta?.microinverter_specs?.params,
-    propuesta?.microinverter_specs?.Params,
-    propuesta?.microinverter_specs
-  );
   const inverterParams = mergeParams(
     propuesta?.inverter_specs_params,
     propuesta?.inverter_specs?.params,
@@ -264,23 +258,29 @@ function buildComponentsFromBackend(propuesta: any, potenciaPorPanel: number, ca
       )
     });
   } else if (Array.isArray(propuesta.microinverters)) {
-    const microSpecs = propuesta.microinverter_specs_params || propuesta.microinverter_specs || [];
+    const microSpecsCandidates = propuesta.microinverter_specs_params || propuesta.microinverter_specs || [];
+    const microSpecs = Array.isArray(microSpecsCandidates) ? microSpecsCandidates : [microSpecsCandidates];
+
     propuesta.microinverters.forEach((micro: any) => {
-      const matchedSpec = microSpecs.find((spec: any) => spec?.ID === micro.id) || {};
+      const matchedSpec = microSpecs.find((spec: any) => spec?.ID === micro.id || spec?.id === micro.id) || {};
+      const brand = micro.brand
+        ?? matchedSpec.Brand
+        ?? pickFromParams(matchedSpec, 'brand', 'Brand');
+      const model = micro.model
+        ?? matchedSpec.Model
+        ?? pickFromParams(matchedSpec, 'model', 'Model');
+      const productWarrantyYears = micro.product_warranty_years
+        ?? matchedSpec.Product_Warranty_Years
+        ?? pickFromParams(matchedSpec, 'product_warranty_years', 'Product_Warranty_Years');
+      const mpptValue = micro.mppt ?? matchedSpec.MPPT ?? pickFromParams(matchedSpec, 'mppt', 'MPPT');
+
       components.push({
-        concepto: `Microinversor ${micro.mppt || matchedSpec.MPPT || ''} MPPT`,
+        concepto: `Microinversor ${mpptValue || ''} MPPT`,
         cantidad: micro.qty,
-        marca: micro.brand ?? matchedSpec.Brand ?? pickFromParams(microParams, 'brand', 'Brand') ?? '',
-        modelo: micro.model ?? matchedSpec.Model ?? pickFromParams(microParams, 'model', 'Model') ?? '',
+        marca: brand || '',
+        modelo: model || '',
         type: 'microinverter',
-        productWarrantyYears: micro.product_warranty_years
-          ?? matchedSpec.Product_Warranty_Years
-          ?? pickFromParams(
-            microParams,
-            'product_warranty_years',
-            'Product_Warranty_Years',
-            'Product Warranty_Years'
-          )
+        productWarrantyYears: productWarrantyYears != null ? Number(productWarrantyYears) : undefined
       });
     });
   }
