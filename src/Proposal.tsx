@@ -938,6 +938,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       }
     });
 
+    const overlayWrapper = document.createElement('div');
+    overlayWrapper.className = 'proposal-overlay pdf-export-wrapper';
+    overlayWrapper.appendChild(clone);
+
     clone.querySelectorAll('details').forEach(details => {
       (details as HTMLDetailsElement).open = true;
     });
@@ -945,6 +949,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     clone.querySelectorAll('.faq-answer').forEach(answer => {
       (answer as HTMLElement).style.display = 'block';
     });
+
+    overlayWrapper.style.position = 'static';
+    overlayWrapper.style.background = 'transparent';
+    overlayWrapper.style.padding = '0';
 
     const sameOriginStylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
       .map(link => toAbsoluteUrl(link.getAttribute('href')))
@@ -1069,6 +1077,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   html, body { margin: 0; padding: 0; }
   body.pdf-root { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
+  .pdf-export-wrapper { position: static !important; background: transparent !important; padding: 0 !important; width: 100%; }
+  .pdf-export-wrapper .proposal-scroll { background: transparent !important; padding: 0 !important; visibility: visible !important; }
+  .pdf-export-wrapper * { visibility: visible !important; }
+
   /* Asegura que el print CSS del sitio no oculte todo */
   @media print {
     body.pdf-root *, body.pdf-root *::before, body.pdf-root *::after {
@@ -1165,7 +1177,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   <style>${pdfStyles}</style>
 </head>
 <body class="pdf-root">
-  ${clone.outerHTML}
+  ${overlayWrapper.outerHTML}
 </body>
 </html>
 `;
