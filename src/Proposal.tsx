@@ -563,7 +563,15 @@ function ProposalCard({
   );
 }
 
-function SharedSections({ onClose, maxEquipmentWarranty }: { onClose: () => void; maxEquipmentWarranty: number }) {
+function SharedSections({
+  onClose,
+  maxEquipmentWarranty,
+  forcePdfOpen = false
+}: {
+  onClose: () => void;
+  maxEquipmentWarranty: number;
+  forcePdfOpen?: boolean;
+}) {
   return (
     <>
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-8 print-hidden">
@@ -1411,6 +1419,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
                 ...proposal.current.components,
                 ...(proposal.future?.components ?? [])
               ])}
+              forcePdfOpen={forcePdfOpen}
             />
           </>
         ) : (
