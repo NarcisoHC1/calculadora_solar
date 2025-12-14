@@ -418,7 +418,7 @@ function ProposalCard({
                 <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
               </div>
               <div className="text-center">
-                <OilBarrelIcon className="w-8 h-8 mb-1 mx-auto" style={{ color: '#0ea5e9' }} />
+                <OilBarrelIcon className="w-8 h-8 mb-1 mx-auto" style={{ color: '#000000' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
                 <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
               </div>
