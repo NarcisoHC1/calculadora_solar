@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
-import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2 } from 'lucide-react';
+import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2, Leaf, Cloud } from 'lucide-react';
 
 interface ProposalProps {
   proposal: DualProposal;
@@ -42,6 +42,15 @@ function addDays(date: Date, days: number): Date {
 
 function formatLongDate(date: Date): string {
   return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function OilBarrelIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M5 7h14M5 12h14M5 17h14" />
+    </svg>
+  );
 }
 
 function inferProductWarrantyYears(component: ComponentBreakdown): number {
@@ -404,17 +413,17 @@ function ProposalCard({
             </h5>
             <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
-                <div className="text-2xl mb-1">🌳</div>
+                <Leaf className="w-8 h-8 mb-1 mx-auto" style={{ color: '#3cd070' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
                 <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl mb-1">🛢️</div>
+                <OilBarrelIcon className="w-8 h-8 mb-1 mx-auto" style={{ color: '#000000' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
                 <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl mb-1">☁️</div>
+                <Cloud className="w-8 h-8 mb-1 mx-auto" style={{ color: '#1f2937' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
                 <p className="text-xs text-slate-600 mt-0.5">kilogramos de CO₂ reducidos</p>
               </div>
