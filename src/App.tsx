@@ -1061,7 +1061,7 @@ function App() {
 
     // Calculate bimonthly payment
     const { paymentAmount } = getEffectivePaymentForFlow();
-    const paymentValue = paymentAmount ?? parseFloat(pago || '0') || 0;
+    const paymentValue = paymentAmount ?? (parseFloat(pago || '0') || 0);
     const bimestralPayment = periodo === 'bimestral' ? paymentValue : paymentValue * 2;
 
     // Check conditions for MANUAL flow
