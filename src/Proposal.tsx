@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
-import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2, Leaf, Droplets, Cloud } from 'lucide-react';
+import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2, Leaf, Cloud } from 'lucide-react';
 
 interface ProposalProps {
   proposal: DualProposal;
@@ -42,6 +42,15 @@ function addDays(date: Date, days: number): Date {
 
 function formatLongDate(date: Date): string {
   return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function OilBarrelIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M5 7h14M5 12h14M5 17h14" />
+    </svg>
+  );
 }
 
 function inferProductWarrantyYears(component: ComponentBreakdown): number {
@@ -409,7 +418,7 @@ function ProposalCard({
                 <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
               </div>
               <div className="text-center">
-                <Droplets className="w-8 h-8 mb-1 mx-auto" style={{ color: '#0ea5e9' }} />
+                <OilBarrelIcon className="w-8 h-8 mb-1 mx-auto" style={{ color: '#0ea5e9' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
                 <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
               </div>
