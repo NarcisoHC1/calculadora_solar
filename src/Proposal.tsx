@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ProposalData, DualProposal, EnvironmentalImpact } from './types';
-import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2 } from 'lucide-react';
+import { X, Zap, TrendingDown, TreePine, Calendar, Shield, Plus, Minus, Download, CheckCircle2, Clock, Share2, Copy, Check, Loader2, Leaf, Droplets, Cloud } from 'lucide-react';
 
 interface ProposalProps {
   proposal: DualProposal;
@@ -404,17 +404,17 @@ function ProposalCard({
             </h5>
             <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
-                <div className="text-2xl mb-1">🌳</div>
+                <Leaf className="w-8 h-8 mb-1 mx-auto" style={{ color: '#3cd070' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.arboles}</p>
                 <p className="text-xs text-slate-600 mt-0.5">árboles plantados</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl mb-1">🛢️</div>
+                <Droplets className="w-8 h-8 mb-1 mx-auto" style={{ color: '#0ea5e9' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.barrilesPetroleo}</p>
                 <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl mb-1">☁️</div>
+                <Cloud className="w-8 h-8 mb-1 mx-auto" style={{ color: '#94a3b8' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
                 <p className="text-xs text-slate-600 mt-0.5">kilogramos de CO₂ reducidos</p>
               </div>
