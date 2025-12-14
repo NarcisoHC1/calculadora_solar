@@ -193,6 +193,40 @@ export async function createSubmissionDetails({ projectId, data }) {
   return rec.id;
 }
 
+export function buildMicroFieldsFromProposal(proposalData, { suffix = "" } = {}) {
+  if (!proposalData || proposalData.micro_central !== "micro") return {};
+  const micros = Array.isArray(proposalData.microinverters) ? proposalData.microinverters : [];
+  if (!micros.length) return {};
+
+  const aggregate = micros.reduce((acc, micro) => {
+    const mppt = Number(micro.mppt);
+    if (mppt !== 2 && mppt !== 4) return acc;
+    const entry = acc[mppt] || { ids: new Set(), qty: 0 };
+    if (micro.id) entry.ids.add(micro.id);
+    entry.qty += Number(micro.qty || 0);
+    acc[mppt] = entry;
+    return acc;
+  }, {});
+
+  const fields = {};
+
+  const assignMicro = (mppt, baseName) => {
+    const entry = aggregate[mppt];
+    if (!entry || entry.qty <= 0) return;
+    if (entry.ids.size > 1) {
+      throw new Error(`❌ Airtable mapping requiere un único modelo de microinversor de ${mppt} MPPT${suffix ? ` para ${suffix.replace(/^_+/, "").replace(/_/g, " ")}` : ""}`);
+    }
+    const [id] = Array.from(entry.ids);
+    if (id) fields[`ID_${baseName}${suffix}`] = id;
+    fields[`Cantidad_${baseName}${suffix}`] = entry.qty;
+  };
+
+  assignMicro(2, "Micro_2_Panel");
+  assignMicro(4, "Micro_4_Panel");
+
+  return fields;
+}
+
 // Crear Proposal (con TODOS los campos del schema)
 export async function createProposal({ projectId, proposalData, proposalCargasExtra }) {
   const fields = {
@@ -223,10 +257,7 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
   if (proposalData.costo_inversor) fields["Costo_Inversor"] = Math.round(proposalData.costo_inversor);
 
   // Microinversores (si aplica)
-  if (proposalData.id_micro_2_panel) fields["ID_Micro_2_Panel"] = proposalData.id_micro_2_panel;
-  if (proposalData.cantidad_micro_2_panel) fields["Cantidad_Micro_2_Panel"] = proposalData.cantidad_micro_2_panel;
-  if (proposalData.id_micro_4_panel) fields["ID_Micro_4_Panel"] = proposalData.id_micro_4_panel;
-  if (proposalData.cantidad_micro_4_panel) fields["Cantidad_Micro_4_Panel"] = proposalData.cantidad_micro_4_panel;
+  Object.assign(fields, buildMicroFieldsFromProposal(proposalData));
   if (proposalData.costo_microinversores) fields["Costo_Microinversores"] = Math.round(proposalData.costo_microinversores);
   if (proposalData.costo_extras_microinversores) fields["Costo_Extras_Microniversores"] = Math.round(proposalData.costo_extras_microinversores);
 
@@ -279,10 +310,7 @@ export async function createProposal({ projectId, proposalData, proposalCargasEx
     if (proposalCargasExtra.id_inversor) fields["ID_Inversor_Cargas_Extra"] = proposalCargasExtra.id_inversor;
     if (proposalCargasExtra.costo_inversor) fields["Costo_Inversor_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_inversor);
 
-    if (proposalCargasExtra.id_micro_2_panel) fields["ID_Micro_2_Panel_Cargas_Extra"] = proposalCargasExtra.id_micro_2_panel;
-    if (proposalCargasExtra.cantidad_micro_2_panel) fields["Cantidad_Micro_2_Panel_Cargas_Extra"] = proposalCargasExtra.cantidad_micro_2_panel;
-    if (proposalCargasExtra.id_micro_4_panel) fields["ID_Micro_4_Panel_Cargas_Extra"] = proposalCargasExtra.id_micro_4_panel;
-    if (proposalCargasExtra.cantidad_micro_4_panel) fields["Cantidad_Micro_4_Panel_Cargas_Extra"] = proposalCargasExtra.cantidad_micro_4_panel;
+    Object.assign(fields, buildMicroFieldsFromProposal(proposalCargasExtra, { suffix: "_Cargas_Extra" }));
     if (proposalCargasExtra.costo_microinversores) fields["Costo_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_microinversores);
     if (proposalCargasExtra.costo_extras_microinversores) fields["Costo_Extras_Microinversores_Cargas_Extra"] = Math.round(proposalCargasExtra.costo_extras_microinversores);
 

@@ -231,7 +231,7 @@ function ProposalCard({
   const panelComponent = components.find(
     comp => comp.type === 'panel' || comp.concepto.toLowerCase().includes('panel')
   );
-  const microinverterComponent = components.find(
+  const microinverterComponents = components.filter(
     comp => comp.type === 'microinverter' || comp.concepto.toLowerCase().includes('microinversor')
   );
   const inverterComponent = components.find(comp => {
@@ -253,7 +253,9 @@ function ProposalCard({
 
   const panelProductWarranty = inferProductWarrantyYears(panelInfo);
   const panelGenerationWarranty = inferGenerationWarrantyYears(panelInfo);
-  const microWarranty = microinverterComponent ? inferProductWarrantyYears(microinverterComponent) : undefined;
+  const microWarranty = microinverterComponents.length > 0
+    ? getMaxProductWarranty(microinverterComponents)
+    : undefined;
   const inverterWarranty = inverterComponent ? inferProductWarrantyYears(inverterComponent) : undefined;
   const montajeWarranty = montajeComponent ? inferProductWarrantyYears(montajeComponent) : undefined;
 
@@ -419,6 +421,10 @@ function ProposalCard({
             </div>
           </div>
 
+          <div className="mt-6 print-compact-card">
+            <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
+          </div>
+
         </div>
 
       </div>
@@ -446,15 +452,6 @@ function ProposalCard({
             </p>
             <CalendlyWidget />
             <p className="text-xs text-slate-500 mt-4 text-center">Sin compromiso · Evaluación profesional · 100% gratis</p>
-          </div>
-        )}
-
-        {showSharedSections && (
-          <div
-            className="border-t border-slate-200 pt-6 mb-6 print-break-before print-avoid-break pdf-section"
-            data-pdf-section="whatyouget"
-          >
-            <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
           </div>
         )}
 
@@ -495,17 +492,27 @@ function ProposalCard({
             </div>
           </div>
 
-          {microinverterComponent ? (
+          {microinverterComponents.length > 0 ? (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 print-compact-card">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                  <p className="text-base font-semibold text-slate-900">Microinversor {microinverterComponent.marca}</p>
-                  <p className="text-sm text-slate-600">Modelo {microinverterComponent.modelo}</p>
+                  <p className="text-base font-semibold text-slate-900">Microinversores</p>
                 </div>
-                <p className="text-sm text-slate-600 font-semibold">×{microinverterComponent.cantidad}</p>
               </div>
-              <div className="mt-3 space-y-2 text-sm text-slate-700">
-                <p>
+              <div className="mt-3 space-y-3 text-sm text-slate-700">
+                <div className="space-y-2">
+                  {microinverterComponents.map((micro, idx) => (
+                    <div key={`${micro.modelo}-${micro.marca}-${idx}`} className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-900">{micro.marca || 'Microinversor'}</p>
+                        <p className="text-slate-600">Modelo {micro.modelo || 'Por confirmar'}</p>
+                        <p className="text-slate-600">{micro.concepto || ''}</p>
+                      </div>
+                      <p className="text-slate-600 font-semibold">×{micro.cantidad}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="pt-2 border-t border-slate-200">
                   • Garantía: <strong>{microWarranty || 'Por confirmar'}</strong>
                   {microWarranty ? ' años' : ''}
                 </p>
@@ -552,7 +559,7 @@ function ProposalCard({
           )}
         </div>
 
-        <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4 print-avoid-break print-break-after print-compact-card">
+        <div className="mt-1 bg-slate-50 border border-slate-200 rounded-xl p-4 print-avoid-break print-compact-card">
           <p className="text-xs text-slate-700 leading-relaxed">
             <strong className="text-slate-900">Nota:</strong> Esta es una cotización preliminar basada en la información proporcionada.
             El precio final se ajustará tras la visita técnica gratuita donde validaremos las condiciones específicas de tu instalación.
@@ -926,6 +933,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       }
     });
 
+    const overlayWrapper = document.createElement('div');
+    overlayWrapper.className = 'proposal-overlay pdf-export-wrapper';
+    overlayWrapper.appendChild(clone);
+
     clone.querySelectorAll('details').forEach(details => {
       (details as HTMLDetailsElement).open = true;
     });
@@ -933,6 +944,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
     clone.querySelectorAll('.faq-answer').forEach(answer => {
       (answer as HTMLElement).style.display = 'block';
     });
+
+    overlayWrapper.style.position = 'static';
+    overlayWrapper.style.background = 'transparent';
+    overlayWrapper.style.padding = '0';
 
     const sameOriginStylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
       .map(link => toAbsoluteUrl(link.getAttribute('href')))
@@ -1057,6 +1072,10 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   html, body { margin: 0; padding: 0; }
   body.pdf-root { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
+  .pdf-export-wrapper { position: static !important; background: transparent !important; padding: 0 !important; width: 100%; }
+  .pdf-export-wrapper .proposal-scroll { background: transparent !important; padding: 0 !important; visibility: visible !important; }
+  .pdf-export-wrapper * { visibility: visible !important; }
+
   /* Asegura que el print CSS del sitio no oculte todo */
   @media print {
     body.pdf-root *, body.pdf-root *::before, body.pdf-root *::after {
@@ -1153,7 +1172,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
   <style>${pdfStyles}</style>
 </head>
 <body class="pdf-root">
-  ${clone.outerHTML}
+  ${overlayWrapper.outerHTML}
 </body>
 </html>
 `;
@@ -1344,21 +1363,24 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
             >
               <Share2 className="w-6 h-6 text-white" />
             </button>
-            <button
-              onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
-                isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
-              }`}
-              aria-label="Descargar PDF"
-              aria-busy={isDownloading}
-            >
-              {isDownloading ? (
-                <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
-              ) : (
-                <Download className="w-6 h-6 text-slate-700" />
-              )}
-            </button>
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
+                  isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
+                }`}
+                aria-label="Descargar PDF"
+                aria-busy={isDownloading}
+              >
+                {isDownloading ? (
+                  <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
+                ) : (
+                  <Download className="w-6 h-6 text-slate-700" />
+                )}
+              </button>
+              <p className="text-[11px] text-slate-600 font-semibold">Descargar PDF</p>
+            </div>
             <button
               onClick={onClose}
               className="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 transition-all"

@@ -367,14 +367,12 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
 
   let idInversor = null;
   let costoInversor = 0;
-  let idMicroPrimario = null;
-  let cantidadMicroPrimario = 0;
-  let idMicroSecundario = null;
-  let cantidadMicroSecundario = 0;
   let costoMicroinversores = 0;
   let costoExtrasMicroinversores = 0;
   let inverterSpec = null;
   let microSpecsSeleccionados = [];
+  let microinverters = [];
+  let microTotals = { total_channels: 0, unused_channels: 0, total_price_usd: 0 };
 
   if (microCentral === "central") {
     // Sistema con inversor central
@@ -387,16 +385,17 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
   } else {
     // Sistema con microinversores
     const microConfig = calculateMicroinverters(cantidadPaneles, params);
-    idMicroPrimario = microConfig.idMicroPrimario;
-    cantidadMicroPrimario = microConfig.cantidadMicroPrimario;
-    idMicroSecundario = microConfig.idMicroSecundario;
-    cantidadMicroSecundario = microConfig.cantidadMicroSecundario;
-
     const costs = calculateMicroCosts(microConfig, params);
     costoMicroinversores = costs.costoMicroinversores;
     costoExtrasMicroinversores = costs.costoExtras;
 
-    microSpecsSeleccionados = microConfig.microCombination.items.map(item => item.spec).filter(Boolean);
+    microSpecsSeleccionados = microConfig.microSpecsSeleccionados || [];
+    microinverters = microConfig.microinverters || [];
+    microTotals = {
+      total_channels: microConfig.total_channels,
+      unused_channels: microConfig.unused_channels,
+      total_price_usd: microConfig.total_price_usd
+    };
   }
 
   // 5. Seleccionar montaje (greedy)
@@ -474,6 +473,10 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     panel_specs_params: panel,
     inverter_specs: inverterSpec,
     inverter_specs_params: inverterSpec,
+    microinverters,
+    microinverters_total_channels: microTotals.total_channels,
+    microinverters_unused_channels: microTotals.unused_channels,
+    microinverters_total_price_usd: microTotals.total_price_usd,
     microinverter_specs: microSpecsSeleccionados,
     microinverter_specs_params: microSpecsSeleccionados,
     montaje_specs: [montajeA, montajeB].filter(Boolean),
@@ -484,10 +487,6 @@ async function generateSystemProposal(kwhTarget, periodicidad, hsp, metrosDistan
     costo_inversor: Math.round(costoInversor),
 
     // Microinversores (si aplica)
-    id_micro_2_panel: idMicroPrimario,
-    cantidad_micro_2_panel: cantidadMicroPrimario,
-    id_micro_4_panel: idMicroSecundario,
-    cantidad_micro_4_panel: cantidadMicroSecundario,
     costo_microinversores: Math.round(costoMicroinversores),
     costo_extras_microinversores: Math.round(costoExtrasMicroinversores),
 

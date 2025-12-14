@@ -212,6 +212,15 @@ export async function getParams() {
   if (!Number.isFinite(installerCostMXNW)) {
     throw new Error(`❌ MXN_W missing for Instalador='Final'. Keys: ${Object.keys(installerFinalRecord).join(', ')}`);
   }
+  if (!oversizingFactorRecord || oversizingFactorRecord.Oversizing_factor === undefined || oversizingFactorRecord.Oversizing_factor === null) {
+    throw new Error("❌ Oversizing_factor missing in Airtable Params");
+  }
+  if (!Array.isArray(microinverterSpecs) || microinverterSpecs.length === 0) {
+    throw new Error("❌ Microinverter_Specs.Params returned 0 records");
+  }
+  if (!Array.isArray(inverterSpecs) || inverterSpecs.length === 0) {
+    throw new Error("❌ Inverter_Specs.Params returned 0 records");
+  }
 
   console.log("✅ Params validated successfully");
 
@@ -249,7 +258,7 @@ export async function getParams() {
     environmentalImpact,
     thresholdMicroInverter: thresholdValue,
     installerCosts,
-    installerCostFinalMXNW: installerCostMXNW
+    installerCostFinalMXNW: installerCostMXNW,
   };
 
   cacheTimestamp = now;

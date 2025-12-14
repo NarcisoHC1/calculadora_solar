@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview --port 5173",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "test": "node netlify/functions/lib/tests/runTests.mjs"
   },
   "dependencies": {
     "@sparticuz/chromium": "^133.0.0",
