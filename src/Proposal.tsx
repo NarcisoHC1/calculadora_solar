@@ -421,6 +421,10 @@ function ProposalCard({
             </div>
           </div>
 
+          <div className="mt-6 print-compact-card">
+            <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
+          </div>
+
         </div>
 
       </div>
@@ -448,15 +452,6 @@ function ProposalCard({
             </p>
             <CalendlyWidget />
             <p className="text-xs text-slate-500 mt-4 text-center">Sin compromiso · Evaluación profesional · 100% gratis</p>
-          </div>
-        )}
-
-        {showSharedSections && (
-          <div
-            className="border-t border-slate-200 pt-6 mb-6 print-break-before print-avoid-break pdf-section"
-            data-pdf-section="whatyouget"
-          >
-            <WhatYouGet maxEquipmentWarranty={maxEquipmentWarranty} />
           </div>
         )}
 
@@ -564,7 +559,7 @@ function ProposalCard({
           )}
         </div>
 
-        <div className="mt-3 bg-slate-50 border border-slate-200 rounded-xl p-4 print-avoid-break print-break-after print-compact-card">
+        <div className="mt-1 bg-slate-50 border border-slate-200 rounded-xl p-4 print-avoid-break print-compact-card">
           <p className="text-xs text-slate-700 leading-relaxed">
             <strong className="text-slate-900">Nota:</strong> Esta es una cotización preliminar basada en la información proporcionada.
             El precio final se ajustará tras la visita técnica gratuita donde validaremos las condiciones específicas de tu instalación.
