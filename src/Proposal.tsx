@@ -423,7 +423,7 @@ function ProposalCard({
                 <p className="text-xs text-slate-600 mt-0.5">barriles de petróleo evitados</p>
               </div>
               <div className="text-center">
-                <Cloud className="w-8 h-8 mb-1 mx-auto" style={{ color: '#94a3b8' }} />
+                <Cloud className="w-8 h-8 mb-1 mx-auto" style={{ color: '#1f2937' }} />
                 <p className="text-xl font-bold" style={{ color: '#1e3a2b' }}>{environmental.toneladasCO2}</p>
                 <p className="text-xs text-slate-600 mt-0.5">kilogramos de CO₂ reducidos</p>
               </div>
