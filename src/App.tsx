@@ -583,6 +583,8 @@ function App() {
   const [expand, setExpand] = useState('');
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [pagoPromedioOcr, setPagoPromedioOcr] = useState<number | null>(null);
+  const [pagoActualOcr, setPagoActualOcr] = useState<number | null>(null);
 
   // Step 2 fields
   const [cargas, setCargas] = useState<string[]>([]);
@@ -590,6 +592,7 @@ function App() {
     ev?: { modelo: string; km: string };
     minisplit?: { cantidad: string; horas: string };
     secadora?: { horas: string };
+    otro?: { descripcion: string };
   }>({});
   const [tipoInmueble, setTipoInmueble] = useState('');
   const [distanciaTechoTablero, setDistanciaTechoTablero] = useState('');
@@ -773,6 +776,18 @@ function App() {
       const cpOCR = result.form_overrides?.cp || '';
       const periodicidadOCR = normalized.Periodicidad || '';
       const pagoProm = prom.Pago_Prom_MXN_Periodo;
+      const pagoActual = pickValue(
+        normalized.Pago_Actual_MXN_Periodo,
+        normalized.Pago_Actual_MXN,
+        normalized.Pago_MXN_Periodo_Actual,
+        normalized.Pago_MXN_Actual,
+        normalized.pago_actual_mxn_periodo,
+        normalized.pago_actual_mxn,
+        normalized.pago_actual,
+        normalized.Pago_Actual,
+        prom.Pago_Actual_MXN_Periodo,
+        normalized.Pago_MXN_Periodo
+      );
       const estadoOCR = normalized.Estado || '';
 
       setOcrStatus('ok');
@@ -786,7 +801,12 @@ function App() {
       if (cpOCR) setCP(cpOCR);
       if (periodicidadOCR) setPeriodo(periodicidadOCR);
       if (estadoOCR) setEstado(estadoOCR);
-      if (pagoProm != null && !Number.isNaN(Number(pagoProm))) setPago(String(Math.round(Number(pagoProm))));
+      const parsedPagoProm = pagoProm != null && !Number.isNaN(Number(pagoProm)) ? Number(pagoProm) : null;
+      const parsedPagoActual = pagoActual != null && !Number.isNaN(Number(pagoActual)) ? Number(pagoActual) : null;
+      setPagoPromedioOcr(parsedPagoProm);
+      setPagoActualOcr(parsedPagoActual);
+      if (parsedPagoProm != null) setPago(String(Math.round(parsedPagoProm)));
+      else if (parsedPagoActual != null) setPago(String(Math.round(parsedPagoActual)));
 
       setHasCFE('si');
       setJustMoved('si');
@@ -824,7 +844,54 @@ function App() {
       setOcrResult(null);
       setOcrQuality(null);
       setOcrImage(null);
+      setPagoPromedioOcr(null);
+      setPagoActualOcr(null);
     }
+  };
+
+  const normalizePayment = (value: any) => {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? num : null;
+  };
+
+  const computeThreshold = () => {
+    let minThreshold = 14000;
+    let isHighThresholdState = false;
+
+    if (estado) {
+      minThreshold = getMinStateThreshold(estado);
+      isHighThresholdState = isCDMXorMexico(estado);
+    }
+
+    const effectiveThreshold = periodo === 'mensual' ? minThreshold / 2 : minThreshold;
+    return { effectiveThreshold, isHighThresholdState };
+  };
+
+  const selectPaymentForFlow = (threshold: number, enteredPayment: number | null) => {
+    const avg = normalizePayment(pagoPromedioOcr);
+    const actual = normalizePayment(pagoActualOcr);
+
+    if (ocrStatus === 'ok') {
+      const avgAbove = avg !== null && avg >= threshold;
+      const actualAbove = actual !== null && actual >= threshold;
+
+      if (avgAbove && actualAbove && avg !== null) return avg;
+      if (avgAbove && avg !== null) return avg;
+      if (actualAbove && actual !== null) return actual;
+    }
+
+    if (enteredPayment !== null) return enteredPayment;
+    if (avg !== null) return avg;
+    if (actual !== null) return actual;
+    return null;
+  };
+
+  const getEffectivePaymentForFlow = () => {
+    const enteredPayment = normalizePayment(pago);
+    const thresholdInfo = computeThreshold();
+    const paymentAmount = selectPaymentForFlow(thresholdInfo.effectiveThreshold, enteredPayment);
+
+    return { paymentAmount, ...thresholdInfo };
   };
 
   const startManual = () => {
@@ -837,6 +904,8 @@ function App() {
     setOcrResult(null);
     setOcrQuality(null);
     setOcrImage(null);
+    setPagoPromedioOcr(null);
+    setPagoActualOcr(null);
   };
 
   const handleCargaToggle = (carga: string, checked: boolean) => {
@@ -855,6 +924,9 @@ function App() {
       if (carga === 'secadora') {
         setCargaDetalles(prev => ({ ...prev, secadora: { horas: '' } }));
       }
+      if (carga === 'otro') {
+        setCargaDetalles(prev => ({ ...prev, otro: { descripcion: '' } }));
+      }
     } else {
       setCargas(prev => prev.filter(c => c !== carga));
       setCargaDetalles(prev => {
@@ -862,6 +934,7 @@ function App() {
         if (carga === 'ev') delete next.ev;
         if (carga === 'minisplit') delete next.minisplit;
         if (carga === 'secadora') delete next.secadora;
+        if (carga === 'otro') delete next.otro;
         return next;
       });
     }
@@ -933,6 +1006,9 @@ function App() {
     if (cargas.includes('secadora')) {
       if (!cargaDetalles.secadora?.horas) return false;
     }
+    if (cargas.includes('otro')) {
+      if (!cargaDetalles.otro?.descripcion?.trim()) return false;
+    }
 
     // Nueva lógica: Si showError (pago bajo threshold) y eligieron "ninguna" → bloquear
     // Si eligieron cargas extra, permitimos avanzar (asumimos que con cargas extra superarán threshold)
@@ -984,7 +1060,8 @@ function App() {
     }
 
     // Calculate bimonthly payment
-    const paymentValue = parseFloat(pago || '0');
+    const { paymentAmount } = getEffectivePaymentForFlow();
+    const paymentValue = paymentAmount ?? parseFloat(pago || '0') || 0;
     const bimestralPayment = periodo === 'bimestral' ? paymentValue : paymentValue * 2;
 
     // Check conditions for MANUAL flow
@@ -1004,6 +1081,8 @@ function App() {
     else if (aboveMaxThreshold) { flow = 'MANUAL'; flow_reason = 'above_max_threshold'; }
 
     showLoading('Calculando tu propuesta…');
+
+    const otroDescripcion = cargaDetalles.otro?.descripcion?.trim() || '';
 
     const loads = {
       ev: cargas.includes('ev') ? cargaDetalles.ev : undefined,
@@ -1030,7 +1109,8 @@ function App() {
       telefono,
       uso: finalUso,
       periodicidad: periodo || 'bimestral',
-      pago_promedio_mxn: parseFloat(pago || '0') || 0,
+      pago_promedio_mxn: paymentValue,
+      pago_actual_mxn: pagoActualOcr ?? undefined,
       cp,
       estado: estado || ocrResult?.data?.Estado || '',
       municipio: estado || ocrResult?.data?.Estado || '',
@@ -1045,6 +1125,8 @@ function App() {
       numero_personas: usoCasaNegocio === 'casa' ? numPersonasCasa : '',
       rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
+      otro_carga_descripcion: otroDescripcion || undefined,
+      otro_details: otroDescripcion || '',
       loads,
       has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
       tiene_recibo: hasCFE === 'si' ? (justMoved === 'si' || ocrResult?.ok === true) : false,
@@ -1112,34 +1194,19 @@ function App() {
   };
 
   useEffect(() => {
-    if (hasCFE !== 'si' || !pago) {
+    if (hasCFE !== 'si') {
       setShowError(false);
       setErrorMessage('');
       return;
     }
 
-    const pagoNum = parseFloat(pago);
-    if (isNaN(pagoNum) || pagoNum <= 0) {
+    const { paymentAmount, effectiveThreshold, isHighThresholdState } = getEffectivePaymentForFlow();
+
+    if (paymentAmount === null) {
       setShowError(false);
       setErrorMessage('');
       return;
     }
-
-    const bimestral = periodo === 'bimestral' ? pagoNum : pagoNum * 2;
-
-    let minThreshold = 14000;
-    let isHighThresholdState = false;
-
-    if (estado) {
-      minThreshold = getMinStateThreshold(estado);
-      isHighThresholdState = isCDMXorMexico(estado);
-    }
-
-    // Adjust threshold based on period
-    // If mensual: threshold is half of bimonthly (since 1 month = 0.5 * bimonthly)
-    // If bimestral: threshold stays the same
-    const effectiveThreshold = periodo === 'mensual' ? minThreshold / 2 : minThreshold;
-    const paymentAmount = parseFloat(pago) || 0;
 
     if (paymentAmount < effectiveThreshold) {
       setShowError(true);
@@ -1153,7 +1220,7 @@ function App() {
       setShowError(false);
       setErrorMessage('');
     }
-  }, [pago, periodo, showManual, hasCFE, knowsTariff, estado]);
+  }, [pago, periodo, hasCFE, estado, pagoPromedioOcr, pagoActualOcr, ocrStatus]);
 
   const progressPercentage = currentStep === 1 ? 33 : currentStep === 2 ? 66 : 100;
 
@@ -1994,6 +2061,27 @@ function App() {
                                   style={{ outlineColor: '#3cd070' }}
                                 />
                               </div>
+                            </div>
+                          )}
+
+                          {cargas.includes(item.value) && item.value === 'otro' && (
+                            <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                              <p className="text-xs text-slate-600">
+                                Escribe qué aparato piensas instalar para que podamos considerarlo en tu propuesta.
+                              </p>
+                              <input
+                                type="text"
+                                value={cargaDetalles.otro?.descripcion || ''}
+                                onChange={(e) =>
+                                  setCargaDetalles(prev => ({
+                                    ...prev,
+                                    otro: { descripcion: e.target.value }
+                                  }))
+                                }
+                                placeholder="Ej. calentador eléctrico, refrigerador industrial"
+                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                style={{ outlineColor: '#3cd070' }}
+                              />
                             </div>
                           )}
                         </div>
