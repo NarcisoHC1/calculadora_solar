@@ -1128,6 +1128,7 @@ function App() {
       otro_carga_descripcion: otroDescripcion || undefined,
       otro_details: otroDescripcion || '',
       loads,
+      utms,
       has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
       tiene_recibo: hasCFE === 'si' ? (justMoved === 'si' || ocrResult?.ok === true) : false,
       plans_cfe: planCFE,
