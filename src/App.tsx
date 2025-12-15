@@ -867,7 +867,7 @@ function App() {
         stopOcrMessageLoop();
         stopOcrCountdown();
         setOcrMsg(
-          'No pudimos leer tu recibo con la nitidez suficiente (menos del 95%). Sube el PDF digital de CFE o ingresa tus datos manualmente.'
+          'No pudimos leer tu recibo con la nitidez suficiente (menos del 95%). Sube PDF digital, una imagen nítida de tu recibo o ingresa tus datos manualmente.'
         );
         setOcrResult(null);
         setOcrQuality(qualityScore);
