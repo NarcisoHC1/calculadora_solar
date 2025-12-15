@@ -926,12 +926,12 @@ function App() {
 
       const qualityScore = typeof result.quality === 'number' ? result.quality : null;
 
-      if (qualityScore !== null && qualityScore < 0.95) {
+      if (qualityScore !== null && qualityScore < 0.6) {
         setOcrStatus('fail');
         stopOcrMessageLoop();
         stopOcrCountdown();
         setOcrMsg(
-          'No pudimos leer tu recibo con la nitidez suficiente (menos del 95%). Sube PDF digital, una imagen nítida de tu recibo o ingresa tus datos manualmente.'
+          'No pudimos leer tu recibo con la nitidez suficiente (menos del 60%). Sube PDF digital, una imagen nítida de tu recibo o ingresa tus datos manualmente.'
         );
         setOcrResult(null);
         setOcrQuality(qualityScore);
@@ -1539,7 +1539,6 @@ function App() {
                       <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm text-green-800 font-semibold">Datos extraídos correctamente</p>
-                        {ocrQuality != null && ocrQuality < 1 && <p className="text-xs text-green-700">Calidad OCR: {(ocrQuality * 100).toFixed(0)}%</p>}
                       </div>
                     </div>
                   )}
