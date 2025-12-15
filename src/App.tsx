@@ -926,12 +926,12 @@ function App() {
 
       const qualityScore = typeof result.quality === 'number' ? result.quality : null;
 
-      if (qualityScore !== null && qualityScore < 0.95) {
+      if (qualityScore !== null && qualityScore < 0.6) {
         setOcrStatus('fail');
         stopOcrMessageLoop();
         stopOcrCountdown();
         setOcrMsg(
-          'No pudimos leer tu recibo con la nitidez suficiente (menos del 95%). Sube PDF digital, una imagen nítida de tu recibo o ingresa tus datos manualmente.'
+          'No pudimos leer tu recibo con la nitidez suficiente (menos del 60%). Sube PDF digital, una imagen nítida de tu recibo o ingresa tus datos manualmente.'
         );
         setOcrResult(null);
         setOcrQuality(qualityScore);
