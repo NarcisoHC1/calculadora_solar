@@ -830,9 +830,11 @@ function App() {
         normalized.Pago_MXN_Periodo ||
         normalized.Pago_MXN ||
         normalized.pago_mxn_periodo ||
+        normalized.total_pagar_mxn ||
         normalized.total_a_pagar_mxn ||
         normalized.total_factura_mxn ||
-        normalized.facturacion_total_mxn
+        normalized.facturacion_total_mxn ||
+        normalized.energia_mxn
       );
       const kwhPromValue = toNumberOrNull(prom.kWh_consumidos);
       const kwhActualValue = toNumberOrNull(
