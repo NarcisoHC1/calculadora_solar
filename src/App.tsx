@@ -591,6 +591,7 @@ function App() {
     minisplit?: { cantidad: string; horas: string };
     secadora?: { horas: string };
   }>({});
+  const [otroDetalle, setOtroDetalle] = useState('');
   const [tipoInmueble, setTipoInmueble] = useState('');
   const [urgenciaInstalacion, setUrgenciaInstalacion] = useState('');
   const [distanciaTechoTablero, setDistanciaTechoTablero] = useState('');
@@ -845,6 +846,7 @@ function App() {
       if (checked) {
         setCargas(['ninguna']);
         setCargaDetalles({});
+        setOtroDetalle('');
       } else {
         setCargas([]);
       }
@@ -865,6 +867,9 @@ function App() {
         if (carga === 'secadora') delete next.secadora;
         return next;
       });
+      if (carga === 'otro') {
+        setOtroDetalle('');
+      }
     }
   };
 
@@ -1014,6 +1019,7 @@ function App() {
       bomba: cargas.includes('bomba'),
       otro: cargas.includes('otro')
     };
+    const otherLoadDetail = cargas.includes('otro') ? otroDetalle.trim() : '';
     const bridge = (window as any).SYBridge;
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
@@ -1048,6 +1054,7 @@ function App() {
       numero_personas: usoCasaNegocio === 'casa' ? numPersonasCasa : '',
       rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
+      otro_details: otherLoadDetail,
       loads,
       has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
       tiene_recibo: hasCFE === 'si' ? (justMoved === 'si' || ocrResult?.ok === true) : false,
@@ -1881,6 +1888,21 @@ function App() {
                             />
                             <span className="text-sm text-slate-700 group-hover:text-slate-900 font-medium">{item.label}</span>
                           </label>
+
+                          {cargas.includes(item.value) && item.value === 'otro' && (
+                            <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                              <label className="block text-xs font-semibold text-slate-700">¿Qué aparato es?</label>
+                              <p className="text-xs text-slate-500">Escribe aquí el aparato que planeas instalar.</p>
+                              <input
+                                type="text"
+                                value={otroDetalle}
+                                onChange={(e) => setOtroDetalle(e.target.value)}
+                                placeholder="Ej. Boiler eléctrico"
+                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                style={{ outlineColor: '#3cd070' }}
+                              />
+                            </div>
+                          )}
 
                           {cargas.includes(item.value) && item.value === 'ev' && (
                             <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
