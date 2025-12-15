@@ -243,8 +243,7 @@ function ProposalCard({
     showDACWarning,
     dacBimonthlyPayment,
     dacFinancial,
-    extraLoadsSummary,
-    extraLoadsDetails
+    extraLoadsSummary
   } = data;
   const maxEquipmentWarranty = getMaxProductWarranty(components);
 
@@ -288,7 +287,7 @@ function ProposalCard({
       >
         <h3 className="text-2xl font-bold mb-6 print-compact-heading" style={{ color: '#1e3a2b' }}>{title}</h3>
 
-        <div className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200 print-compact-card">
+        <div className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200 print-compact-card flex flex-col gap-5 min-h-[260px]">
           <div className="flex items-center justify-center mb-4">
             <TrendingDown className="w-5 h-5" style={{ color: '#ff5c36' }} />
             <h4 className="text-base font-bold text-slate-900 ml-2">Tu Ahorro con SolarYa</h4>
@@ -312,21 +311,13 @@ function ProposalCard({
               {formatCurrency(financial.ahorroBimestral)}
             </p>
           </div>
-        </div>
 
-        {variantKey === 'futura' && (extraLoadsSummary || (extraLoadsDetails?.length ?? 0) > 0) && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 print-compact-card">
-            <p className="text-sm font-bold text-blue-900 mb-2">Cargas extra consideradas</p>
-            {extraLoadsSummary && <p className="text-sm text-blue-800">{extraLoadsSummary}</p>}
-            {extraLoadsDetails?.length ? (
-              <ul className="mt-2 text-sm text-blue-800 list-disc list-inside space-y-1">
-                {extraLoadsDetails.map(detail => (
-                  <li key={detail}>{detail}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        )}
+          {variantKey === 'futura' && extraLoadsSummary && (
+            <p className="text-[11px] leading-tight text-slate-500 mt-auto">
+              {extraLoadsSummary}
+            </p>
+          )}
+        </div>
 
         {showDACWarning && dacBimonthlyPayment !== undefined && dacFinancial && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 print-compact-card">

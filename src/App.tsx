@@ -690,40 +690,55 @@ function App() {
     if (!filtered.length) return null;
 
     const detailLines: string[] = [];
+    const summaryLabels: string[] = [];
+
     if (filtered.includes('ev')) {
       const modelo = detalles.ev?.modelo?.trim();
       const km = detalles.ev?.km?.trim();
       const suffix = [modelo, km ? `${km} km/semana` : ''].filter(Boolean).join(' · ');
       detailLines.push(`Cargador de auto eléctrico${suffix ? ` (${suffix})` : ''}`);
+      summaryLabels.push('Cargador de auto eléctrico');
     }
 
     if (filtered.includes('minisplit')) {
       const cantidad = detalles.minisplit?.cantidad?.trim();
       const horas = detalles.minisplit?.horas?.trim();
-      const suffix = [cantidad ? `${cantidad} minisplits` : 'Minisplit', horas ? `${horas} h/día` : ''].filter(Boolean).join(
-        ' · '
-      );
+      const suffix = [cantidad ? `${cantidad} minisplits` : 'Minisplit', horas ? `${horas} h/día` : '']
+        .filter(Boolean)
+        .join(' · ');
       detailLines.push(suffix || 'Minisplit');
+      summaryLabels.push('Minisplit');
     }
 
     if (filtered.includes('secadora')) {
       const horas = detalles.secadora?.horas?.trim();
-      detailLines.push(`Secadora${horas ? ` (${horas} h/semana)` : ''}`);
+      const detail = `Secadora${horas ? ` (${horas} h/semana)` : ''}`;
+      detailLines.push(detail);
+      summaryLabels.push('Secadora');
     }
 
     if (filtered.includes('bomba')) {
       detailLines.push('Bomba de agua');
+      summaryLabels.push('Bomba de agua');
     }
 
     if (filtered.includes('otro')) {
       const otroDetalle = otroText?.trim();
-      detailLines.push(`Otro: ${otroDetalle || 'carga adicional'}`);
+      const otroDisplay = otroDetalle || 'carga adicional';
+      detailLines.push(`Otro: ${otroDisplay}`);
+      summaryLabels.push(otroDisplay);
     }
 
-    if (!detailLines.length) return null;
+    if (!detailLines.length || !summaryLabels.length) return null;
+
+    const formatList = (items: string[]): string => {
+      if (items.length === 1) return items[0];
+      if (items.length === 2) return `${items[0]} y ${items[1]}`;
+      return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
+    };
 
     return {
-      summary: `Incluimos estas cargas extra en tu propuesta futura: ${detailLines.join(' · ')}`,
+      summary: `Cargas futuras consideradas: ${formatList(summaryLabels)}.`,
       details: detailLines
     };
   };
