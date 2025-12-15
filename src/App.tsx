@@ -1576,11 +1576,13 @@ function App() {
                     </div>
                   )}
 
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
-                    <p className="text-sm text-slate-700">
-                      <strong>Tip:</strong> Sube ambas páginas (frente y reverso) para mayor precisión.
-                    </p>
-                  </div>
+                  {ocrStatus !== 'ok' && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4">
+                      <p className="text-sm text-slate-700">
+                        <strong>Tip:</strong> Sube ambas páginas (frente y reverso) para mayor precisión.
+                      </p>
+                    </div>
+                  )}
 
                   {ocrStatus !== 'ok' && (
                     <>
