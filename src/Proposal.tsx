@@ -234,7 +234,17 @@ function ProposalCard({
   variantKey?: 'actual' | 'futura';
   forcePdfOpen?: boolean;
 }) {
-  const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
+  const {
+    system,
+    financial,
+    environmental,
+    components,
+    porcentajeCobertura,
+    showDACWarning,
+    dacBimonthlyPayment,
+    dacFinancial,
+    extraLoadsSummary
+  } = data;
   const maxEquipmentWarranty = getMaxProductWarranty(components);
 
   const panelComponent = components.find(
@@ -277,7 +287,9 @@ function ProposalCard({
       >
         <h3 className="text-2xl font-bold mb-6 print-compact-heading" style={{ color: '#1e3a2b' }}>{title}</h3>
 
-        <div className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200 print-compact-card">
+        <div
+          className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200 print-compact-card flex flex-col gap-5 min-h-[280px] h-full justify-between"
+        >
           <div className="flex items-center justify-center mb-4">
             <TrendingDown className="w-5 h-5" style={{ color: '#ff5c36' }} />
             <h4 className="text-base font-bold text-slate-900 ml-2">Tu Ahorro con SolarYa</h4>
@@ -301,6 +313,16 @@ function ProposalCard({
               {formatCurrency(financial.ahorroBimestral)}
             </p>
           </div>
+
+          {variantKey === 'futura' && extraLoadsSummary ? (
+            <p className="text-[11px] leading-tight text-slate-500 mt-auto">
+              {extraLoadsSummary}
+            </p>
+          ) : (
+            <p className="text-[11px] leading-tight text-slate-500 mt-auto invisible select-none" aria-hidden="true">
+              Cargas futuras consideradas.
+            </p>
+          )}
         </div>
 
         {showDACWarning && dacBimonthlyPayment !== undefined && dacFinancial && (
@@ -1363,32 +1385,37 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
         }
       `}</style>
         <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
-          <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
-            <button
-              onClick={handleGenerateReferral}
-              className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
-              aria-label="Referir a un amigo"
-              title="Referir a un amigo"
-            >
-              <Share2 className="w-6 h-6 text-white" />
-            </button>
-            <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={handleDownloadPDF}
-                disabled={isDownloading}
-                className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
-                  isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
-                }`}
-                aria-label="Descargar PDF"
-                aria-busy={isDownloading}
-              >
-                {isDownloading ? (
-                  <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
-                ) : (
-                  <Download className="w-6 h-6 text-slate-700" />
-                )}
-              </button>
-              <p className="text-[11px] text-slate-600 font-semibold">Descargar PDF</p>
+          <div className="fixed top-6 right-6 z-50 flex items-start gap-3 no-print">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloading}
+                  className={`w-12 h-12 bg-white rounded-full shadow-lg border border-slate-300 flex items-center justify-center transition-all ${
+                    isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-100'
+                  }`}
+                  aria-label="Descargar PDF"
+                  aria-busy={isDownloading}
+                >
+                  {isDownloading ? (
+                    <Loader2 className="w-6 h-6 text-slate-700 animate-spin" />
+                  ) : (
+                    <Download className="w-6 h-6 text-slate-700" />
+                  )}
+                </button>
+                <p className="text-[11px] text-slate-600 font-semibold">Descargar PDF</p>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  onClick={handleGenerateReferral}
+                  className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
+                  aria-label="Referir a un amigo"
+                  title="Referir a un amigo"
+                >
+                  <Share2 className="w-6 h-6 text-white" />
+                </button>
+                <p className="text-[11px] text-slate-600 font-semibold">Compartir</p>
+              </div>
             </div>
             <button
               onClick={onClose}
