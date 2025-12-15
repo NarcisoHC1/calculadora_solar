@@ -239,6 +239,9 @@ export async function handler(event) {
       horas_secadora: Number(body.loads?.secadora?.horas || 0),
       bomba_agua: body.loads?.bomba === true,
       otro: body.loads?.otro === true,
+      otro_details: typeof body.otro_details === "string"
+        ? body.otro_details
+        : (typeof body.otro_carga_descripcion === "string" ? body.otro_carga_descripcion : ""),
       texto_libre: body.notes || "",
       ref: body.utms?.ref || "",
       utm_source: body.utms?.utm_source || "",
