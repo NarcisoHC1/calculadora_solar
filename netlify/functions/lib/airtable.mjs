@@ -165,6 +165,7 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.horas_secadora) fields["Horas_secadora"] = data.horas_secadora;
   if (data.bomba_agua !== undefined) fields["Bomba_agua"] = data.bomba_agua ? "sí" : "no";
   if (data.otro !== undefined) fields["Otro"] = data.otro ? "sí" : "no";
+  if (data.otro_details !== undefined) fields["otro_details"] = data.otro_details || "";
 
   // Notes
   if (data.texto_libre) fields["Texto_Libre"] = data.texto_libre;

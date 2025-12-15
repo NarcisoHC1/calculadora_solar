@@ -5,6 +5,7 @@
 
 [functions]
   node_bundler = "esbuild"
+  external_node_modules = ["chromium-bidi"]
 
 [functions."proposal_pdf"]
   timeout = 26

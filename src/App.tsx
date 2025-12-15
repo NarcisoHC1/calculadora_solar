@@ -583,6 +583,11 @@ function App() {
   const [expand, setExpand] = useState('');
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [ocrPagoPromedio, setOcrPagoPromedio] = useState<number | null>(null);
+  const [ocrPagoActual, setOcrPagoActual] = useState<number | null>(null);
+  const [ocrKwhPromedio, setOcrKwhPromedio] = useState<number | null>(null);
+  const [ocrKwhActual, setOcrKwhActual] = useState<number | null>(null);
+  const [ocrSelectedKwh, setOcrSelectedKwh] = useState<number | null>(null);
 
   // Step 2 fields
   const [cargas, setCargas] = useState<string[]>([]);
@@ -591,6 +596,7 @@ function App() {
     minisplit?: { cantidad: string; horas: string };
     secadora?: { horas: string };
   }>({});
+  const [otroDetalle, setOtroDetalle] = useState('');
   const [tipoInmueble, setTipoInmueble] = useState('');
   const [urgenciaInstalacion, setUrgenciaInstalacion] = useState('');
   const [distanciaTechoTablero, setDistanciaTechoTablero] = useState('');
@@ -666,6 +672,49 @@ function App() {
       img.src = dataUrl;
     });
   }
+
+  const toNumberOrNull = (value: any): number | null => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const selectOcrPaymentAndKwh = (
+    pagoPromedio: number | null,
+    pagoActual: number | null,
+    kwhPromedio: number | null,
+    kwhActual: number | null,
+    effectiveThreshold: number
+  ) => {
+    const promAbove = pagoPromedio != null && pagoPromedio >= effectiveThreshold;
+    const actualAbove = pagoActual != null && pagoActual >= effectiveThreshold;
+
+    let selectedPayment: number | null = pagoPromedio ?? pagoActual ?? null;
+    let selectedKwh: number | null = kwhPromedio ?? kwhActual ?? null;
+
+    if (promAbove && actualAbove) {
+      selectedPayment = pagoPromedio ?? pagoActual ?? null;
+      selectedKwh = kwhPromedio ?? kwhActual ?? null;
+    } else if (promAbove) {
+      selectedPayment = pagoPromedio;
+      selectedKwh = kwhPromedio ?? kwhActual ?? null;
+    } else if (actualAbove) {
+      selectedPayment = pagoActual;
+      selectedKwh = kwhActual ?? kwhPromedio ?? null;
+    } else {
+      const fallbackFromPromedio = pagoPromedio ?? pagoActual ?? null;
+      const fallbackFromActual = pagoActual ?? pagoPromedio ?? null;
+      const chosenFallback = fallbackFromPromedio ?? fallbackFromActual;
+      selectedPayment = chosenFallback;
+
+      if (chosenFallback === pagoActual) {
+        selectedKwh = kwhActual ?? kwhPromedio ?? null;
+      } else {
+        selectedKwh = kwhPromedio ?? kwhActual ?? null;
+      }
+    }
+
+    return { selectedPayment, selectedKwh, anyAboveThreshold: promAbove || actualAbove };
+  };
 
   // --------- OCR ----------
   const stopOcrMessageLoop = () => {
@@ -774,6 +823,26 @@ function App() {
       const cpOCR = result.form_overrides?.cp || '';
       const periodicidadOCR = normalized.Periodicidad || '';
       const pagoProm = prom.Pago_Prom_MXN_Periodo;
+      const pagoPromValue = toNumberOrNull(pagoProm);
+      const pagoActualValue = toNumberOrNull(
+        normalized.Pago_Actual_MXN_Periodo ||
+        normalized.pago_actual_mxn_periodo ||
+        normalized.Pago_MXN_Periodo ||
+        normalized.Pago_MXN ||
+        normalized.pago_mxn_periodo ||
+        normalized.total_pagar_mxn ||
+        normalized.total_a_pagar_mxn ||
+        normalized.total_factura_mxn ||
+        normalized.facturacion_total_mxn ||
+        normalized.energia_mxn
+      );
+      const kwhPromValue = toNumberOrNull(prom.kWh_consumidos);
+      const kwhActualValue = toNumberOrNull(
+        normalized.energia_periodo_kwh ||
+        normalized.kwh_consumidos ||
+        normalized.kWh_consumidos ||
+        normalized.kwhPeriodo
+      );
       const estadoOCR = normalized.Estado || '';
 
       setOcrStatus('ok');
@@ -783,11 +852,32 @@ function App() {
       setOcrQuality(typeof result.quality === 'number' ? result.quality : null);
       setOcrImage(compressed || null);
 
+      setOcrPagoPromedio(pagoPromValue);
+      setOcrPagoActual(pagoActualValue);
+      setOcrKwhPromedio(kwhPromValue);
+      setOcrKwhActual(kwhActualValue);
+
+      const stateForThreshold = estadoOCR || estado || '';
+      const periodicidadForThreshold = periodicidadOCR || periodo;
+      const minThreshold = stateForThreshold ? getMinStateThreshold(stateForThreshold) : 14000;
+      const effectiveThreshold = periodicidadForThreshold === 'mensual' ? minThreshold / 2 : minThreshold;
+      const { selectedPayment, selectedKwh } = selectOcrPaymentAndKwh(
+        pagoPromValue,
+        pagoActualValue,
+        kwhPromValue,
+        kwhActualValue,
+        effectiveThreshold
+      );
+
+      if (selectedPayment != null && !Number.isNaN(selectedPayment)) {
+        setPago(String(Math.round(selectedPayment)));
+      }
+      setOcrSelectedKwh(selectedKwh);
+
       if (tarifaOCR) setTarifa(tarifaOCR);
       if (cpOCR) setCP(cpOCR);
       if (periodicidadOCR) setPeriodo(periodicidadOCR);
       if (estadoOCR) setEstado(estadoOCR);
-      if (pagoProm != null && !Number.isNaN(Number(pagoProm))) setPago(String(Math.round(Number(pagoProm))));
 
       setHasCFE('si');
       setJustMoved('si');
@@ -825,6 +915,11 @@ function App() {
       setOcrResult(null);
       setOcrQuality(null);
       setOcrImage(null);
+      setOcrPagoPromedio(null);
+      setOcrPagoActual(null);
+      setOcrKwhPromedio(null);
+      setOcrKwhActual(null);
+      setOcrSelectedKwh(null);
     }
   };
 
@@ -838,13 +933,45 @@ function App() {
     setOcrResult(null);
     setOcrQuality(null);
     setOcrImage(null);
+    setOcrPagoPromedio(null);
+    setOcrPagoActual(null);
+    setOcrKwhPromedio(null);
+    setOcrKwhActual(null);
+    setOcrSelectedKwh(null);
   };
+
+  useEffect(() => {
+    if (!ocrResult?.ok) return;
+    if (ocrPagoPromedio == null && ocrPagoActual == null) return;
+
+    const stateForThreshold = estado || ocrResult?.data?.Estado || '';
+    const minThreshold = stateForThreshold ? getMinStateThreshold(stateForThreshold) : 14000;
+    const effectiveThreshold = periodo === 'mensual' ? minThreshold / 2 : minThreshold;
+
+    const { selectedPayment, selectedKwh } = selectOcrPaymentAndKwh(
+      ocrPagoPromedio,
+      ocrPagoActual,
+      ocrKwhPromedio,
+      ocrKwhActual,
+      effectiveThreshold
+    );
+
+    if (selectedPayment != null && !Number.isNaN(selectedPayment)) {
+      setPago(prev => {
+        const rounded = String(Math.round(selectedPayment));
+        return prev === rounded ? prev : rounded;
+      });
+    }
+
+    setOcrSelectedKwh(selectedKwh);
+  }, [ocrResult, ocrPagoPromedio, ocrPagoActual, ocrKwhPromedio, ocrKwhActual, periodo, estado]);
 
   const handleCargaToggle = (carga: string, checked: boolean) => {
     if (carga === 'ninguna') {
       if (checked) {
         setCargas(['ninguna']);
         setCargaDetalles({});
+        setOtroDetalle('');
       } else {
         setCargas([]);
       }
@@ -865,6 +992,9 @@ function App() {
         if (carga === 'secadora') delete next.secadora;
         return next;
       });
+      if (carga === 'otro') {
+        setOtroDetalle('');
+      }
     }
   };
 
@@ -1014,6 +1144,7 @@ function App() {
       bomba: cargas.includes('bomba'),
       otro: cargas.includes('otro')
     };
+    const otherLoadDetail = cargas.includes('otro') ? otroDetalle.trim() : '';
     const bridge = (window as any).SYBridge;
     const utms = (bridge?.getParentUtms?.() || {}) as any;
     const req_id = (crypto as any)?.randomUUID ? (crypto as any).randomUUID() : String(Date.now());
@@ -1038,8 +1169,10 @@ function App() {
       municipio: estado || ocrResult?.data?.Estado || '',
       tarifa: tarifa || (ocrResult?.data?.Tarifa || ocrResult?.data?.tarifa || ocrResult?.form_overrides?.tarifa || ''),
       kwh_consumidos:
-        ocrResult?.data?.historicals_promedios?.kWh_consumidos ||
-        ocrResult?.data?.kWh_consumidos ||
+        ocrSelectedKwh ??
+        ocrResult?.data?.historicals_promedios?.kWh_consumidos ??
+        ocrResult?.data?.kWh_consumidos ??
+        ocrResult?.data?.energia_periodo_kwh ??
         null,
       tipo_inmueble: tipoInmueble || '',
       urgencia: urgenciaInstalacion || '',
@@ -1048,6 +1181,7 @@ function App() {
       numero_personas: usoCasaNegocio === 'casa' ? numPersonasCasa : '',
       rango_personas_negocio: usoCasaNegocio === 'negocio' ? rangoPersonasNegocio : '',
       notes: notas || '',
+      otro_details: otherLoadDetail,
       loads,
       has_cfe: hasCFE === 'si' ? true : hasCFE === 'no' ? false : undefined,
       tiene_recibo: hasCFE === 'si' ? (justMoved === 'si' || ocrResult?.ok === true) : false,
@@ -1881,6 +2015,21 @@ function App() {
                             />
                             <span className="text-sm text-slate-700 group-hover:text-slate-900 font-medium">{item.label}</span>
                           </label>
+
+                          {cargas.includes(item.value) && item.value === 'otro' && (
+                            <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                              <label className="block text-xs font-semibold text-slate-700">¿Qué aparato es?</label>
+                              <p className="text-xs text-slate-500">Escribe aquí el aparato que planeas instalar.</p>
+                              <input
+                                type="text"
+                                value={otroDetalle}
+                                onChange={(e) => setOtroDetalle(e.target.value)}
+                                placeholder="Ej. Boiler eléctrico"
+                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2"
+                                style={{ outlineColor: '#3cd070' }}
+                              />
+                            </div>
+                          )}
 
                           {cargas.includes(item.value) && item.value === 'ev' && (
                             <div className="ml-8 mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">

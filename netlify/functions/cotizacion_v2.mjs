@@ -86,11 +86,16 @@ export async function handler(event) {
     const numeroPersonasRaw = body.numero_personas;
 
     // Generar propuesta completa usando el nuevo motor
-    const kwhFromOCR = parseNumberInput(
+    const selectedKwh = parseNumberInput(
       body.kwh_consumidos ??
       ocrPromedios.kWh_consumidos ??
       ocrData.kwh_consumidos ??
       ocrData.energia_periodo_kwh
+    );
+    const selectedPagoPromedio = parseNumberInput(
+      body.pago_promedio_mxn ??
+      ocrPromedios.Pago_Prom_MXN_Periodo ??
+      null
     );
 
     const formDataForEngine = {
@@ -99,10 +104,10 @@ export async function handler(event) {
       municipio: body.municipio || "Ciudad de México",
       has_cfe: body.has_cfe,
       tiene_recibo: body.has_cfe === true && body.tiene_recibo === true,
-      pago_promedio: parseNumberInput(body.pago_promedio_mxn ?? ocrPromedios.Pago_Prom_MXN_Periodo ?? null) ?? 0,
+      pago_promedio: selectedPagoPromedio ?? 0,
       periodicidad,
       tarifa: body.tarifa || ocrData.Tarifa || "",
-      kwh_consumidos: kwhFromOCR,
+      kwh_consumidos: selectedKwh,
 
       // Property
       uso: usoNormalized || "Casa",
@@ -194,6 +199,12 @@ export async function handler(event) {
     const tarifaResidencial = /^(1[A-F]?|DAC)$/i.test(tarifaParaCalculos);
 
     // Preparar datos para Submission_Details
+    const pagoPromedioParaGuardar =
+      selectedPagoPromedio ??
+      proposal.pago_promedio ??
+      (body.pago_promedio_mxn ? Number(body.pago_promedio_mxn) : null);
+    const kwhBaseParaGuardar = selectedKwh ?? proposal.kwh_consumidos ?? null;
+
     const submissionData = {
       ocr_manual: ocrResult ? "OCR" : "manual",
       ocr_json: ocrResult ? JSON.stringify(ocrResult) : null,
@@ -208,14 +219,14 @@ export async function handler(event) {
       Numero_Servicio_CFE: ocrData.Numero_Servicio_CFE || ocrResult?.no_servicio || "",
       Numero_Medidor_CFE: ocrData.Numero_Medidor_CFE || ocrResult?.no_medidor || "",
       Fases: ocrData.Fases,
-      pago_promedio: proposal.pago_promedio || Number(body.pago_promedio_mxn || 0),
-      Pago_Prom_MXN_Periodo: ocrPromedios.Pago_Prom_MXN_Periodo ?? proposal.pago_promedio ?? Number(body.pago_promedio_mxn || 0),
+      pago_promedio: pagoPromedioParaGuardar ?? 0,
+      Pago_Prom_MXN_Periodo: pagoPromedioParaGuardar,
       periodicidad,
       Periodicidad: ocrData.Periodicidad || periodicidad,
       tarifa: tarifaParaCalculos || proposal.tarifa || ocrData.Tarifa || body.tarifa || "",
       Tarifa: tarifaParaCalculos || ocrData.Tarifa || proposal.tarifa || body.tarifa || "",
-      kwh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
-      kWh_consumidos: ocrPromedios.kWh_consumidos ?? proposal.kwh_consumidos,
+      kwh_consumidos: kwhBaseParaGuardar,
+      kWh_consumidos: kwhBaseParaGuardar,
       kwh_consumidos_y_cargas_extra: proposal.kwh_consumidos_y_cargas_extra,
       pago_hipotetico_cargas_extra: proposal.pago_hipotetico_cargas_extra,
       pago_dac_hipotetico_consumo_actual: tarifaResidencial ? pagoDACActual : null,
@@ -239,6 +250,7 @@ export async function handler(event) {
       horas_secadora: Number(body.loads?.secadora?.horas || 0),
       bomba_agua: body.loads?.bomba === true,
       otro: body.loads?.otro === true,
+      otro_details: body.otro_details || "",
       texto_libre: body.notes || "",
       ref: body.utms?.ref || "",
       utm_source: body.utms?.utm_source || "",
