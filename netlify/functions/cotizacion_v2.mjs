@@ -199,7 +199,10 @@ export async function handler(event) {
     const tarifaResidencial = /^(1[A-F]?|DAC)$/i.test(tarifaParaCalculos);
 
     // Preparar datos para Submission_Details
-    const pagoPromedioParaGuardar = selectedPagoPromedio ?? proposal.pago_promedio ?? Number(body.pago_promedio_mxn || 0) || null;
+    const pagoPromedioParaGuardar =
+      selectedPagoPromedio ??
+      proposal.pago_promedio ??
+      (body.pago_promedio_mxn ? Number(body.pago_promedio_mxn) : null);
     const kwhBaseParaGuardar = selectedKwh ?? proposal.kwh_consumidos ?? null;
 
     const submissionData = {
