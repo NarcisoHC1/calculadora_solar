@@ -116,6 +116,8 @@ export interface ProposalData {
   showDACWarning?: boolean;
   dacBimonthlyPayment?: number;
   dacFinancial?: FinancialBreakdown;
+  extraLoadsSummary?: string;
+  extraLoadsDetails?: string[];
 }
 
 export interface DualProposal {

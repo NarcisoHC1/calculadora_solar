@@ -69,6 +69,12 @@ type BackendProposalEnvelope = {
   kwh_consumidos_y_cargas_extra?: number | null;
 };
 
+type CargaDetalles = {
+  ev?: { modelo: string; km: string };
+  minisplit?: { cantidad: string; horas: string };
+  secadora?: { horas: string };
+};
+
 function pickValue<T>(...values: (T | null | undefined | '')[]): T | undefined {
   const found = values.find(v => v !== undefined && v !== null && v !== '');
   return found === '' ? undefined : (found as T | undefined);
@@ -592,11 +598,7 @@ function App() {
 
   // Step 2 fields
   const [cargas, setCargas] = useState<string[]>([]);
-  const [cargaDetalles, setCargaDetalles] = useState<{
-    ev?: { modelo: string; km: string };
-    minisplit?: { cantidad: string; horas: string };
-    secadora?: { horas: string };
-  }>({});
+  const [cargaDetalles, setCargaDetalles] = useState<CargaDetalles>({});
   const [otroDetalle, setOtroDetalle] = useState('');
   const [tipoInmueble, setTipoInmueble] = useState('');
   const [urgenciaInstalacion, setUrgenciaInstalacion] = useState('');
@@ -677,6 +679,53 @@ function App() {
   const toNumberOrNull = (value: any): number | null => {
     const num = Number(value);
     return Number.isFinite(num) ? num : null;
+  };
+
+  const buildExtraLoadsSummary = (
+    selectedLoads: string[],
+    detalles: CargaDetalles,
+    otroText: string
+  ): { summary: string; details: string[] } | null => {
+    const filtered = selectedLoads.filter(load => load && load !== 'ninguna');
+    if (!filtered.length) return null;
+
+    const detailLines: string[] = [];
+    if (filtered.includes('ev')) {
+      const modelo = detalles.ev?.modelo?.trim();
+      const km = detalles.ev?.km?.trim();
+      const suffix = [modelo, km ? `${km} km/semana` : ''].filter(Boolean).join(' · ');
+      detailLines.push(`Cargador de auto eléctrico${suffix ? ` (${suffix})` : ''}`);
+    }
+
+    if (filtered.includes('minisplit')) {
+      const cantidad = detalles.minisplit?.cantidad?.trim();
+      const horas = detalles.minisplit?.horas?.trim();
+      const suffix = [cantidad ? `${cantidad} minisplits` : 'Minisplit', horas ? `${horas} h/día` : ''].filter(Boolean).join(
+        ' · '
+      );
+      detailLines.push(suffix || 'Minisplit');
+    }
+
+    if (filtered.includes('secadora')) {
+      const horas = detalles.secadora?.horas?.trim();
+      detailLines.push(`Secadora${horas ? ` (${horas} h/semana)` : ''}`);
+    }
+
+    if (filtered.includes('bomba')) {
+      detailLines.push('Bomba de agua');
+    }
+
+    if (filtered.includes('otro')) {
+      const otroDetalle = otroText?.trim();
+      detailLines.push(`Otro: ${otroDetalle || 'carga adicional'}`);
+    }
+
+    if (!detailLines.length) return null;
+
+    return {
+      summary: `Incluimos estas cargas extra en tu propuesta futura: ${detailLines.join(' · ')}`,
+      details: detailLines
+    };
   };
 
   const selectOcrPaymentAndKwh = (
@@ -1298,7 +1347,18 @@ function App() {
         throw new Error('La propuesta debe generarse en backend (sin cálculos locales)');
       }
 
-      const proposal = proposalFromBackend;
+      const extraLoadsInfo = buildExtraLoadsSummary(cargas, cargaDetalles, otroDetalle);
+      const proposal: Proposal =
+        proposalFromBackend.future && extraLoadsInfo
+          ? {
+              ...proposalFromBackend,
+              future: {
+                ...proposalFromBackend.future,
+                extraLoadsSummary: extraLoadsInfo.summary,
+                extraLoadsDetails: extraLoadsInfo.details
+              }
+            }
+          : proposalFromBackend;
 
       hideLoading();
       bridge?.gtm?.('cotizador_v2_auto', { pid: req_id });

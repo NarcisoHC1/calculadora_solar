@@ -234,7 +234,18 @@ function ProposalCard({
   variantKey?: 'actual' | 'futura';
   forcePdfOpen?: boolean;
 }) {
-  const { system, financial, environmental, components, porcentajeCobertura, showDACWarning, dacBimonthlyPayment, dacFinancial } = data;
+  const {
+    system,
+    financial,
+    environmental,
+    components,
+    porcentajeCobertura,
+    showDACWarning,
+    dacBimonthlyPayment,
+    dacFinancial,
+    extraLoadsSummary,
+    extraLoadsDetails
+  } = data;
   const maxEquipmentWarranty = getMaxProductWarranty(components);
 
   const panelComponent = components.find(
@@ -302,6 +313,20 @@ function ProposalCard({
             </p>
           </div>
         </div>
+
+        {variantKey === 'futura' && (extraLoadsSummary || (extraLoadsDetails?.length ?? 0) > 0) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 print-compact-card">
+            <p className="text-sm font-bold text-blue-900 mb-2">Cargas extra consideradas</p>
+            {extraLoadsSummary && <p className="text-sm text-blue-800">{extraLoadsSummary}</p>}
+            {extraLoadsDetails?.length ? (
+              <ul className="mt-2 text-sm text-blue-800 list-disc list-inside space-y-1">
+                {extraLoadsDetails.map(detail => (
+                  <li key={detail}>{detail}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        )}
 
         {showDACWarning && dacBimonthlyPayment !== undefined && dacFinancial && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 print-compact-card">
@@ -1364,14 +1389,17 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
       `}</style>
         <div className="min-h-screen bg-slate-50 py-8 px-4 relative proposal-scroll">
           <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
-            <button
-              onClick={handleGenerateReferral}
-              className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
-              aria-label="Referir a un amigo"
-              title="Referir a un amigo"
-            >
-              <Share2 className="w-6 h-6 text-white" />
-            </button>
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={handleGenerateReferral}
+                className="w-12 h-12 bg-green-500 rounded-full shadow-lg border border-green-600 flex items-center justify-center hover:bg-green-600 transition-all"
+                aria-label="Referir a un amigo"
+                title="Referir a un amigo"
+              >
+                <Share2 className="w-6 h-6 text-white" />
+              </button>
+              <p className="text-[11px] text-slate-600 font-semibold">Compartir propuesta</p>
+            </div>
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={handleDownloadPDF}
