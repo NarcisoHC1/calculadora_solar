@@ -155,6 +155,7 @@ export async function createSubmissionDetails({ projectId, data }) {
   if (data.tipo_inmueble) fields["Tipo_Inmueble"] = data.tipo_inmueble;
   const metrosDistancia = asNumber(data.metros_distancia);
   if (metrosDistancia !== null) fields["Metros_distancia"] = metrosDistancia;
+  if (data.Urgencia || data.urgencia) fields["Urgencia"] = data.Urgencia || data.urgencia;
 
   // Loads
   if (data.modelo_ev) fields["Modelo_EV"] = data.modelo_ev;

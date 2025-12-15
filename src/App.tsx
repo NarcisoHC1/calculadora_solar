@@ -592,6 +592,7 @@ function App() {
     secadora?: { horas: string };
   }>({});
   const [tipoInmueble, setTipoInmueble] = useState('');
+  const [urgenciaInstalacion, setUrgenciaInstalacion] = useState('');
   const [distanciaTechoTablero, setDistanciaTechoTablero] = useState('');
   const [pisos, setPisos] = useState('');
   const [notas, setNotas] = useState('');
@@ -919,6 +920,7 @@ function App() {
   const canProceedStep2 = () => {
     if (cargas.length === 0) return false;
     if (!tipoInmueble) return false;
+    if (!urgenciaInstalacion) return false;
     if (['2', '4', '5', '8', '9'].includes(tipoInmueble) && !pisos) return false;
     if (['3', '6', '7'].includes(tipoInmueble) && !distanciaTechoTablero) return false;
     if (showError && cargas.includes('ninguna')) return false;
@@ -1040,6 +1042,7 @@ function App() {
         ocrResult?.data?.kWh_consumidos ||
         null,
       tipo_inmueble: tipoInmueble || '',
+      urgencia: urgenciaInstalacion || '',
       pisos: parseInt(pisos || '0', 10) || 0,
       distancia_techo_tablero: parseInt(distanciaTechoTablero || '0', 10) || 0,
       numero_personas: usoCasaNegocio === 'casa' ? numPersonasCasa : '',
@@ -2038,6 +2041,30 @@ function App() {
                         <option value="6">Conjunto habitacional horizontal / condominio horizontal</option>
                         <option value="7">Nave industrial / bodega</option>
                         <option value="8">Edificios enteros (hoteles, oficinas, públicos)</option>
+                      </select>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        ¿En cuánto tiempo planeas instalar tu sistema?
+                      </label>
+                      <select
+                        value={urgenciaInstalacion}
+                        onChange={(e) => setUrgenciaInstalacion(e.target.value)}
+                        className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 transition-all appearance-none bg-white cursor-pointer"
+                        style={{
+                          outlineColor: '#3cd070',
+                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
+                      >
+                        <option value="">Selecciona una opción</option>
+                        <option value="cuanto_antes">Cuanto antes</option>
+                        <option value="1_2_meses">En 1-2 meses</option>
+                        <option value="6_meses">Dentro de los siguientes 6 meses</option>
+                        <option value="12_meses">Dentro de los siguientes 12 meses</option>
                       </select>
                     </div>
 

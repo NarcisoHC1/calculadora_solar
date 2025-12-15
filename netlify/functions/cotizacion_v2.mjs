@@ -228,6 +228,7 @@ export async function handler(event) {
           ? String(numeroPersonasRaw)
           : ""),
       rango_personas_negocio: body.rango_personas_negocio || "",
+      Urgencia: body.urgencia || "",
       ya_tiene_fv: yaTieneFV,
       tipo_inmueble: tipoInmuebleMapped,
       metros_distancia: metrosDistancia,
