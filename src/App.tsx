@@ -560,11 +560,12 @@ function App() {
   // OCR state
   const [ocrStatus, setOcrStatus] = useState<'idle' | 'uploading' | 'analyzing' | 'extracting' | 'ok' | 'fail'>('idle');
   const [ocrMsg, setOcrMsg] = useState('');
-  const [ocrMsgIndex, setOcrMsgIndex] = useState(0);
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [ocrQuality, setOcrQuality] = useState<number | null>(null);
   const [ocrImage, setOcrImage] = useState<string | null>(null);
   const ocrMsgIntervalRef = useRef<number | null>(null);
+  const [ocrCountdown, setOcrCountdown] = useState<number | null>(null);
+  const ocrCountdownRef = useRef<number | null>(null);
 
   // Step 1 - manual capture toggles and fields
   const [showManual, setShowManual] = useState(false);
@@ -722,7 +723,6 @@ function App() {
       clearInterval(ocrMsgIntervalRef.current);
       ocrMsgIntervalRef.current = null;
     }
-    setOcrMsgIndex(0);
   };
 
   const startOcrMessageLoop = (messages: string[], delay = 1600) => {
@@ -730,29 +730,72 @@ function App() {
     if (!messages.length) return;
 
     let idx = 0;
-    let dotIdx = 0;
     setOcrMsg(messages[idx]);
-    setOcrMsgIndex(dotIdx);
 
     if (messages.length === 1) return;
 
     ocrMsgIntervalRef.current = window.setInterval(() => {
       idx = (idx + 1) % messages.length;
-      dotIdx = (dotIdx + 1) % 3;
       setOcrMsg(messages[idx]);
-      setOcrMsgIndex(dotIdx);
     }, delay);
   };
 
+  const stopOcrCountdown = () => {
+    if (ocrCountdownRef.current != null) {
+      clearInterval(ocrCountdownRef.current);
+      ocrCountdownRef.current = null;
+    }
+    setOcrCountdown(null);
+  };
+
+  const startOcrCountdown = (seconds = 130) => {
+    stopOcrCountdown();
+    setOcrCountdown(seconds);
+
+    ocrCountdownRef.current = window.setInterval(() => {
+      setOcrCountdown(prev => {
+        if (prev == null) return prev;
+        if (prev <= 1) {
+          if (ocrCountdownRef.current != null) {
+            clearInterval(ocrCountdownRef.current);
+            ocrCountdownRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const formatOcrCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, '0');
+    const secs = Math.floor(seconds % 60)
+      .toString()
+      .padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
   useEffect(() => {
-    return () => stopOcrMessageLoop();
+    return () => {
+      stopOcrMessageLoop();
+      stopOcrCountdown();
+    };
   }, []);
+
+  useEffect(() => {
+    if (ocrStatus !== 'uploading' && ocrStatus !== 'analyzing' && ocrStatus !== 'extracting') {
+      stopOcrCountdown();
+    }
+  }, [ocrStatus]);
 
   async function runOCR(selectedFiles: File[]) {
     try {
       stopOcrMessageLoop();
       setOcrStatus('uploading');
       startOcrMessageLoop(['Subiendo archivos…', 'Preparando imágenes…']);
+      startOcrCountdown(130);
 
       const limitedFiles = selectedFiles.slice(0, 2);
       const firstDataUrl = limitedFiles[0] ? await fileToDataUrl(limitedFiles[0]) : null;
@@ -809,6 +852,7 @@ function App() {
 
         setOcrStatus('fail');
         stopOcrMessageLoop();
+        stopOcrCountdown();
         setOcrMsg(friendlyMsg);
         setOcrResult(result || null);
         setOcrQuality(null);
@@ -847,6 +891,7 @@ function App() {
 
       setOcrStatus('ok');
       stopOcrMessageLoop();
+      stopOcrCountdown();
       setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
       setOcrResult({ ...result, data: normalized });
       setOcrQuality(typeof result.quality === 'number' ? result.quality : null);
@@ -887,6 +932,7 @@ function App() {
       console.error('OCR error:', e);
       setOcrStatus('fail');
       stopOcrMessageLoop();
+      stopOcrCountdown();
       setOcrMsg('Hubo un error al analizar tu recibo. Sube una imagen más nítida o captura tus datos manualmente.');
       setOcrResult(null);
       setOcrQuality(null);
@@ -910,6 +956,7 @@ function App() {
     setFileNames(next.map(f => f.name));
     if (next.length === 0) {
       stopOcrMessageLoop();
+      stopOcrCountdown();
       setOcrStatus('idle');
       setOcrMsg('');
       setOcrResult(null);
@@ -928,6 +975,7 @@ function App() {
     setFiles([]);
     setFileNames([]);
     stopOcrMessageLoop();
+    stopOcrCountdown();
     setOcrStatus('idle');
     setOcrMsg('');
     setOcrResult(null);
@@ -1361,10 +1409,15 @@ function App() {
                       <div className="flex flex-col items-center gap-3 py-6">
                         <div className="w-12 h-12 rounded-full border-4 border-slate-200 animate-spin" style={{ borderTopColor: '#1e3a2b' }} />
                         <p className="text-slate-700 font-semibold">{ocrMsg}</p>
-                        <div className="flex gap-2 items-center">
-                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 1 ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <div className={`w-2 h-2 rounded-full ${ocrMsgIndex === 2 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                        <div className="text-center">
+                          {ocrCountdown !== null && ocrCountdown > 0 ? (
+                            <p className="text-sm text-slate-600 font-medium">
+                              Tiempo restante para la extracción completa: {' '}
+                              <span className="text-slate-900 font-semibold">{formatOcrCountdown(ocrCountdown)}</span>
+                            </p>
+                          ) : (
+                            <p className="text-sm text-slate-600 font-medium">Espera unos segundos más, seguimos extrayendo tus datos.</p>
+                          )}
                         </div>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mt-2">
                           <p className="text-xs text-amber-800 font-semibold">⚠️ No cierres el navegador</p>
