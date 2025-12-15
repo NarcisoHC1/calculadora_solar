@@ -1539,7 +1539,6 @@ function App() {
                       <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm text-green-800 font-semibold">Datos extraídos correctamente</p>
-                        {ocrQuality != null && ocrQuality < 1 && <p className="text-xs text-green-700">Calidad OCR: {(ocrQuality * 100).toFixed(0)}%</p>}
                       </div>
                     </div>
                   )}
