@@ -1414,7 +1414,7 @@ export default function Proposal({ proposal, onClose, userName }: ProposalProps)
                 >
                   <Share2 className="w-6 h-6 text-white" />
                 </button>
-                <p className="text-[11px] text-slate-600 font-semibold">Compartir propuesta</p>
+                <p className="text-[11px] text-slate-600 font-semibold">Compartir</p>
               </div>
             </div>
             <button
