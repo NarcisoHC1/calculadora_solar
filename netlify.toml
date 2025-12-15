@@ -5,7 +5,15 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["chromium-bidi"]
+  # Keep browser tooling as external dependencies so their package metadata
+  # (e.g. package.json) ships with the function bundle. This prevents runtime
+  # resolution errors when the PDF function loads Playwright/Chromium in
+  # Netlify's environment.
+  external_node_modules = [
+    "chromium-bidi",
+    "playwright-core",
+    "@sparticuz/chromium"
+  ]
 
 [functions."proposal_pdf"]
   timeout = 26
