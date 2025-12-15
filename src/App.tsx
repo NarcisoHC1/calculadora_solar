@@ -860,6 +860,21 @@ function App() {
         return;
       }
 
+      const qualityScore = typeof result.quality === 'number' ? result.quality : null;
+
+      if (qualityScore !== null && qualityScore < 0.95) {
+        setOcrStatus('fail');
+        stopOcrMessageLoop();
+        stopOcrCountdown();
+        setOcrMsg(
+          'No pudimos leer tu recibo con la nitidez suficiente (menos del 95%). Sube el PDF digital de CFE o ingresa tus datos manualmente.'
+        );
+        setOcrResult(null);
+        setOcrQuality(qualityScore);
+        setOcrImage(null);
+        return;
+      }
+
       const normalized = result.data || {};
       const prom = normalized.historicals_promedios || {};
 
@@ -894,7 +909,7 @@ function App() {
       stopOcrCountdown();
       setOcrMsg('¡Listo! Extrajimos correctamente los datos de tu recibo.');
       setOcrResult({ ...result, data: normalized });
-      setOcrQuality(typeof result.quality === 'number' ? result.quality : null);
+      setOcrQuality(qualityScore);
       setOcrImage(compressed || null);
 
       setOcrPagoPromedio(pagoPromValue);
