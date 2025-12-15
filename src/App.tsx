@@ -1170,9 +1170,9 @@ function App() {
       tarifa: tarifa || (ocrResult?.data?.Tarifa || ocrResult?.data?.tarifa || ocrResult?.form_overrides?.tarifa || ''),
       kwh_consumidos:
         ocrSelectedKwh ??
-        ocrResult?.data?.historicals_promedios?.kWh_consumidos ||
-        ocrResult?.data?.kWh_consumidos ||
-        ocrResult?.data?.energia_periodo_kwh ||
+        ocrResult?.data?.historicals_promedios?.kWh_consumidos ??
+        ocrResult?.data?.kWh_consumidos ??
+        ocrResult?.data?.energia_periodo_kwh ??
         null,
       tipo_inmueble: tipoInmueble || '',
       urgencia: urgenciaInstalacion || '',
